@@ -20,7 +20,9 @@
     "db:status": "dbmate --migrations-dir db/migrations --no-dump-schema status",
     "db:logins": "sh scripts/local-db.sh logins",
     "db:test": "sh scripts/local-db.sh test",
-    "db:setup": "pnpm db:local:start && pnpm db:migrate && pnpm db:logins"
+    "db:setup": "pnpm db:local:start && pnpm db:migrate && pnpm db:logins",
+    "db:test:setup": "sh scripts/local-db.sh test-db",
+    "seed:dev": "sh scripts/local-db.sh seed"
   },
   "devDependencies": {
     "dbmate": "2.36.0"

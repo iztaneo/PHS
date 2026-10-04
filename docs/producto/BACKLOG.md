@@ -156,6 +156,8 @@ Como **usuario**, quiero acceder con mi identidad real, para que mis operaciones
 
 **Actualización 2026-10-03 (BIT-0008):** identidad validada en la base de datos (D06); atienden Identidad y el gateway. Criterios 5–7 añadidos; el 3 ya no depende de un proveedor externo.
 
+**Estado (BIT-0011): en revisión, no aceptada.** Implementados y probados los criterios 1, 2 y 5–7, el cierre de sesión del 3 y la distinción de errores del 4. Pendiente del criterio 3: recuperar el borrador al vencer la sesión, que depende de PHS-022. Falta la aceptación del usuario.
+
 Criterios de aceptación:
 
 1. Una identidad válida y habilitada accede; la sesión identifica usuario sin aceptar un autor elegido desde el formulario.

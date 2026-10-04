@@ -29,12 +29,13 @@ cp .env.example .env                 # valores solo para desarrollo local
 npx pnpm@12.9.1 install
 npx pnpm@12.9.1 db:setup             # base local, migraciones y usuarios de desarrollo
 npx pnpm@12.9.1 build
+npx pnpm@12.9.1 seed:dev             # usuario inicial definido en .env (DEV_USER_*)
 npx pnpm@12.9.1 dev                  # web, gateway, identity y projects
 ```
 
-Abrir [127.0.0.1:5173](http://127.0.0.1:5173): la página muestra el estado de los servicios consultado a través del gateway. `test` y `typecheck` validan el código; `db:test` ejecuta las pruebas SQL; `db:local:stop` detiene la base. Con Docker, `db:up` sustituye a `db:local:start`.
+Abrir [127.0.0.1:5173](http://127.0.0.1:5173) e iniciar sesión con el usuario de desarrollo de `.env`; la contraseña es temporal y la aplicación obliga a cambiarla. `test` y `typecheck` validan el código; `db:test` ejecuta las pruebas SQL; `db:test:setup` prepara la base `phs_test` que usan las pruebas de integración; `db:local:stop` detiene la base. Con Docker, `db:up` sustituye a `db:local:start`.
 
-Solo existen el gateway y los servicios Identidad y Proyectos con su comprobación de estado; todavía no hay inicio de sesión ni funcionalidad de negocio.
+Existen el gateway y los servicios Identidad y Proyectos, con inicio y cierre de sesión y cambio de contraseña. Todavía no hay permisos por práctica, administración de usuarios ni funcionalidad de negocio.
 
 ## Abrir el prototipo
 

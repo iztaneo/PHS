@@ -6,8 +6,9 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–005 aplicadas con dbmate (inicial, credencial local, sesiones, endurecimiento y roles por servicio), pruebas de integridad, especificación funcional, backlog y plan de entregas.
-- **Esqueleto ejecutable (BIT-0009):** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects` y `packages/service-kit`. Solo expone estado de servicios; ver README para arrancarlo.
-- **Todavía no implementado:** inicio de sesión, permisos, funcionalidad de negocio, servicios Salud y Plataforma, motor de producción y procesos programados.
+- **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects` y `packages/service-kit`; ver README para arrancarlo.
+- **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011).
+- **Todavía no implementado:** permisos por práctica/proyecto, administración de usuarios, funcionalidad de negocio, servicios Salud y Plataforma, motor de producción y procesos programados.
 - **Arquitectura decidida:** microservicios — gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma) sobre un PostgreSQL compartido con el esquema actual; REST y eventos por outbox. Ver [ADR-002](adr/002-microservicios.md) y [mapa de trazabilidad](MAPA-TRAZABILIDAD.md).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
@@ -16,9 +17,9 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Decisiones abiertas:** D01–D04 y D07–D10 completas; D05 y D06 parcialmente confirmadas. Ver [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
-- **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos, identidad firmada entre servicios y roles de base por servicio.
+- **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** PHS-005 — inicio de sesión en Identidad contra `user_credential` y `user_session` con hash Argon2id, sesión validada en el gateway e identidad firmada hacia los servicios. D01 y D02 pueden resolverse antes de R2/R3.
+- **Siguiente paso funcional:** PHS-006 (permisos por práctica y proyecto; requiere cerrar el alcance de D05) y PHS-007 (administración de usuarios y prácticas), luego PHS-008 (auditoría y concurrencia). D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -387,6 +388,44 @@ Tomados al implementar, no confirmados por el usuario: no permitir borrado físi
 ### Pendientes y siguiente paso
 
 De PHS-004: procedimiento de actualización y recuperación, contrato de JSONB y brechas dependientes de D02–D04 y D08. Siguiente: PHS-005. Siguiente entrada: BIT-0011.
+
+## BIT-0011 — Inicio de sesión e identidad entre servicios
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** implementar PHS-005 sobre la arquitectura de ADR-002 y validar la identidad propagada del gateway a los servicios.
+
+**Relación:** PHS-005, PHS-003, D06, ADR-002. PHS-005 queda en revisión, no aceptada.
+
+**Identificación:** commit con prefijo `BIT-0011`.
+
+### Trabajo realizado y archivos
+
+- `packages/service-kit`: token interno firmado con HMAC-SHA256 (`internal-auth.ts`) y sus pruebas.
+- `apps/identity`: `AuthService` (inicio de sesión, validación, cierre y cambio de contraseña), hash Argon2id, controlador de sesiones protegido por firma interna, configuración por variables y comando `create-user`.
+- `apps/gateway`: `/api/v1/session` (iniciar, consultar, cerrar, cambiar contraseña) con cookie `HttpOnly` y `SameSite=Strict`, comprobación de origen, identificador de petición, autenticación previa al proxy e identidad firmada. Identidad dejó de exponerse por proxy.
+- `apps/projects`: guardia de firma interna y `GET /whoami` como comprobación temporal.
+- `apps/web`: formularios de inicio de sesión y de cambio obligatorio de contraseña, página de inicio y cierre de sesión.
+- `scripts/local-db.sh` (`test-db`, `seed`), `package.json`, `pnpm-lock.yaml`, `.env.example`.
+- [ADR-002](adr/002-microservicios.md), [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md), [BACKLOG.md](producto/BACKLOG.md), [README](../README.md) y esta bitácora.
+- No se modificaron migraciones ni pruebas SQL.
+
+### Decisiones y supuestos
+
+Tomados al implementar, no confirmados por el usuario: contraseña de 12 a 128 caracteres; bloqueo de 15 minutos tras 5 intentos fallidos; sesión de 12 horas con 60 minutos de inactividad; respuesta idéntica para usuario inexistente, contraseña incorrecta y cuenta bloqueada; consultas con `pg` en lugar de Kysely; usuario inicial de desarrollo por comando, hasta que exista PHS-007.
+
+### Validación y límites
+
+- 20 pruebas de código pasan: 5 de `service-kit`, 4 del gateway, 2 de Proyectos y 9 de Identidad, 7 de ellas de integración contra la base local `phs_test`. `typecheck` sin errores y las cinco pruebas SQL pasan.
+- Recorrido por el gateway con los servicios en ejecución: sin sesión responde 401; Identidad no es accesible por proxy; llamadas directas a los servicios sin firma o con firma falsa responden 401; origen ajeno responde 403; contraseña incorrecta 401; inicio correcto entrega cookie `HttpOnly` y el token no aparece en la respuesta; con contraseña temporal Proyectos responde 403 hasta cambiarla; contraseña débil 400; tras el cambio Proyectos recibe el usuario correcto aunque el cliente envíe una cabecera de identidad falsa; tras cerrar sesión responde 401. La auditoría registró los cuatro eventos sin secretos.
+- En navegador, con un usuario de prueba: error de contraseña incorrecta, cambio obligatorio, página de inicio, sesión conservada al recargar y cierre de sesión.
+- Defecto encontrado y corregido: un valor con espacios sin comillas en `.env` rompía `scripts/local-db.sh`.
+- No probado: caducidad real de 12 horas (solo la de inactividad, manipulando fechas en la prueba), concurrencia de intentos, carga, `docker-compose.yml`. No hay límite de frecuencia por IP ni restablecimiento de contraseña por un administrador (PHS-007). Cada servicio arranca dos veces al iniciar `dev`; es inofensivo y queda pendiente.
+- La base local se recreó al terminar; contiene solo el usuario de desarrollo con su contraseña temporal.
+
+### Pendientes y siguiente paso
+
+Aceptación de PHS-005 por el usuario. Siguiente: PHS-006 y PHS-007; D05 debe definir alcance por rol antes de aceptar permisos. Siguiente entrada: BIT-0012.
 
 ## Plantilla para próximas entradas
 

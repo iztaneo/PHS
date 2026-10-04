@@ -43,6 +43,15 @@ La arquitectura inicial proponía un backend modular con una API y un worker. El
 - **Más piezas que operar.** Seis procesos desplegables (web, gateway y cuatro servicios) más el proceso programado de Salud, con sus contratos, salud y logs correlacionados por request ID. Para una sola persona es un costo real de construcción y operación.
 - Los contratos OpenAPI pasan a ser uno por servicio; el gateway expone el contrato público.
 
+## Implementación de la identidad entre servicios (BIT-0011)
+
+Validado en ejecución con gateway, Identidad y Proyectos:
+
+- La cookie de sesión (`HttpOnly`, `SameSite=Strict`) solo la conoce el gateway. Identidad no se expone por proxy: sus operaciones de sesión se publican en `/api/v1/session`.
+- En cada petición a un servicio, el gateway valida la sesión contra Identidad, elimina la cookie y cualquier cabecera de identidad enviada por el navegador, y añade `x-phs-internal-auth`: identificador de usuario, de sesión y de petición firmados con HMAC-SHA256 y un secreto compartido (`INTERNAL_AUTH_SECRET`), válidos 60 segundos.
+- Cada servicio rechaza peticiones sin esa firma. Identidad la exige también para iniciar sesión, de modo que solo el gateway puede llamarla.
+- Límites: un único secreto compartido por todos los servicios, sin rotación definida; una consulta a Identidad por petición, sin caché; los servicios escuchan en 127.0.0.1 y el aislamiento de red del despliegue está por definir (PHS-042).
+
 ## Revisión de la decisión
 
 Revisar si el acoplamiento por la base bloquea despliegues, si el protocolo de envío de revisión no logra la coherencia requerida por D02 o si el costo operativo supera la capacidad del equipo. Registrar una nueva ADR en lugar de sustituir esta.

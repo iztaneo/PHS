@@ -37,13 +37,27 @@ case "${1:-}" in
   test)
     for file in db/tests/*.sql; do run_psql -q -d "$POSTGRES_DB" -f "$file"; done
     ;;
+  test-db)
+    # Separate database for integration tests, with the same migrations.
+    if [ "$(run_psql -d postgres -Atc "SELECT 1 FROM pg_database WHERE datname = 'phs_test'")" != "1" ]; then
+      run_psql -q -d postgres -c 'CREATE DATABASE phs_test'
+    fi
+    DATABASE_URL="postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@127.0.0.1:$POSTGRES_PORT/phs_test?sslmode=disable" \
+      ./node_modules/.bin/dbmate --migrations-dir db/migrations --no-dump-schema up
+    ;;
+  seed)
+    # Development user from .env; the password is passed through the environment, not the command line.
+    : "${DEV_USER_EMAIL:?Falta DEV_USER_EMAIL en .env}" "${DEV_USER_NAME:?Falta DEV_USER_NAME en .env}" "${DEV_USER_PASSWORD:?Falta DEV_USER_PASSWORD en .env}"
+    (cd apps/identity && PHS_NEW_USER_EMAIL="$DEV_USER_EMAIL" PHS_NEW_USER_NAME="$DEV_USER_NAME" \
+      PHS_NEW_USER_PASSWORD="$DEV_USER_PASSWORD" node dist/cli/create-user.js)
+    ;;
   reset)
     pg_ctl -D "$DATA" -m fast stop >/dev/null 2>&1 || true
     rm -rf "$DATA" .local/pg.log
     echo "Datos locales eliminados"
     ;;
   *)
-    echo "Uso: $0 start|stop|logins|test|reset" >&2
+    echo "Uso: $0 start|stop|logins|test|test-db|seed|reset" >&2
     exit 2
     ;;
 esac
