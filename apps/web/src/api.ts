@@ -124,6 +124,28 @@ export interface Baseline {
   reason: string; createdBy: Person; createdAt: string;
 }
 
+export interface Observation {
+  id: string; effectiveOn: string; totalCost: string; totalEffortHours: string | null; source: string;
+  recordedBy: Person; recordedAt: string; supersedesId: string | null; superseded: boolean;
+}
+export interface FinanceSummary {
+  currency: string; asOf: string; budget: string | null; effortBudgetHours: string | null; current: Observation | null;
+  actualProgress: string | null; expectedCost: string | null; deviation: string | null; gate: boolean;
+  missing: ('budget' | 'cost' | 'progress')[]; ruleSetVersion: string; observations: Observation[];
+}
+
+export type RiskStatus = 'open' | 'mitigating' | 'mitigated' | 'materialized' | 'closed';
+export interface Risk {
+  id: string; title: string; description: string; riskType: 'project' | 'client'; category: string; probability: number;
+  impact: number; severity: number; owner: Person; mitigationDueOn: string; strategy: string; status: RiskStatus;
+  overdue: boolean; revision: number; canUpdate: boolean;
+}
+export interface RiskInput {
+  title: string; description: string; riskType: 'project' | 'client'; category: string; probability: number; impact: number;
+  ownerId: string; mitigationDueOn: string; strategy: string;
+}
+export interface RiskHistoryEntry { occurredAt: string; actor: Person | null; note: string; before: Record<string, unknown>; after: Record<string, unknown> }
+
 export interface Responsibilities4 { milestones: number; risks: number; renewals: number; tasks: number }
 
 export type ProjectChanges = Partial<Omit<ProjectInput, 'practiceId' | 'code' | 'clientName'>>;
@@ -210,6 +232,14 @@ export const api = {
   baselines: (id: string) => call<Baseline[]>('GET', `/api/v1/projects/${id}/baselines`),
   publishBaseline: (id: string, input: { expectedRevision: number; scope: string; budget: string | null; effortHours: string | null }, key: string) =>
     call<Baseline>('POST', `/api/v1/projects/${id}/baselines`, input, key),
+  finance: (id: string) => call<FinanceSummary>('GET', `/api/v1/projects/${id}/finance`),
+  recordObservation: (id: string, input: { effectiveOn: string; totalCost: string; totalEffortHours: string | null; source: string; supersedesId: string | null }, key: string) =>
+    call<Observation>('POST', `/api/v1/projects/${id}/finance`, input, key),
+  risks: (id: string) => call<Risk[]>('GET', `/api/v1/projects/${id}/risks`),
+  createRisk: (id: string, input: RiskInput, key: string) => call<Risk>('POST', `/api/v1/projects/${id}/risks`, input, key),
+  followUpRisk: (id: string, riskId: string, expectedRevision: number, comment: string, changes: { status?: RiskStatus; probability?: number; impact?: number; mitigationDueOn?: string }) =>
+    call<Risk>('PATCH', `/api/v1/projects/${id}/risks/${riskId}`, { expectedRevision, comment, ...changes }),
+  riskHistory: (id: string, riskId: string) => call<RiskHistoryEntry[]>('GET', `/api/v1/projects/${id}/risks/${riskId}/history`),
   clients: () => call<{ id: string; name: string }[]>('GET', '/api/v1/clients'),
   people: (practiceId: string) => call<PracticePerson[]>('GET', `/api/v1/people?practiceId=${practiceId}`),
   serviceTypes: () => call<ServiceType[]>('GET', '/api/v1/catalog/service-types'),
@@ -250,10 +280,12 @@ const MESSAGES: Record<string, string> = {
   idempotency_key_reused: 'Esta solicitud ya se había enviado con otros datos. Vuelve a abrir el formulario.',
   not_found: 'El proyecto o el elemento no existe o no está a tu alcance.',
   member_has_responsibilities: 'El integrante tiene responsabilidades abiertas en el proyecto.',
-  invalid_transition: 'Ese cambio de estado no está permitido para el hito.',
+  invalid_transition: 'Ese cambio de estado no está permitido.',
   note_required: 'Escribe un comentario para completar, cancelar o reabrir el hito.',
   reason_required: 'Escribe el motivo de la reprogramación: la fecha está comprometida en la línea base.',
   invalid_completion_date: 'La fecha de cumplimiento no puede ser futura.',
+  invalid_effective_date: 'La fecha efectiva no puede ser futura.',
+  already_superseded: 'Esa observación ya fue corregida. Corrige la más reciente.',
   baseline_exists: 'El proyecto ya tiene línea base. Los compromisos se cambian mediante un cambio aprobado.',
   email_taken: 'Ya existe un usuario con ese correo.',
   code_taken: 'Ya existe un registro con ese código o nombre.',

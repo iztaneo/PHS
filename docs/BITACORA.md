@@ -6,11 +6,11 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–008 (la 008 añade contacto por proyecto y fecha comprometida del hito; 31 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
-- **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects`, `packages/service-kit` y `packages/contracts`; ver README para arrancarlo.
+- **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects`, `packages/service-kit`, `packages/contracts` y `packages/health-engine`; ver README para arrancarlo.
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
-- **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011). PHS-006 y PHS-007 — reglas de acceso de D05, consulta de proyectos por alcance y pantalla de administración (BIT-0013). PHS-008 y PHS-009 — auditoría, control de versiones, idempotencia y alta, lista y edición de proyectos (BIT-0015). PHS-010, PHS-015 y PHS-011 — equipo y contacto por proyecto, hitos y línea base inicial (BIT-0016). Con esto existe todo el recorrido de R1, pendiente de aceptación.
-- **Todavía no implementado:** riesgos, economía, renovaciones, evidencias, cambios aprobados, revisiones, evaluación de salud, servicios Salud y Plataforma, motor de producción y procesos programados.
+- **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011). PHS-006 y PHS-007 — reglas de acceso de D05, consulta de proyectos por alcance y pantalla de administración (BIT-0013). PHS-008 y PHS-009 — auditoría, control de versiones, idempotencia y alta, lista y edición de proyectos (BIT-0015). PHS-010, PHS-015 y PHS-011 — equipo y contacto por proyecto, hitos y línea base inicial (BIT-0016). Con esto existe todo el recorrido de R1, pendiente de aceptación. De R2: PHS-012 y PHS-016 — economía y riesgos, y el inicio del motor (BIT-0019).
+- **Todavía no implementado:** renovaciones, evidencias, cambios aprobados, revisiones, evaluación de salud, servicios Salud y Plataforma, motor de producción y procesos programados.
 - **Arquitectura decidida:** microservicios — gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma) sobre un PostgreSQL compartido con el esquema actual; REST y eventos por outbox. Ver [ADR-002](adr/002-microservicios.md) y [mapa de trazabilidad](MAPA-TRAZABILIDAD.md).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
@@ -21,7 +21,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** aceptación de R1 por el usuario; después R2: PHS-012 (economía), PHS-016 (riesgos), PHS-017 (evidencias), PHS-018/019 (cambios) y el motor (PHS-025/026) con las reglas versión 1. D01 y D02 pueden resolverse antes de R2/R3.
+- **Siguiente paso funcional:** aceptación de R1 por el usuario; de R2 faltan PHS-013 (renovaciones), PHS-014 (pausa y cierre, requiere D08), PHS-017 (evidencias, requiere D09 y el servicio Plataforma), PHS-018/019 (cambios) y el motor completo (PHS-025/026), que implica crear el servicio Salud. D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -680,6 +680,39 @@ Los 15 ejemplos se calcularon a mano; no hay código que los ejecute. Ningún co
 ### Pendientes y siguiente paso
 
 Construir R2 empezando por economía y riesgos, que son entradas del motor. Siguiente entrada: BIT-0019.
+
+## BIT-0019 — Economía, riesgos e inicio del motor
+
+**Fecha:** trabajo realizado la noche del 2026-10-03 y cerrado el 2026-10-04, America/Mexico_City.
+
+**Objetivo:** implementar PHS-012 y PHS-016, las entradas que el motor necesita, con las reglas versión 1.
+
+**Relación:** PHS-012, PHS-016, PHS-025 (avance), D01, RN-02, RN-07, RN-12, RN-17, RN-19. Las historias quedan en revisión, no aceptadas.
+
+**Identificación:** commit con prefijo `BIT-0019`.
+
+### Trabajo realizado y archivos
+
+- `packages/health-engine` (nuevo): avance por peso de hito y desviación financiera contra el avance real, con decimales exactos y umbrales estrictos; pruebas con los ejemplos 1 a 8 y 13 de [REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md).
+- `packages/contracts` y [docs/api](api/README.md): seis rutas nuevas de economía y riesgos.
+- `apps/projects`: `FinanceService` (observaciones acumuladas, correcciones que conservan la anterior, consulta a una fecha y desviación calculada) y `RisksService` (alta, seguimiento con comentario y valores anteriores y nuevos, transiciones e historial).
+- `apps/web`: pestañas Riesgos y Economía en el proyecto; Economía solo para quien puede ver importes.
+- [BACKLOG.md](producto/BACKLOG.md), [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md), [REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md), [README](../README.md) y esta bitácora. Sin migraciones nuevas.
+
+### Decisiones y supuestos
+
+Tomados al implementar, no confirmados por el usuario: registrar economía exige poder editar el proyecto y ver importes (PM o líder); la fecha efectiva no puede ser futura; solo se puede corregir una observación que no haya sido corregida; categorías de riesgo del prototipo como catálogo fijo; transiciones de riesgo abierto → en mitigación → mitigado → cerrado, abierto o en mitigación → materializado → cerrado, y reapertura desde mitigado o cerrado; todo seguimiento exige comentario; el responsable del riesgo puede darle seguimiento pero no reasignarlo; el peso de cada hito se toma del snapshot de la línea base, hoy siempre 1.
+
+### Validación y límites
+
+- 85 pruebas de código pasan (11 del motor, 7 de contratos, 11 de `service-kit`, 5 del gateway, 36 de Proyectos y 15 de Identidad); `typecheck` sin errores. Las ocho pruebas SQL no cambiaron.
+- Probado contra la base de pruebas: el ejemplo 5 de las reglas de punta a punta (presupuesto 100,000, avance 50%, costo 54,000 da 4% y activa el tope); observación aplicable a una fecha sin sumar acumulados; corrección que conserva la original; datos faltantes sin desviación inventada; economía prohibida para lector y responsable de hito; alta, seguimiento, transiciones e historial de riesgos; mitigación vencida.
+- En la pila de vista previa, sin tocar los datos del usuario: pestañas Economía y Riesgos a 1280 px y 375 px, seguimiento de un riesgo e historial.
+- Límites: el motor solo calcula avance y desviación financiera; no hay score ni dimensiones; el vencimiento de un riesgo se calcula al consultar, sin evento ni tarea; la pantalla de riesgos no permite cambiar probabilidad, impacto, fecha, estrategia ni responsable; no hay consulta de economía a una fecha pasada desde la pantalla.
+
+### Pendientes y siguiente paso
+
+El motor completo y la evaluación (PHS-025/026) requieren crear el servicio Salud. Evidencias (PHS-017) requiere el servicio Plataforma y D09. Siguiente entrada: BIT-0020.
 
 ## Plantilla para próximas entradas
 

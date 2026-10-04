@@ -38,7 +38,7 @@ npx pnpm@12.9.1 dev                  # web, gateway, identity y projects
 
 Abrir [127.0.0.1:5173](http://127.0.0.1:5173) e iniciar sesión con el usuario de desarrollo de `.env`; la contraseña es temporal y la aplicación obliga a cambiarla. `test` y `typecheck` validan el código; `db:test` ejecuta las pruebas SQL; `db:test:setup` prepara la base `phs_test` que usan las pruebas de integración; `db:local:stop` detiene la base. Con Docker, `db:up` sustituye a `db:local:start`.
 
-Existen el gateway y los servicios Identidad y Proyectos, con inicio y cierre de sesión, cambio de contraseña, administración de usuarios, prácticas, roles y tipos de servicio, y alta, consulta y edición de proyectos según el alcance de cada usuario. El usuario de desarrollo es administrador: para crear un proyecto debe crear antes una práctica y asignarse los roles de PM y líder. También hay equipo, hitos y línea base inicial, con lo que se completa el recorrido de la primera entrega (R1). Todavía no hay riesgos, economía, cambios aprobados, revisiones ni evaluación de salud.
+Existen el gateway y los servicios Identidad y Proyectos, con inicio y cierre de sesión, cambio de contraseña, administración de usuarios, prácticas, roles y tipos de servicio, y alta, consulta y edición de proyectos según el alcance de cada usuario. El usuario de desarrollo es administrador: para crear un proyecto debe crear antes una práctica y asignarse los roles de PM y líder. También hay equipo, hitos y línea base inicial, con lo que se completa el recorrido de la primera entrega (R1). También hay riesgos con seguimiento y economía con desviación financiera calculada. Todavía no hay evidencias, cambios aprobados, revisiones ni score de salud.
 
 ## Abrir el prototipo
 

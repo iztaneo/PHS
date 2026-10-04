@@ -192,6 +192,92 @@ export const publishBaselineBody = z.object({
   reason: text(1000).default('Línea base inicial'),
 });
 
+// ---- Economy (PHS-012)
+export const financialObservation = z.object({
+  id: z.uuid(),
+  effectiveOn: date,
+  totalCost: z.string().describe('Costo acumulado a la fecha efectiva, en la moneda del proyecto.'),
+  totalEffortHours: z.string().nullable().describe('Horas acumuladas; null si no se registraron.'),
+  source: z.string().describe('Origen del dato, por ejemplo el sistema o reporte del que se tomó.'),
+  recordedBy: person,
+  recordedAt: z.iso.datetime({ offset: true }),
+  supersedesId: z.uuid().nullable().describe('Observación que esta corrige.'),
+  superseded: z.boolean().describe('true: otra observación la corrigió; se conserva como historia.'),
+});
+export const financeSummary = z.object({
+  currency: z.string(),
+  asOf: date,
+  budget: z.string().nullable().describe('Presupuesto de la línea base vigente; null si es desconocido o no hay línea base.'),
+  effortBudgetHours: z.string().nullable(),
+  current: financialObservation.nullable().describe('Observación aplicable a la fecha consultada. No se suman acumulados.'),
+  actualProgress: z.string().nullable().describe('Avance real por peso de hitos, en porcentaje.'),
+  expectedCost: z.string().nullable().describe('Costo que justifica el avance logrado: presupuesto × avance real.'),
+  deviation: z.string().nullable().describe('Desviación financiera en porcentaje del presupuesto; positiva si se gasta por delante del avance.'),
+  gate: z.boolean().describe('true si la desviación supera 3% (regla v1).'),
+  missing: z.array(z.enum(['budget', 'cost', 'progress'])).describe('Datos que faltan para calcular la desviación.'),
+  ruleSetVersion: z.string(),
+  observations: z.array(financialObservation).describe('Historial completo, de la más reciente a la más antigua.'),
+});
+export const financeQuery = z.object({ asOf: date.optional().describe('Por defecto, hoy en la zona horaria del proyecto.') });
+export const createObservationBody = z.object({
+  effectiveOn: date,
+  totalCost: amount,
+  totalEffortHours: amount.nullable().default(null),
+  source: text(200),
+  supersedesId: z.uuid().nullable().default(null).describe('Para corregir una observación anterior, que se conserva.'),
+});
+
+// ---- Risks (PHS-016)
+export const riskType = z.enum(['project', 'client']);
+export const riskCategory = z.enum(['schedule', 'financial', 'client', 'team', 'technical', 'supplier', 'scope']);
+export const riskStatus = z.enum(['open', 'mitigating', 'mitigated', 'materialized', 'closed']);
+const level = z.number().int().min(1).max(3).describe('1 baja, 2 media, 3 alta.');
+export const risk = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  description: z.string(),
+  riskType,
+  category: riskCategory,
+  probability: level,
+  impact: level,
+  severity: z.number().int().describe('Probabilidad × impacto, de 1 a 9. Crítico desde 6.'),
+  owner: person,
+  mitigationDueOn: date,
+  strategy: z.string(),
+  status: riskStatus,
+  overdue: z.boolean().describe('Abierto o en mitigación con fecha de mitigación anterior a hoy en la zona del proyecto.'),
+  revision: z.number().int(),
+  canUpdate: z.boolean().describe('El usuario puede registrar seguimiento: PM, líder o responsable del riesgo.'),
+});
+export const createRiskBody = z.object({
+  title: text(200),
+  description: z.string().trim().max(4000).default(''),
+  riskType,
+  category: riskCategory,
+  probability: level,
+  impact: level,
+  ownerId: z.uuid(),
+  mitigationDueOn: date,
+  strategy: z.string().trim().max(4000).default(''),
+});
+export const followUpRiskBody = z.object({
+  expectedRevision: z.number().int().min(1),
+  comment: text(2000).describe('Obligatorio en todo seguimiento; queda en el historial.'),
+  probability: level.optional(),
+  impact: level.optional(),
+  mitigationDueOn: date.optional(),
+  strategy: z.string().trim().max(4000).optional(),
+  ownerId: z.uuid().optional().describe('Solo PM o líder pueden reasignar.'),
+  status: riskStatus.optional(),
+});
+export const riskHistoryEntry = z.object({
+  occurredAt: z.iso.datetime({ offset: true }),
+  actor: person.nullable(),
+  note: z.string(),
+  before: z.record(z.string(), z.unknown()),
+  after: z.record(z.string(), z.unknown()),
+});
+
 export const clientSummary = z.object({ id: z.uuid(), name: z.string() });
 export const practicePerson = z.object({
   id: z.uuid(),
@@ -295,6 +381,44 @@ export const projectsRoutes: RouteContract[] = [
       401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
       409: { description: 'Ya existe una línea base (`baseline_exists`), otro usuario modificó el proyecto (`revision_conflict`) o clave reutilizada (`idempotency_key_reused`).', schema: conflictResponse },
     } },
+  { method: 'get', path: '/projects/:id/finance', summary: 'Economía del proyecto a una fecha', tag: 'Economía', auth: 'session',
+    params: { id: z.uuid() }, query: financeQuery.shape,
+    responses: {
+      200: { description: 'Presupuesto, gasto aplicable, desviación calculada e historial.', schema: financeSummary },
+      400: errors.invalidRequest, 401: errors.unauthenticated,
+      403: { description: 'El usuario no puede ver datos económicos (`forbidden`).', schema: errorResponse },
+      404: errors.notFound,
+    } },
+  { method: 'post', path: '/projects/:id/finance', summary: 'Registrar o corregir una observación económica', tag: 'Economía', auth: 'session',
+    params: { id: z.uuid() }, headers: { 'Idempotency-Key': idempotencyKey }, body: createObservationBody,
+    responses: {
+      201: { description: 'Observación registrada. Una corrección conserva la observación anterior.', schema: financialObservation },
+      400: { description: 'Datos inválidos, `idempotency_key_required` o fecha efectiva futura (`invalid_effective_date`).', schema: errorResponse },
+      401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: 'La observación a corregir ya fue corregida (`already_superseded`) o clave reutilizada (`idempotency_key_reused`).', schema: errorResponse },
+    } },
+  { method: 'get', path: '/projects/:id/risks', summary: 'Riesgos del proyecto', tag: 'Riesgos', auth: 'session',
+    params: { id: z.uuid() },
+    responses: { 200: { description: 'Riesgos, primero los abiertos de mayor severidad.', schema: z.array(risk) }, 401: errors.unauthenticated, 404: errors.notFound } },
+  { method: 'post', path: '/projects/:id/risks', summary: 'Registrar riesgo', tag: 'Riesgos', auth: 'session',
+    params: { id: z.uuid() }, headers: { 'Idempotency-Key': idempotencyKey }, body: createRiskBody,
+    responses: {
+      201: { description: 'Riesgo registrado en estado abierto.', schema: risk },
+      400: { description: 'Datos inválidos o fuera de catálogo, `idempotency_key_required` o `responsible_not_enabled`.', schema: errorResponse },
+      401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: 'Clave de idempotencia reutilizada (`idempotency_key_reused`).', schema: errorResponse },
+    } },
+  { method: 'patch', path: '/projects/:id/risks/:riskId', summary: 'Registrar seguimiento de un riesgo', tag: 'Riesgos', auth: 'session',
+    params: { id: z.uuid(), riskId: z.uuid() }, body: followUpRiskBody,
+    responses: {
+      200: { description: 'Riesgo actualizado; el comentario y los valores anteriores y nuevos quedan en el historial.', schema: risk },
+      400: { description: 'Datos inválidos o `responsible_not_enabled`.', schema: errorResponse },
+      401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: 'Otro usuario lo modificó (`revision_conflict`) o el cambio de estado no está permitido (`invalid_transition`).', schema: conflictResponse },
+    } },
+  { method: 'get', path: '/projects/:id/risks/:riskId/history', summary: 'Historial de seguimiento de un riesgo', tag: 'Riesgos', auth: 'session',
+    params: { id: z.uuid(), riskId: z.uuid() },
+    responses: { 200: { description: 'Seguimientos, del más reciente al más antiguo.', schema: z.array(riskHistoryEntry) }, 401: errors.unauthenticated, 404: errors.notFound } },
   { method: 'get', path: '/clients', summary: 'Clientes de los proyectos al alcance del usuario', tag: 'Proyectos', auth: 'session',
     responses: { 200: { description: 'Clientes para filtrar la lista.', schema: z.array(clientSummary) }, 401: errors.unauthenticated } },
   { method: 'get', path: '/people', summary: 'Usuarios activos que pueden nombrarse responsables en una práctica', tag: 'Proyectos', auth: 'session',

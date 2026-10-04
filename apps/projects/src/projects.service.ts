@@ -89,7 +89,7 @@ export type ProjectErrorCode =
   | 'service_type_inactive' | 'pm_not_eligible' | 'lead_not_eligible' | 'responsible_not_enabled'
   | 'revision_conflict' | 'baseline_change_required' | 'idempotency_key_reused'
   | 'member_has_responsibilities' | 'invalid_transition' | 'note_required' | 'reason_required'
-  | 'invalid_completion_date' | 'baseline_exists';
+  | 'invalid_completion_date' | 'baseline_exists' | 'invalid_effective_date' | 'already_superseded';
 
 export class ProjectError extends Error {
   constructor(

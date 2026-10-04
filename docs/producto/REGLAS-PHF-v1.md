@@ -89,7 +89,7 @@ Los umbrales son estrictos: 10 y 3 exactos no activan el tope.
 
 ## 7. Ejemplos con resultado esperado
 
-Sirven como casos de prueba del motor.
+Sirven como casos de prueba del motor. Desde BIT-0019 los ejemplos 1 a 8 y 13 están automatizados en `packages/health-engine`; el resto se automatiza al construir dimensiones y score.
 
 | # | Caso | Resultado |
 | --- | --- | --- |

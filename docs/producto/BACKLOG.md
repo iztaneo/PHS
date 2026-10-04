@@ -227,7 +227,7 @@ Como **equipo técnico**, quiero ejecutar cambios de forma transaccional, para e
 
 **Datos / artefactos:** audit_entry, outbox_message, revision
 
-**Estado (BIT-0015): en revisión, no aceptada.** Criterios 1, 2 y 4 implementados y probados sobre los comandos de proyecto, con la tabla `command_idempotency`. Criterio 3: la revisión del proyecto aumenta al editar la ficha y, desde BIT-0016, al cambiar equipo, hitos y línea base; falta para riesgos y economía, que todavía no existen.
+**Estado (BIT-0015): en revisión, no aceptada.** Criterios 1, 2 y 4 implementados y probados sobre los comandos de proyecto, con la tabla `command_idempotency`. Criterio 3: la revisión del proyecto aumenta al editar la ficha y, desde BIT-0016, al cambiar equipo, hitos y línea base, y desde BIT-0019 al cambiar riesgos y economía.
 
 Criterios de aceptación:
 
@@ -314,6 +314,8 @@ Como **PM**, quiero actualizar costo y esfuerzo acumulados, para medir evolució
 
 **Datos / artefactos:** financial_observation, baseline
 
+**Estado (BIT-0019): en revisión, no aceptada.** Criterios 1–4 implementados y probados. La desviación se calcula con las reglas versión 1 (costo contra avance real). La moneda del proyecto no se puede cambiar desde la aplicación.
+
 Criterios de aceptación:
 
 1. Se registra fecha efectiva, costo acumulado, esfuerzo opcional y origen en moneda del proyecto.
@@ -392,6 +394,8 @@ Como **responsable de riesgo**, quiero actualizar exposición y mitigación, par
 **Trazabilidad:** F3: createRisk, saveRiskUpdate, openRiskHistory · RN-12, RN-17, RN-19
 
 **Datos / artefactos:** risk, activity
+
+**Estado (BIT-0019): en revisión, no aceptada.** Criterios 1–4 implementados y probados. Desde la pantalla el seguimiento cambia comentario y estado; cambiar probabilidad, impacto, fecha, estrategia o responsable está en la API pero aún no en la pantalla.
 
 Criterios de aceptación:
 
@@ -570,6 +574,8 @@ Como **líder**, quiero obtener indicadores explicables, para identificar por qu
 **Trazabilidad:** F3: plannedProgress, financialDeviation, dim*, gateStatus · RN-02–07
 
 **Datos / artefactos:** Motor PHF y rule_set
+
+**Avance (BIT-0019):** existe el paquete `packages/health-engine` con el avance por peso de hito y la desviación financiera, probados con los ejemplos 1 a 8 y 13 de las reglas. Faltan las seis dimensiones, los topes restantes y el score.
 
 Criterios de aceptación:
 

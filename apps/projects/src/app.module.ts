@@ -4,6 +4,7 @@ import type pg from 'pg';
 import { BaselinesService } from './baselines.service.js';
 import { CatalogController } from './catalog.controller.js';
 import { CatalogService } from './catalog.service.js';
+import { FinanceService } from './finance.service.js';
 import { HealthController } from './health.controller.js';
 import { InternalAuthGuard } from './internal-auth.guard.js';
 import { MilestonesService } from './milestones.service.js';
@@ -11,6 +12,7 @@ import { OpenApiController } from './openapi.controller.js';
 import { ProjectChildrenController } from './project-children.controller.js';
 import { ProjectsController } from './projects.controller.js';
 import { ProjectsService } from './projects.service.js';
+import { RisksService } from './risks.service.js';
 import { TeamService } from './team.service.js';
 
 @Module({
@@ -23,6 +25,8 @@ import { TeamService } from './team.service.js';
     { provide: TeamService, useFactory: (pool: pg.Pool, projects: ProjectsService) => new TeamService(pool, projects), inject: [PG_POOL, ProjectsService] },
     { provide: MilestonesService, useFactory: (pool: pg.Pool, projects: ProjectsService) => new MilestonesService(pool, projects), inject: [PG_POOL, ProjectsService] },
     { provide: BaselinesService, useFactory: (pool: pg.Pool, projects: ProjectsService) => new BaselinesService(pool, projects), inject: [PG_POOL, ProjectsService] },
+    { provide: FinanceService, useFactory: (pool: pg.Pool, projects: ProjectsService) => new FinanceService(pool, projects), inject: [PG_POOL, ProjectsService] },
+    { provide: RisksService, useFactory: (pool: pg.Pool, projects: ProjectsService) => new RisksService(pool, projects), inject: [PG_POOL, ProjectsService] },
     { provide: CatalogService, useFactory: (pool: pg.Pool) => new CatalogService(pool), inject: [PG_POOL] },
   ],
 })

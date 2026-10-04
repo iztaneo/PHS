@@ -3,14 +3,16 @@ import {
   Inject, NotFoundException, Param, Patch, Post, Put, Query, Req, UseGuards,
 } from '@nestjs/common';
 import {
-  IDEMPOTENCY_HEADER, createMilestoneBody, idempotencyKey, publishBaselineBody, putMemberBody, removeMemberQuery,
-  transitionMilestoneBody, updateMilestoneBody,
+  IDEMPOTENCY_HEADER, createMilestoneBody, createObservationBody, createRiskBody, financeQuery, followUpRiskBody,
+  idempotencyKey, publishBaselineBody, putMemberBody, removeMemberQuery, transitionMilestoneBody, updateMilestoneBody,
 } from '@phs/contracts';
 import { z } from 'zod';
 import { BaselinesService } from './baselines.service.js';
+import { FinanceService } from './finance.service.js';
 import { InternalAuthGuard, type AuthenticatedRequest } from './internal-auth.guard.js';
 import { MilestonesService } from './milestones.service.js';
 import { ProjectError, type Actor } from './projects.service.js';
+import { RisksService } from './risks.service.js';
 import { TeamService } from './team.service.js';
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -46,7 +48,7 @@ export async function runProjectCommand<T>(work: Promise<T>): Promise<T> {
       case 'not_found': throw new NotFoundException(body);
       case 'forbidden': case 'practice_not_authorized': throw new ForbiddenException(body);
       case 'code_taken': case 'revision_conflict': case 'baseline_change_required': case 'idempotency_key_reused':
-      case 'member_has_responsibilities': case 'invalid_transition': case 'baseline_exists':
+      case 'member_has_responsibilities': case 'invalid_transition': case 'baseline_exists': case 'already_superseded':
         throw new ConflictException(body);
       default: throw new BadRequestException(body);
     }
@@ -60,6 +62,8 @@ export class ProjectChildrenController {
     @Inject(TeamService) private readonly team: TeamService,
     @Inject(MilestonesService) private readonly milestones: MilestonesService,
     @Inject(BaselinesService) private readonly baselines: BaselinesService,
+    @Inject(FinanceService) private readonly finance: FinanceService,
+    @Inject(RisksService) private readonly risks: RisksService,
   ) {}
 
   @Get('members')
@@ -115,5 +119,43 @@ export class ProjectChildrenController {
     @Req() request: AuthenticatedRequest,
   ) {
     return runProjectCommand(this.baselines.publishInitial(actor(request), uuid(id), parse(publishBaselineBody, body), key(idempotency)));
+  }
+
+  @Get('finance')
+  financeSummary(@Param('id') id: string, @Query() query: unknown, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.finance.summary(request.internal.userId, uuid(id), parse(financeQuery, query).asOf));
+  }
+
+  @Post('finance')
+  @HttpCode(201)
+  recordObservation(
+    @Param('id') id: string, @Body() body: unknown, @Headers(IDEMPOTENCY_HEADER) idempotency: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return runProjectCommand(this.finance.record(actor(request), uuid(id), parse(createObservationBody, body), key(idempotency)));
+  }
+
+  @Get('risks')
+  listRisks(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.risks.list(request.internal.userId, uuid(id)));
+  }
+
+  @Post('risks')
+  @HttpCode(201)
+  createRisk(
+    @Param('id') id: string, @Body() body: unknown, @Headers(IDEMPOTENCY_HEADER) idempotency: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return runProjectCommand(this.risks.create(actor(request), uuid(id), parse(createRiskBody, body), key(idempotency)));
+  }
+
+  @Patch('risks/:riskId')
+  followUpRisk(@Param('id') id: string, @Param('riskId') riskId: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.risks.followUp(actor(request), uuid(id), uuid(riskId), parse(followUpRiskBody, body)));
+  }
+
+  @Get('risks/:riskId/history')
+  riskHistory(@Param('id') id: string, @Param('riskId') riskId: string, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.risks.history(request.internal.userId, uuid(id), uuid(riskId)));
   }
 }
