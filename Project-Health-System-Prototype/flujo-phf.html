@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PHF — Flujo Conceptual Integral</title>
+
+<style>
+:root{
+  --ink:#173b5c;
+  --text:#334e64;
+  --muted:#74889a;
+  --line:#dbe5ec;
+  --surface:#ffffff;
+  --canvas:#f7fafc;
+
+  --green:#15966a;
+  --green-soft:#eaf7f2;
+
+  --blue:#3478c9;
+  --blue-soft:#edf5fd;
+
+  --purple:#7867d7;
+  --purple-soft:#f2effd;
+
+  --orange:#e89a16;
+  --orange-soft:#fff6e6;
+
+  --red:#ec6157;
+  --red-soft:#fff0ee;
+
+  --teal:#20a6a3;
+  --teal-soft:#eaf9f8;
+
+  --navy:#173b5c;
+  --navy-soft:#edf3f7;
+
+  --shadow:0 8px 24px rgba(21,52,78,.07);
+}
+
+*{
+  box-sizing:border-box;
+}
+
+html{
+  scroll-behavior:smooth;
+}
+
+body{
+  margin:0;
+  color:var(--ink);
+  background:#fff;
+
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+header{
+  padding:32px 28px 18px;
+  text-align:center;
+  border-bottom:1px solid #edf2f5;
+}
+
+.eyebrow{
+  color:var(--green);
+  font-size:11px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.15em;
+  margin-bottom:8px;
+}
+
+header h1{
+  margin:0;
+  font-size:clamp(30px,4vw,52px);
+  letter-spacing:-.045em;
+}
+
+header p{
+  max-width:1000px;
+  margin:10px auto 0;
+  color:var(--muted);
+  line-height:1.55;
+  font-size:15px;
+}
+
+.reading-hint{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  margin-top:14px;
+  font-size:12px;
+  color:#61798d;
+}
+
+.reading-hint strong{
+  color:var(--green);
+}
+
+
+/* =========================================================
+   OUTER SCROLLER
+   ========================================================= */
+
+.flow-shell{
+  width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
+
+  padding:28px 0 22px;
+
+  background:
+    linear-gradient(#fff,#f9fbfc);
+
+  scrollbar-width:thin;
+  scrollbar-color:#9db2c2 #eaf0f4;
+}
+
+.flow-shell::-webkit-scrollbar{
+  height:14px;
+}
+
+.flow-shell::-webkit-scrollbar-track{
+  background:#eaf0f4;
+}
+
+.flow-shell::-webkit-scrollbar-thumb{
+  background:#9db2c2;
+  border:4px solid #eaf0f4;
+  border-radius:999px;
+}
+
+
+/* =========================================================
+   FLOW CANVAS
+   ========================================================= */
+
+.flow-canvas{
+  width:max-content;
+  min-width:100%;
+
+  padding:0 55px 25px;
+
+  display:flex;
+  flex-direction:column;
+  gap:28px;
+}
+
+
+/* =========================================================
+   MINI TIMELINE / READING GUIDE
+   ========================================================= */
+
+.stage-guide{
+  display:flex;
+  align-items:center;
+  width:max-content;
+  margin-left:0;
+}
+
+.guide-stage{
+  width:320px;
+  text-align:center;
+}
+
+.guide-stage span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  min-width:160px;
+  min-height:32px;
+
+  padding:6px 14px;
+
+  border-radius:999px;
+  border:1px solid var(--line);
+
+  background:#fff;
+
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+
+  box-shadow:0 3px 10px rgba(20,52,76,.04);
+}
+
+.guide-arrow{
+  width:76px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  color:#91a6b7;
+  font-size:24px;
+}
+
+
+/* =========================================================
+   PRIMARY FLOW
+   ========================================================= */
+
+.primary-flow{
+  display:flex;
+  align-items:stretch;
+  width:max-content;
+}
+
+.stage{
+  width:320px;
+  min-width:320px;
+
+  border:1px solid #dde7ee;
+  border-radius:22px;
+
+  background:#fff;
+
+  padding:17px;
+
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+
+  box-shadow:var(--shadow);
+}
+
+.stage-top{
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  padding-bottom:12px;
+  border-bottom:1px solid #edf2f5;
+}
+
+.step-number{
+  width:34px;
+  height:34px;
+  border-radius:50%;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  flex:0 0 34px;
+
+  color:#fff;
+  font-weight:900;
+  font-size:13px;
+}
+
+.stage-title{
+  min-width:0;
+}
+
+.stage-title h2{
+  margin:0 0 2px;
+  font-size:17px;
+  letter-spacing:-.02em;
+}
+
+.stage-title p{
+  margin:0;
+  color:var(--muted);
+  font-size:10.5px;
+  line-height:1.35;
+}
+
+.flow-arrow{
+  width:76px;
+  min-width:76px;
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+
+  color:#8ca2b3;
+}
+
+.flow-arrow .line{
+  width:54px;
+  height:2px;
+  background:#a7bac8;
+  position:relative;
+}
+
+.flow-arrow .line:after{
+  content:"";
+  position:absolute;
+  right:-1px;
+  top:50%;
+  transform:translateY(-50%);
+
+  border-left:8px solid #a7bac8;
+  border-top:5px solid transparent;
+  border-bottom:5px solid transparent;
+}
+
+.flow-arrow small{
+  width:68px;
+  text-align:center;
+  color:#718698;
+  font-size:9px;
+  margin-top:8px;
+  line-height:1.25;
+}
+
+
+/* =========================================================
+   CONTENT CARDS INSIDE STAGES
+   ========================================================= */
+
+.node{
+  border:1px solid;
+  border-radius:14px;
+  padding:13px 14px;
+}
+
+.node h3{
+  margin:0 0 6px;
+  font-size:14px;
+  letter-spacing:-.01em;
+}
+
+.node p{
+  margin:0;
+  color:var(--text);
+  font-size:11px;
+  line-height:1.45;
+}
+
+.node ul{
+  padding-left:17px;
+  margin:8px 0 0;
+}
+
+.node li{
+  color:var(--text);
+  font-size:10.5px;
+  line-height:1.35;
+  margin-bottom:4px;
+}
+
+.node.green{
+  border-color:#a6d8c7;
+  background:var(--green-soft);
+}
+
+.node.green h3{color:var(--green)}
+
+.node.blue{
+  border-color:#a8c4e8;
+  background:var(--blue-soft);
+}
+
+.node.blue h3{color:var(--blue)}
+
+.node.purple{
+  border-color:#bab1eb;
+  background:var(--purple-soft);
+}
+
+.node.purple h3{color:var(--purple)}
+
+.node.orange{
+  border-color:#efc77f;
+  background:var(--orange-soft);
+}
+
+.node.orange h3{color:var(--orange)}
+
+.node.red{
+  border-color:#efaca6;
+  background:var(--red-soft);
+}
+
+.node.red h3{color:var(--red)}
+
+.node.teal{
+  border-color:#91d5d2;
+  background:var(--teal-soft);
+}
+
+.node.teal h3{color:var(--teal)}
+
+.node.navy{
+  border-color:#b4c6d3;
+  background:var(--navy-soft);
+}
+
+.node.navy h3{color:var(--navy)}
+
+
+.subflow-arrow{
+  min-height:21px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  color:#9ab0c0;
+}
+
+.subflow-arrow:before{
+  content:"";
+  display:block;
+  width:2px;
+  height:13px;
+  background:#b7c7d3;
+}
+
+.subflow-arrow:after{
+  content:"";
+  margin-top:-1px;
+
+  border-top:6px solid #b7c7d3;
+  border-left:4px solid transparent;
+  border-right:4px solid transparent;
+}
+
+.badges{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:8px;
+}
+
+.badge{
+  display:inline-flex;
+  padding:4px 7px;
+
+  border:1px solid rgba(55,85,110,.14);
+  border-radius:999px;
+
+  background:#fff;
+
+  color:#415c72;
+  font-size:9px;
+  font-weight:750;
+}
+
+
+/* =========================================================
+   ASSESSMENT
+   ========================================================= */
+
+.assessment{
+  border:2px solid #a3c7bc;
+
+  background:
+    radial-gradient(circle at 50% 0%,rgba(21,150,106,.12),transparent 55%),
+    #fff;
+}
+
+.assessment-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+}
+
+.metric{
+  border:1px solid #dbe5eb;
+  background:#fff;
+  border-radius:10px;
+
+  padding:8px;
+
+  text-align:center;
+}
+
+.metric strong{
+  display:block;
+  font-size:10px;
+  color:var(--ink);
+  margin-bottom:2px;
+}
+
+.metric span{
+  font-size:9px;
+  color:var(--muted);
+}
+
+.gate{
+  margin-top:8px;
+
+  padding:8px;
+
+  border-radius:9px;
+
+  background:var(--red-soft);
+  border:1px solid #efb2ac;
+
+  color:#a94740;
+
+  font-size:9.5px;
+  font-weight:800;
+  line-height:1.35;
+}
+
+
+/* =========================================================
+   ROLE VIEWS
+   ========================================================= */
+
+.role-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:6px;
+}
+
+.role{
+  display:grid;
+  grid-template-columns:72px 1fr;
+  gap:8px;
+  align-items:center;
+
+  padding:8px 9px;
+
+  border:1px solid #dfe7ed;
+  border-radius:10px;
+  background:#fff;
+}
+
+.role strong{
+  font-size:10px;
+}
+
+.role span{
+  color:var(--muted);
+  font-size:9.5px;
+}
+
+
+/* =========================================================
+   SECONDARY / FEEDBACK FLOW
+   ========================================================= */
+
+.feedback-area{
+  width:100%;
+
+  border:1px solid #dbe5ec;
+  border-radius:22px;
+
+  background:
+    linear-gradient(135deg,#fbfdfe,#f5f9fb);
+
+  padding:20px;
+
+  box-shadow:0 6px 20px rgba(22,52,76,.04);
+}
+
+.feedback-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:30px;
+  margin-bottom:17px;
+}
+
+.feedback-header h2{
+  margin:0 0 3px;
+  font-size:15px;
+}
+
+.feedback-header p{
+  margin:0;
+  color:var(--muted);
+  font-size:10.5px;
+}
+
+.feedback-label{
+  color:var(--green);
+  font-weight:900;
+  font-size:10px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+
+.feedback-flow{
+  display:flex;
+  align-items:center;
+  width:max-content;
+}
+
+.feedback-card{
+  width:290px;
+  min-width:290px;
+
+  padding:13px 14px;
+
+  background:#fff;
+  border:1px solid #dbe5ec;
+  border-radius:14px;
+}
+
+.feedback-card h3{
+  margin:0 0 5px;
+  font-size:12px;
+}
+
+.feedback-card p{
+  margin:0;
+  color:var(--text);
+  font-size:9.8px;
+  line-height:1.4;
+}
+
+.feedback-arrow{
+  width:60px;
+  min-width:60px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.feedback-arrow span{
+  display:block;
+  width:42px;
+  height:2px;
+  background:#a7bac8;
+  position:relative;
+}
+
+.feedback-arrow span:after{
+  content:"";
+  position:absolute;
+  right:-1px;
+  top:50%;
+  transform:translateY(-50%);
+
+  border-left:7px solid #a7bac8;
+  border-top:4px solid transparent;
+  border-bottom:4px solid transparent;
+}
+
+
+/* =========================================================
+   PRINCIPLE
+   ========================================================= */
+
+.principle{
+  width:min(1500px,95vw);
+
+  margin:22px auto 45px;
+
+  padding:22px 26px;
+
+  border-radius:20px;
+
+  background:#102f48;
+  color:white;
+}
+
+.principle small{
+  display:block;
+  margin-bottom:7px;
+
+  color:#6fdeb4;
+  font-weight:900;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+
+.principle p{
+  margin:0;
+  font-size:18px;
+  line-height:1.5;
+}
+
+
+/* =========================================================
+   LEGEND
+   ========================================================= */
+
+.legend{
+  width:min(1500px,95vw);
+  margin:0 auto 25px;
+
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:15px;
+}
+
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:6px;
+
+  color:var(--text);
+  font-size:10px;
+}
+
+.legend-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+}
+
+
+/* =========================================================
+   RESPONSIVE EXTERNAL
+   ========================================================= */
+
+@media(max-width:700px){
+  header{
+    text-align:left;
+  }
+
+  .reading-hint{
+    justify-content:flex-start;
+  }
+
+  .principle p{
+    font-size:15px;
+  }
+}
+
+</style>
+</head>
+
+<body>
+
+
+<!-- =========================================================
+     HEADER
+     ========================================================= -->
+
+<header>
+
+  <div class="eyebrow">
+    Project Health Framework · Flujo conceptual
+  </div>
+
+  <h1>
+    Cómo funciona el PHF de punta a punta
+  </h1>
+
+  <p>
+    El mapa se lee de izquierda a derecha. Cada columna representa una etapa
+    del ciclo de salud; los procesos internos de una etapa se leen de arriba
+    hacia abajo. La pista inferior muestra exclusivamente cómo los cambios y
+    aprendizajes retroalimentan la línea base del proyecto.
+  </p>
+
+  <div class="reading-hint">
+    <strong>COMIENZA AQUÍ</strong>
+    <span>Project → Baseline → Operación → Anticipación → Review → Health Event → Health Assessment → Action → Health Center → Aprendizaje</span>
+  </div>
+
+</header>
+
+
+
+<!-- =========================================================
+     FLOW
+     ========================================================= -->
+
+<section class="flow-shell" id="flowScroller">
+
+  <div class="flow-canvas">
+
+
+    <!-- =====================================================
+         GUIDE
+         ===================================================== -->
+
+    <div class="stage-guide">
+
+      <div class="guide-stage">
+        <span style="color:var(--green)">
+          1 · Definir
+        </span>
+      </div>
+
+      <div class="guide-arrow">→</div>
+
+      <div class="guide-stage">
+        <span style="color:var(--green)">
+          2 · Línea base
+        </span>
+      </div>
+
+      <div class="guide-arrow">→</div>
+
+      <div class="guide-stage">
+        <span style="color:var(--blue)">
+          3 · Operar
+        </span>
+      </div>
+
+      <div class="guide-arrow">→</div>
+
+      <div class="guide-stage">
+        <span style="color:var(--blue)">
+          4 · Observar
+        </span>
+      </div>
+
+      <div class="guide-arrow">→</div>
+
+      <div class="guide-stage">
+        <span style="color:var(--purple)">
+          5 · Anticipar
+        </span>
+      </div>
+
+      <div class="guide-arrow">→</div>
+
+      <div class="guide-stage">
+        <span style="color:var(--purple)">
+          6 · Revisar
+        </span>
+      </div>
+
+      <div class="guide-arrow">→</div>
+
+      <div class="guide-stage">
+        <span style="color:var(--red)">
+          7 · Interpretar
+        </span>
+      </div>
+
+      <div class="guide-arrow">→</div>
+
+      <div class="guide-stage">
+        <span style="color:var(--red)">
+          8 · Evaluar
+        </span>
+      </div>
+
+      <div class="guide-arrow">→</div>
+
+      <div class="guide-stage">
+        <span style="color:var(--teal)">
+          9 · Actuar
+        </span>
+      </div>
+
+      <div class="guide-arrow">→</div>
+
+      <div class="guide-stage">
+        <span style="color:var(--navy)">
+          10 · Gobernar
+        </span>
+      </div>
+
+      <div class="guide-arrow">→</div>
+
+      <div class="guide-stage">
+        <span style="color:var(--blue)">
+          11 · Aprender
+        </span>
+      </div>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         MAIN FLOW
+         ===================================================== -->
+
+    <div class="primary-flow">
+
+
+      <!-- 1 PROJECT -->
+
+      <article class="stage">
+
+        <div class="stage-top">
+
+          <div class="step-number" style="background:var(--green)">
+            1
+          </div>
+
+          <div class="stage-title">
+            <h2>Project</h2>
+            <p>Definir qué estamos gobernando.</p>
+          </div>
+
+        </div>
+
+
+        <div class="node green">
+
+          <h3>
+            Proyecto / Servicio
+          </h3>
+
+          <p>
+            Unidad central del Project Health Framework.
+          </p>
+
+          <div class="badges">
+            <span class="badge">Cliente</span>
+            <span class="badge">Tipo</span>
+            <span class="badge">Estado</span>
+            <span class="badge">Inicio</span>
+            <span class="badge">Fin</span>
+          </div>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node green">
+
+          <h3>
+            Responsabilidad
+          </h3>
+
+          <ul>
+            <li>Project Manager / Gestor</li>
+            <li>Responsable técnico</li>
+            <li>Equipo</li>
+            <li>Contacto cliente</li>
+            <li>Matriz de escalación</li>
+          </ul>
+
+        </div>
+
+      </article>
+
+
+      <div class="flow-arrow">
+        <div class="line"></div>
+        <small>establece compromisos</small>
+      </div>
+
+
+
+      <!-- 2 BASELINE -->
+
+      <article class="stage">
+
+        <div class="stage-top">
+
+          <div class="step-number" style="background:var(--green)">
+            2
+          </div>
+
+          <div class="stage-title">
+            <h2>Baseline</h2>
+            <p>Definir qué debería ocurrir.</p>
+          </div>
+
+        </div>
+
+
+        <div class="node green">
+
+          <h3>
+            Línea base vigente
+          </h3>
+
+          <p>
+            Referencia contra la que se comparará la realidad.
+          </p>
+
+          <ul>
+            <li>Fecha inicio / fin</li>
+            <li>Alcance</li>
+            <li>Esfuerzo</li>
+            <li>Presupuesto / referencia económica</li>
+            <li>Equipo comprometido</li>
+          </ul>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node blue">
+
+          <h3>
+            Milestones
+          </h3>
+
+          <ul>
+            <li>Nombre</li>
+            <li>Entregable</li>
+            <li>Fecha</li>
+            <li>Responsable</li>
+          </ul>
+
+        </div>
+
+      </article>
+
+
+      <div class="flow-arrow">
+        <div class="line"></div>
+        <small>inicia ejecución</small>
+      </div>
+
+
+
+      <!-- 3 EXECUTION -->
+
+      <article class="stage">
+
+        <div class="stage-top">
+
+          <div class="step-number" style="background:var(--blue)">
+            3
+          </div>
+
+          <div class="stage-title">
+            <h2>Ejecución</h2>
+            <p>La realidad del proyecto evoluciona.</p>
+          </div>
+
+        </div>
+
+
+        <div class="node blue">
+
+          <h3>
+            Milestone
+          </h3>
+
+          <p>
+            Cada hito evoluciona respecto a su compromiso original.
+          </p>
+
+          <div class="badges">
+            <span class="badge">Pendiente</span>
+            <span class="badge">En curso</span>
+            <span class="badge">Cumplido</span>
+            <span class="badge">Vencido</span>
+          </div>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node orange">
+
+          <h3>
+            Risk
+          </h3>
+
+          <ul>
+            <li>Proyecto / Cliente</li>
+            <li>Probabilidad</li>
+            <li>Impacto</li>
+            <li>Owner</li>
+            <li>Deadline de mitigación</li>
+          </ul>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node purple">
+
+          <h3>
+            Project Change
+          </h3>
+
+          <p>
+            Cambio formal que puede modificar:
+          </p>
+
+          <div class="badges">
+            <span class="badge">Tiempo</span>
+            <span class="badge">Esfuerzo</span>
+            <span class="badge">Costo</span>
+            <span class="badge">Alcance</span>
+            <span class="badge">Hitos</span>
+          </div>
+
+        </div>
+
+      </article>
+
+
+      <div class="flow-arrow">
+        <div class="line"></div>
+        <small>genera eventos</small>
+      </div>
+
+
+
+      <!-- 4 TIMELINE -->
+
+      <article class="stage">
+
+        <div class="stage-top">
+
+          <div class="step-number" style="background:var(--blue)">
+            4
+          </div>
+
+          <div class="stage-title">
+            <h2>Health Timeline</h2>
+            <p>Ordenar el proyecto en el tiempo.</p>
+          </div>
+
+        </div>
+
+
+        <div class="node blue">
+
+          <h3>
+            Pasado
+          </h3>
+
+          <ul>
+            <li>Hitos cumplidos / vencidos</li>
+            <li>Cambios realizados</li>
+            <li>Riesgos actualizados</li>
+            <li>Reviews anteriores</li>
+          </ul>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node navy">
+
+          <h3>
+            Presente
+          </h3>
+
+          <ul>
+            <li>Estado actual</li>
+            <li>Riesgos abiertos</li>
+            <li>Acciones pendientes</li>
+          </ul>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node blue">
+
+          <h3>
+            Futuro
+          </h3>
+
+          <ul>
+            <li>Hitos próximos</li>
+            <li>Deadlines de riesgos</li>
+            <li>Renovaciones</li>
+            <li>Próximos X ciclos</li>
+          </ul>
+
+        </div>
+
+      </article>
+
+
+      <div class="flow-arrow">
+        <div class="line"></div>
+        <small>calcula expectativas</small>
+      </div>
+
+
+
+      <!-- 5 EXPECTATION ENGINE -->
+
+      <article class="stage">
+
+        <div class="stage-top">
+
+          <div class="step-number" style="background:var(--purple)">
+            5
+          </div>
+
+          <div class="stage-title">
+            <h2>Expectation Engine</h2>
+            <p>Preguntar qué debería haber cambiado.</p>
+          </div>
+
+        </div>
+
+
+        <div class="node purple">
+
+          <h3>
+            Evalúa fechas
+          </h3>
+
+          <ul>
+            <li>¿Venció algún hito?</li>
+            <li>¿Debió mitigarse un riesgo?</li>
+            <li>¿Venció una acción?</li>
+            <li>¿Falta una revisión?</li>
+            <li>¿Se aproxima una renovación?</li>
+          </ul>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node purple">
+
+          <h3>
+            Ventana futura
+          </h3>
+
+          <p>
+            Identifica trabajo esperado dentro de los siguientes
+            ciclos configurados para el proyecto.
+          </p>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node red">
+
+          <h3>
+            Inconsistencia
+          </h3>
+
+          <p>
+            Si el PM responde “nada cambió” pero había eventos
+            esperados, el sistema obliga a revisarlos.
+          </p>
+
+        </div>
+
+      </article>
+
+
+      <div class="flow-arrow">
+        <div class="line"></div>
+        <small>construye revisión</small>
+      </div>
+
+
+
+      <!-- 6 REVIEW -->
+
+      <article class="stage">
+
+        <div class="stage-top">
+
+          <div class="step-number" style="background:var(--purple)">
+            6
+          </div>
+
+          <div class="stage-title">
+            <h2>Health Review</h2>
+            <p>Actualizar en menos de un minuto.</p>
+          </div>
+
+        </div>
+
+
+        <div class="node purple">
+
+          <h3>
+            ¿Qué cambió?
+          </h3>
+
+          <div class="badges">
+            <span class="badge">Cronograma</span>
+            <span class="badge">Hitos</span>
+            <span class="badge">Riesgos</span>
+            <span class="badge">Cliente</span>
+            <span class="badge">Finanzas</span>
+            <span class="badge">Alcance</span>
+          </div>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node navy">
+
+          <h3>
+            Support</h3>
+
+          <p>
+            Soporte ligero para evitar complejidad documental.
+          </p>
+
+          <div class="badges">
+            <span class="badge">Imagen</span>
+            <span class="badge">Screenshot</span>
+            <span class="badge">Texto</span>
+          </div>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node orange">
+
+          <h3>
+            Risk Update
+          </h3>
+
+          <ul>
+            <li>Nueva probabilidad</li>
+            <li>Nuevo deadline</li>
+            <li>Mitigado</li>
+            <li>Materializado</li>
+            <li>Nueva acción</li>
+          </ul>
+
+        </div>
+
+      </article>
+
+
+      <div class="flow-arrow">
+        <div class="line"></div>
+        <small>produce hechos</small>
+      </div>
+
+
+
+      <!-- 7 EVENT -->
+
+      <article class="stage">
+
+        <div class="stage-top">
+
+          <div class="step-number" style="background:var(--red)">
+            7
+          </div>
+
+          <div class="stage-title">
+            <h2>Health Event</h2>
+            <p>Convertir cambios en hechos objetivos.</p>
+          </div>
+
+        </div>
+
+
+        <div class="node red">
+
+          <h3>
+            Tipos de evento
+          </h3>
+
+          <div class="badges">
+            <span class="badge">Hito vencido</span>
+            <span class="badge">Riesgo vencido</span>
+            <span class="badge">Cambio de alcance</span>
+            <span class="badge">Renovación</span>
+            <span class="badge">Desvío financiero</span>
+            <span class="badge">Desvío de proyecto</span>
+          </div>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node red">
+
+          <h3>
+            Diferencia fundamental
+          </h3>
+
+          <p>
+            Un <strong>Health Event</strong> describe lo que ocurrió.
+            Todavía no define qué debe hacer alguien.
+          </p>
+
+        </div>
+
+      </article>
+
+
+      <div class="flow-arrow">
+        <div class="line"></div>
+        <small>recalcula salud</small>
+      </div>
+
+
+
+      <!-- 8 ASSESSMENT -->
+
+      <article class="stage assessment">
+
+        <div class="stage-top">
+
+          <div class="step-number" style="background:var(--red)">
+            8
+          </div>
+
+          <div class="stage-title">
+            <h2>Health Assessment</h2>
+            <p>Interpretar la realidad.</p>
+          </div>
+
+        </div>
+
+
+        <div class="node green">
+
+          <h3>
+            Compara
+          </h3>
+
+          <p>
+            Baseline vigente + cambios aprobados
+            versus estado real.
+          </p>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="assessment-grid">
+
+          <div class="metric">
+            <strong>Health Score</strong>
+            <span>¿Cómo está hoy?</span>
+          </div>
+
+          <div class="metric">
+            <strong>Health Trend</strong>
+            <span>¿Mejora o empeora?</span>
+          </div>
+
+          <div class="metric">
+            <strong>Confidence</strong>
+            <span>¿Confío en el dato?</span>
+          </div>
+
+          <div class="metric">
+            <strong>Forecast</strong>
+            <span>¿Qué podría ocurrir?</span>
+          </div>
+
+        </div>
+
+
+        <div class="gate">
+          HEALTH GATES<br>
+          Desviación proyecto &gt;10% · Desviación financiera &gt;3% ·
+          hitos críticos · cliente · riesgos críticos.
+        </div>
+
+      </article>
+
+
+      <div class="flow-arrow">
+        <div class="line"></div>
+        <small>dispara acciones</small>
+      </div>
+
+
+
+      <!-- 9 TASK -->
+
+      <article class="stage">
+
+        <div class="stage-top">
+
+          <div class="step-number" style="background:var(--teal)">
+            9
+          </div>
+
+          <div class="stage-title">
+            <h2>Health Task</h2>
+            <p>Convertir alerta en trabajo.</p>
+          </div>
+
+        </div>
+
+
+        <div class="node teal">
+
+          <h3>
+            Acción requerida
+          </h3>
+
+          <ul>
+            <li>Qué debe hacerse</li>
+            <li>Responsable</li>
+            <li>Deadline</li>
+            <li>Prioridad</li>
+            <li>Estado</li>
+          </ul>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node teal">
+
+          <h3>
+            Seguimiento
+          </h3>
+
+          <div class="badges">
+            <span class="badge">Pendiente</span>
+            <span class="badge">En curso</span>
+            <span class="badge">Bloqueada</span>
+            <span class="badge">Completada</span>
+          </div>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node navy">
+
+          <h3>
+            Cierre
+          </h3>
+
+          <p>
+            Comentario y/o soporte que confirma la resolución.
+          </p>
+
+        </div>
+
+      </article>
+
+
+      <div class="flow-arrow">
+        <div class="line"></div>
+        <small>prioriza información</small>
+      </div>
+
+
+
+      <!-- 10 CENTER -->
+
+      <article class="stage">
+
+        <div class="stage-top">
+
+          <div class="step-number" style="background:var(--navy)">
+            10
+          </div>
+
+          <div class="stage-title">
+            <h2>Health Center</h2>
+            <p>Gobernanza según el rol.</p>
+          </div>
+
+        </div>
+
+
+        <div class="role-grid">
+
+          <div class="role">
+            <strong>PM</strong>
+            <span>¿Qué debo atender hoy?</span>
+          </div>
+
+          <div class="role">
+            <strong>Líder</strong>
+            <span>¿Dónde debo intervenir?</span>
+          </div>
+
+          <div class="role">
+            <strong>Director</strong>
+            <span>¿Cómo está la práctica?</span>
+          </div>
+
+        </div>
+
+
+        <div class="node red">
+
+          <h3>
+            Focos de atención
+          </h3>
+
+          <ul>
+            <li>Proyectos rojos / amarillos</li>
+            <li>Desviación financiera</li>
+            <li>Proyectos sin Review</li>
+            <li>Riesgos vencidos</li>
+            <li>Próximas renovaciones</li>
+          </ul>
+
+        </div>
+
+      </article>
+
+
+      <div class="flow-arrow">
+        <div class="line"></div>
+        <small>conserva aprendizaje</small>
+      </div>
+
+
+
+      <!-- 11 HISTORY -->
+
+      <article class="stage">
+
+        <div class="stage-top">
+
+          <div class="step-number" style="background:var(--blue)">
+            11
+          </div>
+
+          <div class="stage-title">
+            <h2>Health History</h2>
+            <p>Entender cómo llegamos aquí.</p>
+          </div>
+
+        </div>
+
+
+        <div class="node blue">
+
+          <h3>
+            Histórico completo
+          </h3>
+
+          <ul>
+            <li>Health Scores</li>
+            <li>Health Reviews</li>
+            <li>Risk Updates</li>
+            <li>Project Changes</li>
+            <li>Milestone Updates</li>
+            <li>Health Tasks</li>
+          </ul>
+
+        </div>
+
+
+        <div class="subflow-arrow"></div>
+
+
+        <div class="node green">
+
+          <h3>
+            Aprendizaje
+          </h3>
+
+          <p>
+            Permite identificar patrones de deterioro, recuperación
+            y causas recurrentes en los proyectos de la práctica.
+          </p>
+
+        </div>
+
+      </article>
+
+    </div>
+
+
+
+    <!-- =====================================================
+         FEEDBACK / CONTROL LOOP
+         ===================================================== -->
+
+    <section class="feedback-area">
+
+      <div class="feedback-header">
+
+        <div>
+          <div class="feedback-label">
+            Flujo de retroalimentación
+          </div>
+
+          <h2>
+            Cómo vuelve a comenzar el ciclo
+          </h2>
+
+          <p>
+            Esta pista se lee de izquierda a derecha y evita mezclar
+            los cambios estructurales con el flujo operativo principal.
+          </p>
+        </div>
+
+      </div>
+
+
+      <div class="feedback-flow">
+
+
+        <div class="feedback-card">
+
+          <h3 style="color:var(--orange)">
+            1 · Risk Update
+          </h3>
+
+          <p>
+            Un riesgo puede cambiar probabilidad, impacto, deadline,
+            estrategia de mitigación o estado sin perder su historia.
+          </p>
+
+        </div>
+
+
+        <div class="feedback-arrow">
+          <span></span>
+        </div>
+
+
+        <div class="feedback-card">
+
+          <h3 style="color:var(--purple)">
+            2 · Project Change
+          </h3>
+
+          <p>
+            Un cambio aprobado puede modificar tiempo, esfuerzo,
+            presupuesto, alcance, equipo o hitos.
+          </p>
+
+        </div>
+
+
+        <div class="feedback-arrow">
+          <span></span>
+        </div>
+
+
+        <div class="feedback-card">
+
+          <h3 style="color:var(--purple)">
+            3 · Change Approval
+          </h3>
+
+          <p>
+            El cambio se registra y se distingue explícitamente de
+            una desviación no controlada.
+          </p>
+
+        </div>
+
+
+        <div class="feedback-arrow">
+          <span></span>
+        </div>
+
+
+        <div class="feedback-card">
+
+          <h3 style="color:var(--green)">
+            4 · Baseline vN+1
+          </h3>
+
+          <p>
+            Si el cambio es aceptado, se crea una nueva línea base
+            vigente sin eliminar la anterior.
+          </p>
+
+        </div>
+
+
+        <div class="feedback-arrow">
+          <span></span>
+        </div>
+
+
+        <div class="feedback-card">
+
+          <h3 style="color:var(--blue)">
+            5 · Nuevo Timeline
+          </h3>
+
+          <p>
+            Fechas, riesgos, hitos y compromisos futuros se recalculan
+            usando la Baseline actualizada.
+          </p>
+
+        </div>
+
+
+        <div class="feedback-arrow">
+          <span></span>
+        </div>
+
+
+        <div class="feedback-card">
+
+          <h3 style="color:var(--purple)">
+            6 · Nuevo Health Cycle
+          </h3>
+
+          <p>
+            El PHS vuelve a observar qué debe ocurrir y reinicia
+            el ciclo de anticipación, revisión y evaluación.
+          </p>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+  </div>
+
+</section>
+
+
+
+<!-- =========================================================
+     LEGEND
+     ========================================================= -->
+
+<div class="legend">
+
+  <div class="legend-item">
+    <span class="legend-dot" style="background:var(--green)"></span>
+    Project / Baseline
+  </div>
+
+  <div class="legend-item">
+    <span class="legend-dot" style="background:var(--blue)"></span>
+    Ejecución / Timeline / Historia
+  </div>
+
+  <div class="legend-item">
+    <span class="legend-dot" style="background:var(--purple)"></span>
+    Anticipación / Review / Cambios
+  </div>
+
+  <div class="legend-item">
+    <span class="legend-dot" style="background:var(--orange)"></span>
+    Riesgos
+  </div>
+
+  <div class="legend-item">
+    <span class="legend-dot" style="background:var(--red)"></span>
+    Events / Evaluación
+  </div>
+
+  <div class="legend-item">
+    <span class="legend-dot" style="background:var(--teal)"></span>
+    Acciones
+  </div>
+
+</div>
+
+
+
+<!-- =========================================================
+     PRINCIPLE
+     ========================================================= -->
+
+<section class="principle">
+
+  <small>
+    Principio estructural del PHF
+  </small>
+
+  <p>
+    La salud no se determina comparando simplemente “plan vs. realidad”:
+    se compara la <strong>Baseline vigente + los cambios aprobados</strong>
+    contra el estado real. Una modificación controlada actualiza la Baseline;
+    una diferencia no aprobada permanece como desviación y afecta la salud.
+  </p>
+
+</section>
+
+
+
+<script>
+
+/*
+  Permite usar Shift + rueda para navegar horizontalmente
+  cuando el usuario está sobre el flujo.
+*/
+
+const scroller =
+  document.getElementById("flowScroller");
+
+scroller.addEventListener(
+  "wheel",
+  function(event){
+
+    if(
+      Math.abs(event.deltaY) >
+      Math.abs(event.deltaX)
+    ){
+
+      if(event.shiftKey){
+
+        event.preventDefault();
+
+        scroller.scrollLeft +=
+          event.deltaY;
+
+      }
+
+    }
+
+  },
+  { passive:false }
+);
+
+</script>
+
+</body>
+</html>

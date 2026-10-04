@@ -1,0 +1,25 @@
+# Project Health System (PHS)
+
+Aplicación para gestionar la salud de proyectos y servicios mediante el Project Health Framework (PHF).
+
+El repositorio contiene un prototipo navegable y el diseño inicial de arquitectura y base de datos. El backend multiusuario todavía no está implementado.
+
+## Contenido
+
+- [Prototipo y guía de uso](Project-Health-System-Prototype/README.md).
+- [Arquitectura propuesta](docs/ARQUITECTURA-PHS.md).
+- [Diseño de PostgreSQL y diagrama](docs/DATABASE-PHS.md).
+- [Migración inicial](db/migrations/001_initial.sql).
+- [Pruebas de integridad](db/tests/001_integrity.sql).
+
+## Abrir el prototipo
+
+Desde la raíz del repositorio:
+
+```sh
+python3 Project-Health-System-Prototype/app.py
+```
+
+Abrir [localhost:8000](http://localhost:8000). Los datos del prototipo se guardan en el navegador; todavía no utiliza PostgreSQL.
+
+La instalación y validación del esquema se describen en la guía de base de datos.

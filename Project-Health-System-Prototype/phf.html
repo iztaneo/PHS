@@ -1,0 +1,2674 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Health Framework + Project Health System</title>
+
+<style>
+:root{
+  --ink:#12304c;
+  --muted:#53697e;
+  --line:#d8e2ea;
+  --soft:#f7fafc;
+
+  --green:#15966a;
+  --greenSoft:#e9f7f1;
+
+  --blue:#3478c9;
+  --blueSoft:#eef5fd;
+
+  --purple:#7665d7;
+  --purpleSoft:#f2effd;
+
+  --orange:#f6a313;
+  --orangeSoft:#fff7e6;
+
+  --red:#f05d52;
+  --redSoft:#fff0ee;
+
+  --teal:#22a6a4;
+  --tealSoft:#eaf9f8;
+
+  --shadow:0 10px 28px rgba(21,48,74,.10);
+}
+
+*{
+  box-sizing:border-box;
+}
+
+html{
+  scroll-behavior:smooth;
+}
+
+body{
+  margin:0;
+  background:
+    radial-gradient(circle at 50% 36%,rgba(21,150,106,.055),transparent 22%),
+    linear-gradient(#fff,#fbfdfe);
+  color:var(--ink);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+button,
+a{
+  font:inherit;
+}
+
+button{
+  border:0;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.header{
+  text-align:center;
+  padding:30px 30px 10px;
+}
+
+.header h1{
+  font-size:clamp(25px,3vw,44px);
+  letter-spacing:-.035em;
+  margin:0;
+  color:#173b5c;
+}
+
+.header p{
+  color:#344e68;
+  margin:8px auto 0;
+  max-width:1000px;
+  font-size:clamp(14px,1.5vw,20px);
+}
+
+.link-note{
+  text-align:center;
+  color:#718497;
+  font-size:11px;
+  margin:3px 0 17px;
+}
+
+
+/* =========================================================
+   CANVAS DEL MODELO
+   ========================================================= */
+
+.board-wrap{
+  width:100%;
+  max-width:none;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding:20px 0 35px;
+
+  scrollbar-width:thin;
+  scrollbar-color:#9fb3c4 #eef3f6;
+}
+
+.board-wrap::-webkit-scrollbar{
+  height:12px;
+}
+
+.board-wrap::-webkit-scrollbar-track{
+  background:#eef3f6;
+  border-radius:999px;
+}
+
+.board-wrap::-webkit-scrollbar-thumb{
+  background:#9fb3c4;
+  border-radius:999px;
+  border:3px solid #eef3f6;
+}
+
+.board{
+  position:relative;
+
+  width:2200px;
+  min-width:2200px;
+
+  height:850px;
+  min-height:850px;
+
+  margin:0 auto;
+  border-radius:30px;
+}
+
+
+/* =========================================================
+   CONNECTORS
+   ========================================================= */
+
+.connectors{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:1;
+}
+
+.connector{
+  fill:none;
+  stroke-width:2.3;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  opacity:.95;
+}
+
+.connector-dot{
+  stroke:white;
+  stroke-width:3;
+}
+
+
+/* =========================================================
+   HUB CENTRAL
+   ========================================================= */
+
+.hub{
+  position:absolute;
+
+  left:910px;
+  top:185px;
+
+  transform:none;
+
+  width:380px;
+  height:380px;
+
+  border-radius:50%;
+  background:white;
+
+  z-index:3;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  text-align:center;
+  padding:38px;
+
+  box-shadow:
+    0 0 0 8px rgba(35,166,164,.12),
+    0 0 0 15px rgba(52,120,201,.09),
+    0 15px 45px rgba(17,55,85,.15);
+}
+
+.hub:before{
+  content:"";
+  position:absolute;
+  inset:-14px;
+  border-radius:50%;
+  border:6px solid transparent;
+  border-top-color:var(--green);
+  border-right-color:var(--blue);
+  border-bottom-color:var(--blue);
+  border-left-color:var(--green);
+  opacity:.7;
+}
+
+.hub-content{
+  position:relative;
+  z-index:2;
+}
+
+.hub .kicker{
+  color:var(--green);
+  font-weight:800;
+  font-size:17px;
+}
+
+.hub h2{
+  margin:5px 0 4px;
+  font-size:41px;
+  letter-spacing:-.05em;
+}
+
+.hub h3{
+  margin:0 0 15px;
+  color:var(--green);
+  font-size:19px;
+}
+
+.hub p{
+  font-size:14px;
+  color:#213c55;
+  line-height:1.45;
+  margin:0 auto 20px;
+}
+
+.hub-split{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.hub-mini{
+  border:1px solid var(--line);
+  border-radius:11px;
+  padding:12px 8px;
+  cursor:pointer;
+  background:#fff;
+  transition:.2s ease;
+}
+
+.hub-mini:hover{
+  transform:translateY(-2px);
+  box-shadow:var(--shadow);
+}
+
+.hub-mini.phf{
+  border-color:#84cfb5;
+  background:var(--greenSoft);
+}
+
+.hub-mini.phs{
+  border-color:#8bb3e6;
+  background:var(--blueSoft);
+}
+
+.hub-mini b{
+  font-size:20px;
+}
+
+.hub-mini small{
+  display:block;
+  font-size:10px;
+  margin-top:3px;
+  color:var(--muted);
+}
+
+
+/* =========================================================
+   TARJETAS PRINCIPALES
+   ========================================================= */
+
+.component{
+  position:absolute;
+
+  width:330px;
+  min-height:110px;
+
+  display:flex;
+  align-items:center;
+  gap:15px;
+
+  border-radius:18px;
+  padding:19px;
+
+  cursor:pointer;
+
+  z-index:5;
+
+  background:#fff;
+  border:1px solid;
+
+  box-shadow:0 5px 18px rgba(25,59,86,.06);
+  transition:.2s ease;
+}
+
+.component:hover{
+  transform:translateY(-3px);
+  box-shadow:var(--shadow);
+}
+
+.component-icon{
+  width:56px;
+  height:56px;
+  flex:0 0 56px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+}
+
+.component-icon svg{
+  width:30px;
+  height:30px;
+  stroke:currentColor;
+}
+
+.component h3{
+  margin:0 0 8px;
+  font-size:19px;
+}
+
+.component p{
+  margin:0;
+  color:#31495f;
+  font-size:12px;
+  line-height:1.45;
+}
+
+
+/* IZQUIERDA */
+
+.core{
+  left:315px;
+  top:60px;
+
+  border-color:#72c5aa;
+  background:linear-gradient(90deg,#fff,var(--greenSoft));
+}
+
+.core .component-icon{
+  background:var(--green);
+}
+
+.core h3{
+  color:var(--green);
+}
+
+.model{
+  left:315px;
+  top:300px;
+
+  border-color:#80ace0;
+  background:linear-gradient(90deg,#fff,var(--blueSoft));
+}
+
+.model .component-icon{
+  background:var(--blue);
+}
+
+.model h3{
+  color:var(--blue);
+}
+
+.review{
+  left:315px;
+  top:540px;
+
+  border-color:#aaa1e9;
+  background:linear-gradient(90deg,#fff,var(--purpleSoft));
+}
+
+.review .component-icon{
+  background:var(--purple);
+}
+
+.review h3{
+  color:var(--purple);
+}
+
+
+/* DERECHA */
+
+.timeline{
+  left:1555px;
+  top:60px;
+
+  border-color:#f6bf59;
+  background:linear-gradient(270deg,#fff,var(--orangeSoft));
+}
+
+.timeline .component-icon{
+  background:var(--orange);
+}
+
+.timeline h3{
+  color:var(--orange);
+}
+
+.center-card{
+  left:1555px;
+  top:300px;
+
+  border-color:#f28d85;
+  background:linear-gradient(270deg,#fff,var(--redSoft));
+}
+
+.center-card .component-icon{
+  background:var(--red);
+}
+
+.center-card h3{
+  color:var(--red);
+}
+
+.actions{
+  left:1555px;
+  top:540px;
+
+  border-color:#6dc8c7;
+  background:linear-gradient(270deg,#fff,var(--tealSoft));
+}
+
+.actions .component-icon{
+  background:var(--teal);
+}
+
+.actions h3{
+  color:var(--teal);
+}
+
+
+/* =========================================================
+   RAMIFICACIONES
+   ========================================================= */
+
+.branch{
+  position:absolute;
+
+  width:275px;
+
+  display:flex;
+  flex-direction:column;
+
+  gap:2px;
+
+  z-index:6;
+}
+
+.branch.left{
+  left:15px;
+  text-align:right;
+}
+
+.branch.right{
+  left:1910px;
+  text-align:left;
+}
+
+.branch-core{
+  top:26px;
+  color:var(--green);
+}
+
+.branch-model{
+  top:260px;
+  color:var(--blue);
+}
+
+.branch-review{
+  top:510px;
+  color:var(--purple);
+}
+
+.branch-timeline{
+  top:22px;
+  color:var(--orange);
+}
+
+.branch-center{
+  top:260px;
+  color:var(--red);
+}
+
+.branch-actions{
+  top:510px;
+  color:var(--teal);
+}
+
+
+/* =========================================================
+   ITEMS DE RAMAS
+   ========================================================= */
+
+.branch-item{
+  position:relative;
+
+  display:block;
+
+  min-height:27px;
+  padding:6px 18px;
+
+  color:#17334e;
+  text-decoration:none;
+
+  font-size:12px;
+  line-height:1.3;
+
+  border-radius:8px;
+
+  cursor:pointer;
+
+  transition:.18s ease;
+
+  white-space:normal;
+}
+
+.branch.left .branch-item{
+  padding-right:22px;
+}
+
+.branch.right .branch-item{
+  padding-left:22px;
+}
+
+.branch-item:hover{
+  background:#fff;
+  box-shadow:0 4px 12px rgba(26,55,80,.10);
+}
+
+.branch.left .branch-item:hover{
+  transform:translateX(-3px);
+}
+
+.branch.right .branch-item:hover{
+  transform:translateX(3px);
+}
+
+.branch-item:after{
+  content:"";
+
+  position:absolute;
+
+  width:6px;
+  height:6px;
+
+  top:50%;
+
+  transform:translateY(-50%);
+
+  border-radius:50%;
+
+  background:currentColor;
+}
+
+.branch.left .branch-item:after{
+  right:5px;
+}
+
+.branch.right .branch-item:after{
+  left:5px;
+}
+
+
+/* =========================================================
+   PRINCIPIO CENTRAL
+   ========================================================= */
+
+.central-principle{
+  position:absolute;
+
+  left:990px;
+  top:595px;
+
+  transform:none;
+
+  width:220px;
+
+  padding:14px;
+
+  text-align:center;
+
+  border:1px dashed #87a2b5;
+  background:#fff;
+
+  border-radius:12px;
+
+  z-index:5;
+
+  cursor:pointer;
+
+  transition:.2s;
+}
+
+.central-principle:hover{
+  box-shadow:var(--shadow);
+}
+
+.central-principle strong{
+  color:var(--green);
+  display:block;
+  margin-bottom:5px;
+  font-size:13px;
+}
+
+.central-principle span{
+  font-size:12px;
+  color:#243c52;
+}
+
+
+/* =========================================================
+   RESULTADOS
+   ========================================================= */
+
+.section-title{
+  font-size:13px;
+  font-weight:900;
+  color:#173b5c;
+  text-align:center;
+  margin-bottom:12px;
+}
+
+.results{
+  margin:0 auto 22px;
+  max-width:1440px;
+  background:white;
+  border:1px solid #cfdce6;
+  border-radius:18px;
+  padding:18px 22px;
+  box-shadow:0 6px 20px rgba(28,58,82,.04);
+}
+
+.results-grid{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+}
+
+.result{
+  min-height:88px;
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:5px 14px;
+  border-right:1px solid #dfe7ed;
+  cursor:pointer;
+  border-radius:10px;
+  transition:.18s;
+}
+
+.result:last-child{
+  border-right:0;
+}
+
+.result:hover{
+  background:#f7fafc;
+}
+
+.result-icon{
+  font-size:29px;
+  flex:0 0 auto;
+}
+
+.result div{
+  font-size:11px;
+  line-height:1.35;
+  color:#263d51;
+}
+
+
+/* =========================================================
+   PRINCIPIOS
+   ========================================================= */
+
+.principles{
+  margin:0 auto 25px;
+  max-width:1490px;
+  background:white;
+  border:1px solid #cfdce6;
+  border-radius:18px;
+  padding:15px 20px 18px;
+}
+
+.principle-grid{
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+}
+
+.principle{
+  min-height:58px;
+  padding:8px 13px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  border-right:1px solid #dfe7ed;
+  font-size:10.5px;
+  color:#263d51;
+  cursor:pointer;
+  transition:.18s;
+}
+
+.principle:last-child{
+  border-right:0;
+}
+
+.principle:hover{
+  background:#f7fafc;
+}
+
+.principle .symbol{
+  font-size:22px;
+}
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:100;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(10,28,43,.62);
+  backdrop-filter:blur(6px);
+  padding:25px;
+}
+
+.modal-backdrop.open{
+  display:flex;
+}
+
+.modal{
+  width:min(760px,96vw);
+  max-height:90vh;
+  overflow:auto;
+  border-radius:22px;
+  background:#fff;
+  box-shadow:0 25px 80px rgba(4,20,32,.30);
+  animation:modalIn .18s ease;
+}
+
+@keyframes modalIn{
+  from{
+    opacity:0;
+    transform:translateY(12px) scale(.98);
+  }
+  to{
+    opacity:1;
+    transform:none;
+  }
+}
+
+.modal-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:20px;
+  padding:25px 28px 18px;
+  border-bottom:1px solid #e5edf2;
+}
+
+.modal-header .eyebrow{
+  color:var(--green);
+  text-transform:uppercase;
+  font-weight:900;
+  letter-spacing:.12em;
+  font-size:11px;
+  margin-bottom:6px;
+}
+
+.modal-header h2{
+  margin:0;
+  font-size:28px;
+  letter-spacing:-.03em;
+}
+
+.close{
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  background:#eef3f6;
+  cursor:pointer;
+  color:#28445c;
+  font-size:21px;
+}
+
+.close:hover{
+  background:#e1eaf0;
+}
+
+.modal-body{
+  padding:25px 28px 30px;
+}
+
+.detail-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.detail{
+  border:1px solid #dde7ee;
+  border-radius:15px;
+  padding:17px;
+  background:#fbfdfe;
+}
+
+.detail.full{
+  grid-column:1 / -1;
+}
+
+.detail label{
+  display:block;
+  color:#718497;
+  font-size:10px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.09em;
+  margin-bottom:8px;
+}
+
+.detail p,
+.detail div{
+  margin:0;
+  color:#253e53;
+  font-size:14px;
+  line-height:1.55;
+}
+
+.form-row{
+  margin-top:17px;
+}
+
+.form-row label{
+  font-size:11px;
+  color:#718497;
+  display:block;
+  margin-bottom:6px;
+}
+
+.form-row textarea{
+  width:100%;
+  min-height:88px;
+  resize:vertical;
+  border:1px solid #cad8e2;
+  border-radius:11px;
+  padding:12px;
+  font:inherit;
+  color:#18354d;
+}
+
+.modal-footer{
+  display:flex;
+  justify-content:flex-end;
+  padding:0 28px 27px;
+}
+
+.modal-footer button{
+  background:#163d5e;
+  color:#fff;
+  border-radius:10px;
+  padding:11px 18px;
+  cursor:pointer;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   Mantiene geometría + scroll horizontal
+   ========================================================= */
+
+@media(max-width:2200px){
+
+  .board{
+    margin-left:0;
+    margin-right:0;
+  }
+
+}
+
+@media(max-width:900px){
+
+  .results{
+    margin-left:20px;
+    margin-right:20px;
+  }
+
+  .results-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .result{
+    border-right:0;
+    border-bottom:1px solid #e4ebf0;
+  }
+
+  .principles{
+    margin-left:20px;
+    margin-right:20px;
+  }
+
+  .principle-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .principle{
+    border-right:0;
+    border-bottom:1px solid #e4ebf0;
+  }
+
+}
+
+@media(max-width:700px){
+
+  .header{
+    min-width:700px;
+    text-align:left;
+    padding-left:24px;
+  }
+
+  .link-note{
+    min-width:700px;
+    text-align:left;
+    padding-left:24px;
+  }
+
+  .detail-grid{
+    grid-template-columns:1fr;
+  }
+
+  .detail.full{
+    grid-column:auto;
+  }
+
+}
+</style>
+</head>
+
+<body>
+
+<header class="header">
+  <h1>PROJECT HEALTH FRAMEWORK (PHF) + PROJECT HEALTH SYSTEM (PHS)</h1>
+  <p>
+    Un modelo integral para gobernar la salud de todos los proyectos y servicios de la práctica
+  </p>
+</header>
+
+<div class="link-note">
+  Selecciona cualquier componente o elemento para consultar su definición, objetivo y criterios.
+</div>
+
+
+<main>
+
+  <div class="board-wrap">
+
+    <section class="board">
+
+      <!-- =====================================================
+           CONNECTORS
+           ===================================================== -->
+
+      <svg
+        class="connectors"
+        viewBox="0 0 2200 850"
+        preserveAspectRatio="none"
+      >
+
+        <!-- CORE -->
+        <path
+          class="connector"
+          stroke="#15966a"
+          d="M645 115 C760 115 805 220 915 265"
+        />
+
+        <circle
+          class="connector-dot"
+          fill="#15966a"
+          cx="915"
+          cy="265"
+          r="8"
+        />
+
+
+        <!-- HEALTH MODEL -->
+        <path
+          class="connector"
+          stroke="#3478c9"
+          d="M645 355 C760 355 820 375 910 375"
+        />
+
+        <circle
+          class="connector-dot"
+          fill="#3478c9"
+          cx="910"
+          cy="375"
+          r="8"
+        />
+
+
+        <!-- HEALTH REVIEW -->
+        <path
+          class="connector"
+          stroke="#7665d7"
+          d="M645 595 C760 595 805 535 935 500"
+        />
+
+        <circle
+          class="connector-dot"
+          fill="#7665d7"
+          cx="935"
+          cy="500"
+          r="8"
+        />
+
+
+        <!-- HEALTH TIMELINE -->
+        <path
+          class="connector"
+          stroke="#f6a313"
+          d="M1555 115 C1440 115 1395 220 1285 265"
+        />
+
+        <circle
+          class="connector-dot"
+          fill="#f6a313"
+          cx="1285"
+          cy="265"
+          r="8"
+        />
+
+
+        <!-- HEALTH CENTER -->
+        <path
+          class="connector"
+          stroke="#f05d52"
+          d="M1555 355 C1440 355 1380 375 1290 375"
+        />
+
+        <circle
+          class="connector-dot"
+          fill="#f05d52"
+          cx="1290"
+          cy="375"
+          r="8"
+        />
+
+
+        <!-- HEALTH ACTIONS -->
+        <path
+          class="connector"
+          stroke="#22a6a4"
+          d="M1555 595 C1440 595 1395 535 1265 500"
+        />
+
+        <circle
+          class="connector-dot"
+          fill="#22a6a4"
+          cx="1265"
+          cy="500"
+          r="8"
+        />
+
+      </svg>
+
+
+      <!-- =====================================================
+           RAMAS IZQUIERDA
+           ===================================================== -->
+
+      <nav class="branch left branch-core">
+
+        <a class="branch-item js-info" data-key="project">
+          Proyecto / Servicio
+        </a>
+
+        <a class="branch-item js-info" data-key="client">
+          Cliente
+        </a>
+
+        <a class="branch-item js-info" data-key="scope">
+          Descripción y Alcance
+        </a>
+
+        <a class="branch-item js-info" data-key="dates">
+          Fechas Clave
+        </a>
+
+        <a class="branch-item js-info" data-key="roles">
+          Responsables
+        </a>
+
+        <a class="branch-item js-info" data-key="team">
+          Equipo
+        </a>
+
+        <a class="branch-item js-info" data-key="serviceType">
+          Categoría / Tipo de Servicio
+        </a>
+
+        <a class="branch-item js-info" data-key="projectStatus">
+          Estado del Proyecto
+        </a>
+
+      </nav>
+
+
+      <nav class="branch left branch-model">
+
+        <a class="branch-item js-info" data-key="score">
+          Health Score (0–100)
+        </a>
+
+        <a class="branch-item js-info" data-key="dimensions">
+          Dimensiones de Salud
+        </a>
+
+        <a class="branch-item js-info" data-key="metrics">
+          Métricas Clave
+        </a>
+
+        <a class="branch-item js-info" data-key="projectDeviation">
+          Desviación de Proyecto (&gt;10%)
+        </a>
+
+        <a class="branch-item js-info" data-key="financialDeviation">
+          Desviación Financiera (&gt;3%)
+        </a>
+
+        <a class="branch-item js-info" data-key="gates">
+          Health Gates
+        </a>
+
+        <a class="branch-item js-info" data-key="confidence">
+          Health Confidence
+        </a>
+
+        <a class="branch-item js-info" data-key="trend">
+          Health Trend
+        </a>
+
+        <a class="branch-item js-info" data-key="forecast">
+          Health Forecast
+        </a>
+
+      </nav>
+
+
+      <nav class="branch left branch-review">
+
+        <a class="branch-item js-info" data-key="cycle">
+          Ciclo de Revisión
+        </a>
+
+        <a class="branch-item js-info" data-key="oneMinute">
+          Actualización &lt; 1 minuto
+        </a>
+
+        <a class="branch-item js-info" data-key="changes">
+          Qué cambió desde la última revisión
+        </a>
+
+        <a class="branch-item js-info" data-key="expectedEvents">
+          Eventos próximos y vencidos
+        </a>
+
+        <a class="branch-item js-info" data-key="support">
+          Soportes (imagen y/o texto)
+        </a>
+
+        <a class="branch-item js-info" data-key="reviewConfidence">
+          Nivel de Confianza
+        </a>
+
+      </nav>
+
+
+      <!-- =====================================================
+           RAMAS DERECHA
+           ===================================================== -->
+
+      <nav class="branch right branch-timeline">
+
+        <a class="branch-item js-info" data-key="nextMilestones">
+          Hitos próximos
+        </a>
+
+        <a class="branch-item js-info" data-key="expiredMilestones">
+          Hitos vencidos
+        </a>
+
+        <a class="branch-item js-info" data-key="activeRisks">
+          Riesgos activos
+        </a>
+
+        <a class="branch-item js-info" data-key="nextEvents">
+          Eventos próximos
+        </a>
+
+        <a class="branch-item js-info" data-key="renewals">
+          Renovaciones y vencimientos
+        </a>
+
+        <a class="branch-item js-info" data-key="scopeChanges">
+          Cambios de alcance
+        </a>
+
+        <a class="branch-item js-info" data-key="eventHistory">
+          Historial de eventos
+        </a>
+
+      </nav>
+
+
+      <nav class="branch right branch-center">
+
+        <a class="branch-item js-info" data-key="pmView">
+          Vista Project Manager
+        </a>
+
+        <a class="branch-item js-info" data-key="leadView">
+          Vista Líder / Practice Lead
+        </a>
+
+        <a class="branch-item js-info" data-key="directionView">
+          Vista Dirección
+        </a>
+
+        <a class="branch-item js-info" data-key="portfolio">
+          Portafolio de Proyectos
+        </a>
+
+        <a class="branch-item js-info" data-key="priorities">
+          Alertas y Prioridades
+        </a>
+
+        <a class="branch-item js-info" data-key="attention">
+          Focos de Atención
+        </a>
+
+        <a class="branch-item js-info" data-key="tasks">
+          Tareas y Acciones
+        </a>
+
+      </nav>
+
+
+      <nav class="branch right branch-actions">
+
+        <a class="branch-item js-info" data-key="autoActions">
+          Generación automática de acciones
+        </a>
+
+        <a class="branch-item js-info" data-key="actionOwner">
+          Asignación de responsable
+        </a>
+
+        <a class="branch-item js-info" data-key="deadline">
+          Plazo y prioridad
+        </a>
+
+        <a class="branch-item js-info" data-key="followUp">
+          Seguimiento y estatus
+        </a>
+
+        <a class="branch-item js-info" data-key="closure">
+          Cierre y validación
+        </a>
+
+        <a class="branch-item js-info" data-key="actionHistory">
+          Historial de acciones
+        </a>
+
+      </nav>
+
+
+      <!-- =====================================================
+           COMPONENTES
+           ===================================================== -->
+
+      <article class="component core js-info" data-key="core">
+
+        <div class="component-icon">
+
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+            <path d="M9 5h6"/>
+            <path d="M9 3h6v4H9z"/>
+            <rect x="5" y="5" width="14" height="16" rx="2"/>
+            <path d="M8 11h8M8 15h8M8 19h5"/>
+          </svg>
+
+        </div>
+
+        <div>
+          <h3>1. PHS CORE</h3>
+          <p>
+            Información esencial y estructural de cada proyecto o servicio.
+          </p>
+        </div>
+
+      </article>
+
+
+      <article class="component model js-info" data-key="healthModel">
+
+        <div class="component-icon">
+
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+            <path d="M3 12h4l2-5 3 10 2-5h7"/>
+            <path d="M12 21C6 17 3 14 3 9.5A4.5 4.5 0 0 1 11 6a4.5 4.5 0 0 1 8 3.5C19 14 16 17 12 21z"/>
+          </svg>
+
+        </div>
+
+        <div>
+          <h3>2. HEALTH MODEL</h3>
+          <p>
+            Modelo de salud basado en dimensiones, métricas y reglas objetivas.
+          </p>
+        </div>
+
+      </article>
+
+
+      <article class="component review js-info" data-key="healthReview">
+
+        <div class="component-icon">
+
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+            <path d="M20 12a8 8 0 1 1-2.3-5.7"/>
+            <path d="M20 4v6h-6"/>
+          </svg>
+
+        </div>
+
+        <div>
+          <h3>3. HEALTH REVIEW</h3>
+          <p>
+            Revisión periódica, rápida y orientada a cambios y eventos relevantes.
+          </p>
+        </div>
+
+      </article>
+
+
+      <article class="component timeline js-info" data-key="timeline">
+
+        <div class="component-icon">
+
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+            <rect x="3" y="5" width="18" height="16" rx="2"/>
+            <path d="M7 3v4M17 3v4M3 10h18"/>
+            <path d="M7 14h3M14 14h3M7 18h3"/>
+          </svg>
+
+        </div>
+
+        <div>
+          <h3>4. HEALTH TIMELINE</h3>
+          <p>
+            Cronología de todo lo relevante para la salud del proyecto.
+          </p>
+        </div>
+
+      </article>
+
+
+      <article class="component center-card js-info" data-key="healthCenter">
+
+        <div class="component-icon">
+
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+            <circle cx="12" cy="7" r="4"/>
+            <path d="M4 21c.7-5 3.4-7 8-7s7.3 2 8 7"/>
+          </svg>
+
+        </div>
+
+        <div>
+          <h3>5. HEALTH CENTER</h3>
+          <p>
+            Vistas y experiencias personalizadas por rol para acción y priorización.
+          </p>
+        </div>
+
+      </article>
+
+
+      <article class="component actions js-info" data-key="healthActions">
+
+        <div class="component-icon">
+
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+            <path d="M4 12l5 5L20 6"/>
+          </svg>
+
+        </div>
+
+        <div>
+          <h3>6. HEALTH ACTIONS</h3>
+          <p>
+            Cada alerta genera una acción con responsable, plazo y seguimiento.
+          </p>
+        </div>
+
+      </article>
+
+
+      <!-- =====================================================
+           HUB
+           ===================================================== -->
+
+      <section class="hub">
+
+        <div class="hub-content">
+
+          <div class="kicker">
+            AL CENTRO: LA SOLUCIÓN
+          </div>
+
+          <h2>
+            PHF + PHS
+          </h2>
+
+          <h3>
+            Propuesta de Solución
+          </h3>
+
+          <p>
+            Un sistema de salud de proyectos que proporciona visibilidad homogénea,
+            anticipa desviaciones y guía la acción para mejorar resultados.
+          </p>
+
+          <div class="hub-split">
+
+            <button
+              class="hub-mini phf js-info"
+              data-key="phf"
+            >
+              <b>PHF</b>
+              <small>Project Health Framework</small>
+              <small>La metodología</small>
+            </button>
+
+            <button
+              class="hub-mini phs js-info"
+              data-key="phs"
+            >
+              <b>PHS</b>
+              <small>Project Health System</small>
+              <small>La plataforma</small>
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- PRINCIPIO -->
+
+      <div
+        class="central-principle js-info"
+        data-key="centralPrinciple"
+      >
+        <strong>
+          PRINCIPIO CENTRAL
+        </strong>
+
+        <span>
+          Estándar en el modelo, flexible en la ejecución.
+        </span>
+      </div>
+
+    </section>
+
+  </div>
+
+
+  <!-- =======================================================
+       RESULTADOS
+       ======================================================= -->
+
+  <section class="results">
+
+    <div class="section-title">
+      RESULTADOS ESPERADOS
+    </div>
+
+    <div class="results-grid">
+
+      <div
+        class="result js-info"
+        data-key="resultEarly"
+      >
+        <span class="result-icon">◎</span>
+        <div>
+          Detectar desviaciones antes de que impacten al negocio.
+        </div>
+      </div>
+
+
+      <div
+        class="result js-info"
+        data-key="resultVisibility"
+      >
+        <span class="result-icon">◉</span>
+        <div>
+          Visibilidad homogénea y confiable de toda la práctica.
+        </div>
+      </div>
+
+
+      <div
+        class="result js-info"
+        data-key="resultFast"
+      >
+        <span class="result-icon">⏱</span>
+        <div>
+          Actualización rápida, menor a un minuto y sostenible.
+        </div>
+      </div>
+
+
+      <div
+        class="result js-info"
+        data-key="resultDecision"
+      >
+        <span class="result-icon">◇</span>
+        <div>
+          Decisiones basadas en datos objetivos y oportunos.
+        </div>
+      </div>
+
+
+      <div
+        class="result js-info"
+        data-key="resultImprove"
+      >
+        <span class="result-icon">↗</span>
+        <div>
+          Mejora continua en la salud y resultados de los proyectos.
+        </div>
+      </div>
+
+
+      <div
+        class="result js-info"
+        data-key="resultLoad"
+      >
+        <span class="result-icon">♙</span>
+        <div>
+          Menor carga operativa y mayor foco en la ejecución.
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- =======================================================
+       PRINCIPIOS
+       ======================================================= -->
+
+  <section class="principles">
+
+    <div class="section-title">
+      PRINCIPIOS QUE GUÍAN EL MODELO
+    </div>
+
+    <div class="principle-grid">
+
+      <div
+        class="principle js-info"
+        data-key="principleObjective"
+      >
+        <span class="symbol">◎</span>
+        <span>
+          Objetividad sobre percepciones
+        </span>
+      </div>
+
+
+      <div
+        class="principle js-info"
+        data-key="principleSimple"
+      >
+        <span class="symbol">ϟ</span>
+        <span>
+          Simplicidad y bajo esfuerzo
+        </span>
+      </div>
+
+
+      <div
+        class="principle js-info"
+        data-key="principleCommon"
+      >
+        <span class="symbol">♙</span>
+        <span>
+          Modelo común, ejecución flexible
+        </span>
+      </div>
+
+
+      <div
+        class="principle js-info"
+        data-key="principleValue"
+      >
+        <span class="symbol">◉</span>
+        <span>
+          Información al servicio del PM y la práctica
+        </span>
+      </div>
+
+
+      <div
+        class="principle js-info"
+        data-key="principleAction"
+      >
+        <span class="symbol">☑</span>
+        <span>
+          Cada alerta genera acción
+        </span>
+      </div>
+
+
+      <div
+        class="principle js-info"
+        data-key="principleAnticipate"
+      >
+        <span class="symbol">⌁</span>
+        <span>
+          Anticipar, no solo reportar
+        </span>
+      </div>
+
+
+      <div
+        class="principle js-info"
+        data-key="principleTrust"
+      >
+        <span class="symbol">♢</span>
+        <span>
+          Confianza = información útil
+        </span>
+      </div>
+
+
+      <div
+        class="principle js-info"
+        data-key="principleAutomate"
+      >
+        <span class="symbol">⚙</span>
+        <span>
+          Automatizar para simplificar
+        </span>
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+
+<!-- =========================================================
+     MODAL
+     ========================================================= -->
+
+<div
+  class="modal-backdrop"
+  id="modalBackdrop"
+>
+
+  <section
+    class="modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modalTitle"
+  >
+
+    <header class="modal-header">
+
+      <div>
+
+        <div
+          class="eyebrow"
+          id="modalCategory"
+        >
+          Project Health Framework
+        </div>
+
+        <h2 id="modalTitle">
+          Elemento
+        </h2>
+
+      </div>
+
+      <button
+        class="close"
+        id="closeModal"
+        aria-label="Cerrar"
+      >
+        ×
+      </button>
+
+    </header>
+
+
+    <div class="modal-body">
+
+      <div class="detail-grid">
+
+        <div class="detail full">
+
+          <label>
+            ¿De qué se trata?
+          </label>
+
+          <p id="modalWhat"></p>
+
+        </div>
+
+
+        <div class="detail">
+
+          <label>
+            Objetivo
+          </label>
+
+          <p id="modalObjective"></p>
+
+        </div>
+
+
+        <div class="detail">
+
+          <label>
+            Valor para la práctica
+          </label>
+
+          <p id="modalValue"></p>
+
+        </div>
+
+
+        <div class="detail full">
+
+          <label>
+            Información / reglas relevantes
+          </label>
+
+          <div id="modalRelevant"></div>
+
+        </div>
+
+
+        <div class="detail full">
+
+          <label>
+            Aplicación en el MVP
+          </label>
+
+          <div id="modalMvp"></div>
+
+        </div>
+
+      </div>
+
+
+      <div class="form-row">
+
+        <label>
+          Notas de validación
+        </label>
+
+        <textarea
+          id="validationNotes"
+          placeholder="Registra aquí comentarios, dudas, ajustes o decisiones sobre este elemento..."
+        ></textarea>
+
+      </div>
+
+    </div>
+
+
+    <footer class="modal-footer">
+
+      <button id="acceptModal">
+        Cerrar
+      </button>
+
+    </footer>
+
+  </section>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   CONTENIDO DE MODALES
+   ========================================================= */
+
+const D = {
+
+  phf:{
+    title:"Project Health Framework (PHF)",
+    category:"Solución central",
+    what:"La metodología que define cómo se representa, revisa, mide y gobierna la salud de cualquier proyecto o servicio.",
+    objective:"Crear un lenguaje y modelo común para toda la práctica sin imponer una metodología única de ejecución.",
+    value:"Permite comparar proyectos heterogéneos y mantener consistencia aunque cambien las herramientas tecnológicas.",
+    relevant:"Define información mínima, Health Review, dimensiones, métricas, Health Gates, ciclos, roles, acciones y principios de gobierno.",
+    mvp:"El PHF debe quedar validado antes de automatizar el proceso. Es el activo principal del proyecto."
+  },
+
+  phs:{
+    title:"Project Health System (PHS)",
+    category:"Solución central",
+    what:"La plataforma que implementa y hace operativo el Project Health Framework.",
+    objective:"Reducir el esfuerzo de captura y convertir el modelo de salud en una experiencia simple, repetible y accionable.",
+    value:"Centraliza visibilidad, detecta eventos, genera alertas, calcula salud y guía acciones.",
+    relevant:"La plataforma es reemplazable; el framework no debe depender de una tecnología específica.",
+    mvp:"Implementará registro, Health Review, salud, timeline, acciones, alertas y soportes simples mediante texto e imágenes."
+  },
+
+  centralPrinciple:{
+    title:"Estándar en el modelo, flexible en la ejecución",
+    category:"Principio central",
+    what:"Todos los proyectos reportan bajo un mismo lenguaje de salud aunque puedan operar con herramientas y metodologías diferentes.",
+    objective:"Evitar imponer un proceso único a servicios heterogéneos.",
+    value:"Permite gobernanza común sin interferir con la forma de trabajo del cliente o del equipo.",
+    relevant:"El PHS estandariza lo mínimo indispensable: responsables, fechas, hitos, riesgos, desviaciones, salud y acciones.",
+    mvp:"Debe respetarse como filtro para todas las decisiones funcionales."
+  },
+
+  core:{
+    title:"1. PHS Core",
+    category:"Componente PHF + PHS",
+    what:"El registro mínimo y estructurado que permite entender qué es el proyecto, quién responde por él y cuáles son sus compromisos principales.",
+    objective:"Crear una base homogénea de información para cualquier proyecto o servicio.",
+    value:"Reduce dependencia del conocimiento individual y permite que otra persona pueda comprender y tomar control del servicio.",
+    relevant:"Proyecto, cliente, descripción, alcance, responsables, equipo, tipo de servicio, estado, fechas, hitos y renovaciones.",
+    mvp:"Captura inicial y mantenimiento de información estructural."
+  },
+
+  healthModel:{
+    title:"2. Health Model",
+    category:"Componente PHF + PHS",
+    what:"El mecanismo que traduce información operativa en una evaluación objetiva de salud.",
+    objective:"Evitar que el estado del proyecto dependa exclusivamente de percepciones o semáforos declarativos.",
+    value:"Permite comparar salud, detectar deterioro y establecer condiciones críticas homogéneas.",
+    relevant:"Health Score, dimensiones, métricas, desviación de proyecto, desviación financiera, Health Gates, Confidence, Trend y Forecast.",
+    mvp:"Definir reglas iniciales simples y transparentes, evitando modelos matemáticos innecesariamente complejos."
+  },
+
+  healthReview:{
+    title:"3. Health Review",
+    category:"Componente PHF + PHS",
+    what:"La revisión periódica mediante la cual el sistema confirma qué cambió y qué debía haber cambiado.",
+    objective:"Mantener la información actualizada con menos de un minuto de esfuerzo en condiciones normales.",
+    value:"Reduce carga administrativa y evita depender de la memoria del Project Manager.",
+    relevant:"Ciclo semanal/quincenal/mensual, cambios desde la revisión anterior, hitos esperados, eventos vencidos, riesgos y soportes.",
+    mvp:"Formulario adaptativo y revisión dirigida por eventos."
+  },
+
+  timeline:{
+    title:"4. Health Timeline",
+    category:"Componente PHF + PHS",
+    what:"La cronología de compromisos, hitos, riesgos, eventos, renovaciones y cambios relevantes del proyecto.",
+    objective:"Permitir que el sistema observe pasado, presente y próximos ciclos.",
+    value:"Habilita anticipación y seguimiento sistemático de compromisos.",
+    relevant:"Hitos próximos y vencidos, riesgos activos, eventos, renovaciones, cambios de alcance e historial.",
+    mvp:"Timeline estructurado a partir de hitos, riesgos, fechas y acciones."
+  },
+
+  healthCenter:{
+    title:"5. Health Center",
+    category:"Componente PHF + PHS",
+    what:"La experiencia principal de consulta y priorización para cada rol.",
+    objective:"Mostrar a cada usuario únicamente la información que necesita para actuar.",
+    value:"Reduce ruido y convierte la visibilidad en gestión accionable.",
+    relevant:"Vista PM, Practice Lead, Dirección, portafolio, alertas, focos de atención y tareas.",
+    mvp:"Vistas sencillas diferenciadas para PM y liderazgo."
+  },
+
+  healthActions:{
+    title:"6. Health Actions",
+    category:"Componente PHF + PHS",
+    what:"El mecanismo mediante el cual una alerta o desviación se convierte en trabajo concreto.",
+    objective:"Evitar alertas sin seguimiento ni responsable.",
+    value:"Transforma monitoreo en intervención.",
+    relevant:"Acción, responsable, plazo, prioridad, seguimiento, cierre, validación e historial.",
+    mvp:"Acciones estructuradas generadas por reglas simples."
+  },
+
+  project:{
+    title:"Proyecto / Servicio",
+    category:"PHS Core",
+    what:"Unidad mínima de seguimiento dentro del PHF.",
+    objective:"Tratar de forma homogénea proyectos, servicios recurrentes, assessments, soporte u otras modalidades.",
+    value:"Permite aplicar el mismo framework independientemente del modelo contractual.",
+    relevant:"Debe contar con un identificador, nombre y relación con cliente.",
+    mvp:"Obligatorio."
+  },
+
+  client:{
+    title:"Cliente",
+    category:"PHS Core",
+    what:"Organización receptora del proyecto o servicio.",
+    objective:"Relacionar la salud operacional con el contexto comercial y de servicio.",
+    value:"Permite detectar concentración de riesgos y problemas por cliente.",
+    relevant:"Cliente, contacto principal y matriz de escalación.",
+    mvp:"Obligatorio."
+  },
+
+  scope:{
+    title:"Descripción y Alcance",
+    category:"PHS Core",
+    what:"Descripción ejecutiva del propósito y cobertura del proyecto.",
+    objective:"Permitir comprender rápidamente qué se está entregando.",
+    value:"Evita ambigüedades cuando otra persona necesita revisar o asumir el proyecto.",
+    relevant:"Debe ser breve y comprensible; no sustituye documentación contractual.",
+    mvp:"Descripción textual resumida."
+  },
+
+  dates:{
+    title:"Fechas Clave",
+    category:"PHS Core",
+    what:"Fechas que definen la ventana temporal del servicio.",
+    objective:"Habilitar alertas, seguimiento y detección de desviaciones.",
+    value:"Permite anticipar cierres y renovaciones.",
+    relevant:"Inicio, fin, posibles renovaciones y fechas de hitos.",
+    mvp:"Inicio y fin obligatorios."
+  },
+
+  roles:{
+    title:"Responsables",
+    category:"PHS Core",
+    what:"Identificación explícita de accountability operativo y técnico.",
+    objective:"Eliminar dudas respecto a quién debe actuar ante una desviación.",
+    value:"Reduce dependencias personales y acelera escalaciones.",
+    relevant:"Project Manager / gestor, responsable técnico y sponsor o líder cuando aplique.",
+    mvp:"PM y responsable técnico obligatorios."
+  },
+
+  team:{
+    title:"Equipo",
+    category:"PHS Core",
+    what:"Personas que operan o entregan el servicio.",
+    objective:"Mantener visibilidad sobre quién participa en la ejecución.",
+    value:"Ayuda a comprender capacidad, continuidad y dependencias.",
+    relevant:"No requiere sustituir sistemas de staffing.",
+    mvp:"Lista sencilla de integrantes."
+  },
+
+  serviceType:{
+    title:"Categoría / Tipo de Servicio",
+    category:"PHS Core",
+    what:"Clasificación funcional del trabajo.",
+    objective:"Permitir segmentar sin crear un modelo distinto por cada tipo.",
+    value:"Habilita análisis comparables entre familias de servicio.",
+    relevant:"Ejemplos: desarrollo, arquitectura, DevSecOps, assessment, AMS, soporte.",
+    mvp:"Catálogo configurable."
+  },
+
+  projectStatus:{
+    title:"Estado del Proyecto",
+    category:"PHS Core",
+    what:"Situación de ciclo de vida, diferente de la salud.",
+    objective:"Distinguir si el trabajo está por iniciar, activo, detenido o terminado.",
+    value:"Evita confundir estado administrativo con Health Score.",
+    relevant:"Por iniciar, en ejecución, detenido/pausado, cerrado y renovación.",
+    mvp:"Obligatorio."
+  },
+
+  score:{
+    title:"Health Score",
+    category:"Health Model",
+    what:"Indicador agregado que resume la salud actual del proyecto.",
+    objective:"Proporcionar una referencia comparable y consistente.",
+    value:"Ayuda a priorizar atención a nivel portafolio.",
+    relevant:"Escala inicial propuesta: 0–100, complementada por Health Gates.",
+    mvp:"Sí, con cálculo transparente."
+  },
+
+  dimensions:{
+    title:"Dimensiones de Salud",
+    category:"Health Model",
+    what:"Áreas principales que explican por qué un proyecto está sano o deteriorándose.",
+    objective:"Evitar depender de un único indicador.",
+    value:"Permite identificar dónde está el problema.",
+    relevant:"Desempeño del proyecto, financiero, cliente, riesgos, gobernanza y equipo.",
+    mvp:"Conjunto reducido y configurable."
+  },
+
+  metrics:{
+    title:"Métricas Clave",
+    category:"Health Model",
+    what:"Indicadores cuantificables que alimentan las dimensiones.",
+    objective:"Basar la salud en señales objetivas.",
+    value:"Reduce subjetividad entre PMs.",
+    relevant:"Cumplimiento de hitos, desviaciones, riesgos vencidos y actualidad de información.",
+    mvp:"Solo métricas que puedan mantenerse fácilmente."
+  },
+
+  projectDeviation:{
+    title:"Desviación de Proyecto >10%",
+    category:"Health Gate",
+    what:"Umbral de desviación operativa considerado crítico.",
+    objective:"Detectar proyectos que ya se encuentran fuera de tolerancia.",
+    value:"Evita que un promedio alto oculte una desviación importante.",
+    relevant:"La fórmula exacta deberá validarse según el tipo de proyecto.",
+    mvp:"Health Gate inicial."
+  },
+
+  financialDeviation:{
+    title:"Desviación Financiera >3%",
+    category:"Health Gate",
+    what:"Umbral inicial de desviación económica que requiere atención.",
+    objective:"Proteger margen y desempeño económico.",
+    value:"Prioriza problemas de impacto directo al negocio.",
+    relevant:"Debe calcularse respecto a la línea base/forecast acordado.",
+    mvp:"Umbral inicial sujeto a validación."
+  },
+
+  gates:{
+    title:"Health Gates",
+    category:"Health Model",
+    what:"Reglas críticas capaces de limitar o forzar el estado de salud independientemente del promedio.",
+    objective:"Evitar que situaciones graves se diluyan dentro de un score agregado.",
+    value:"Hace al modelo más confiable para liderazgo.",
+    relevant:"Desviación financiera, desviación de proyecto, hitos críticos, cliente y otras condiciones severas.",
+    mvp:"Conjunto pequeño de reglas explícitas."
+  },
+
+  confidence:{
+    title:"Health Confidence",
+    category:"Health Model",
+    what:"Medida de qué tan confiable es la información utilizada para evaluar el proyecto.",
+    objective:"Diferenciar un proyecto sano de un proyecto que simplemente parece sano por falta de información.",
+    value:"Hace visible la calidad del dato.",
+    relevant:"Actualización dentro del ciclo, consistencia y soportes.",
+    mvp:"Indicador simplificado."
+  },
+
+  trend:{
+    title:"Health Trend",
+    category:"Health Model",
+    what:"Dirección de cambio de la salud a través del tiempo.",
+    objective:"Detectar deterioro aunque el proyecto aún esté en verde.",
+    value:"Permite intervenir antes.",
+    relevant:"Comparación de Health Score entre ciclos.",
+    mvp:"Tendencia simple ↑ → ↓."
+  },
+
+  forecast:{
+    title:"Health Forecast",
+    category:"Health Model",
+    what:"Estimación de posible deterioro en los siguientes ciclos.",
+    objective:"Anticipar desviaciones.",
+    value:"Transforma el sistema de reactivo a preventivo.",
+    relevant:"Se alimenta de eventos próximos, hitos, riesgos y vencimientos.",
+    mvp:"Reglas determinísticas; IA queda para evoluciones posteriores."
+  },
+
+  cycle:{
+    title:"Ciclo de Revisión",
+    category:"Health Review",
+    what:"Frecuencia con la que debe confirmarse la salud del proyecto.",
+    objective:"Establecer una cadencia mínima de gobernanza.",
+    value:"Evita información obsoleta.",
+    relevant:"Semanal, quincenal o mensual según el servicio.",
+    mvp:"Configurable por proyecto."
+  },
+
+  oneMinute:{
+    title:"Actualización < 1 minuto",
+    category:"Health Review",
+    what:"Restricción de diseño para la revisión periódica normal.",
+    objective:"Hacer sostenible la adopción.",
+    value:"Reduce la competencia entre operar para el cliente y reportar internamente.",
+    relevant:"El sistema no debe pedir información que ya conoce.",
+    mvp:"KPI oficial de experiencia."
+  },
+
+  changes:{
+    title:"Qué cambió desde la última revisión",
+    category:"Health Review",
+    what:"Modelo de actualización basado en diferencias y eventos.",
+    objective:"Evitar repetir todo el formulario.",
+    value:"Hace la revisión rápida y contextual.",
+    relevant:"Cronograma, hitos, alcance, riesgos, equipo, cliente, finanzas o nada.",
+    mvp:"Formulario adaptativo."
+  },
+
+  expectedEvents:{
+    title:"Eventos próximos y vencidos",
+    category:"Health Review",
+    what:"Información que el sistema espera que haya cambiado según fechas y compromisos.",
+    objective:"Evitar aceptar 'nada cambió' cuando existen eventos que requerían actualización.",
+    value:"Reduce dependencia de memoria humana.",
+    relevant:"Hitos, riesgos, compromisos, revisiones y renovaciones.",
+    mvp:"Reglas de calendario."
+  },
+
+  support:{
+    title:"Soportes: imagen y/o texto",
+    category:"Health Review",
+    what:"Forma simplificada de respaldar actualizaciones sin construir un sistema documental complejo.",
+    objective:"Mejorar confianza manteniendo bajo esfuerzo.",
+    value:"Permite incorporar contexto sin integraciones corporativas complejas.",
+    relevant:"Captura de correo, minuta, acta, carta, tablero u otro soporte; también comentario textual.",
+    mvp:"Imagen y texto únicamente."
+  },
+
+  reviewConfidence:{
+    title:"Nivel de Confianza",
+    category:"Health Review",
+    what:"Evaluación de la actualidad y respaldo de la información presentada.",
+    objective:"Señalar cuándo una revisión necesita mayor validación.",
+    value:"Evita confianza falsa.",
+    relevant:"Actualidad, consistencia y soporte disponible.",
+    mvp:"Bajo / medio / alto o score simplificado."
+  },
+
+  nextMilestones:{
+    title:"Hitos próximos",
+    category:"Health Timeline",
+    what:"Entregables o compromisos cuya fecha se aproxima.",
+    objective:"Dar visibilidad anticipada.",
+    value:"Permite preparar acciones antes del vencimiento.",
+    relevant:"Nombre, entregable, responsable y fecha.",
+    mvp:"Sí."
+  },
+
+  expiredMilestones:{
+    title:"Hitos vencidos",
+    category:"Health Timeline",
+    what:"Hitos cuya fecha ya ocurrió y no registran cumplimiento válido.",
+    objective:"Forzar actualización y tratamiento.",
+    value:"Son una señal objetiva de posible desviación.",
+    relevant:"El sistema debe pedir estado, nueva fecha y soporte.",
+    mvp:"Sí."
+  },
+
+  activeRisks:{
+    title:"Riesgos activos",
+    category:"Health Timeline",
+    what:"Riesgos abiertos de proyecto o cliente.",
+    objective:"Dar seguimiento antes de que materialicen impacto.",
+    value:"Permite asignar responsables y fechas de tratamiento.",
+    relevant:"Tipo, impacto, responsable, deadline y estado.",
+    mvp:"Sí."
+  },
+
+  nextEvents:{
+    title:"Eventos próximos",
+    category:"Health Timeline",
+    what:"Compromisos relevantes que ocurrirán dentro de los próximos ciclos.",
+    objective:"Construir una ventana de planeación preventiva.",
+    value:"Reduce gestión reactiva.",
+    relevant:"Cantidad de ciclos futuros configurable.",
+    mvp:"Sí."
+  },
+
+  renewals:{
+    title:"Renovaciones y vencimientos",
+    category:"Health Timeline",
+    what:"Fechas relacionadas con continuidad contractual o de servicio.",
+    objective:"Evitar renovaciones tardías o sorpresas operativas.",
+    value:"Conecta ejecución con continuidad comercial.",
+    relevant:"Fecha, responsable y acciones previas.",
+    mvp:"Sí."
+  },
+
+  scopeChanges:{
+    title:"Cambios de alcance",
+    category:"Health Timeline",
+    what:"Modificaciones significativas respecto al alcance original.",
+    objective:"Mantener trazabilidad de cambios que puedan generar desviación.",
+    value:"Facilita explicar impacto en tiempo o dinero.",
+    relevant:"Fecha, descripción, impacto y estado de aprobación.",
+    mvp:"Registro sencillo."
+  },
+
+  eventHistory:{
+    title:"Historial de eventos",
+    category:"Health Timeline",
+    what:"Secuencia temporal de cambios importantes.",
+    objective:"Entender cómo evolucionó la salud.",
+    value:"Permite análisis posterior y continuidad cuando cambia el responsable.",
+    relevant:"Eventos generados por revisiones, hitos, riesgos, acciones y cambios.",
+    mvp:"Historial básico automático."
+  },
+
+  pmView:{
+    title:"Vista Project Manager",
+    category:"Health Center",
+    what:"Vista enfocada en lo que el responsable necesita atender hoy.",
+    objective:"Dar valor inmediato al PM.",
+    value:"Reduce carga cognitiva.",
+    relevant:"Reviews pendientes, próximos hitos, riesgos y Health Actions.",
+    mvp:"Vista prioritaria."
+  },
+
+  leadView:{
+    title:"Vista Líder / Practice Lead",
+    category:"Health Center",
+    what:"Vista transversal de los proyectos bajo responsabilidad de la práctica.",
+    objective:"Identificar dónde intervenir.",
+    value:"Permite priorizar apoyo y escalaciones.",
+    relevant:"Rojos, amarillos, desviaciones, información vencida y riesgos.",
+    mvp:"Sí."
+  },
+
+  directionView:{
+    title:"Vista Dirección",
+    category:"Health Center",
+    what:"Resumen ejecutivo de salud y exposición del portafolio.",
+    objective:"Apoyar decisiones estratégicas.",
+    value:"Evita depender de consolidaciones manuales.",
+    relevant:"Salud global, tendencia, exposición financiera y clientes críticos.",
+    mvp:"Vista resumida."
+  },
+
+  portfolio:{
+    title:"Portafolio de Proyectos",
+    category:"Health Center",
+    what:"Vista consolidada de proyectos y servicios.",
+    objective:"Comparar y priorizar.",
+    value:"Genera una única fuente de visibilidad ejecutiva.",
+    relevant:"Filtros por cliente, tipo, líder, estado y salud.",
+    mvp:"Sí."
+  },
+
+  priorities:{
+    title:"Alertas y Prioridades",
+    category:"Health Center",
+    what:"Listado ordenado de elementos que requieren atención.",
+    objective:"Distinguir lo urgente de lo informativo.",
+    value:"Reduce ruido.",
+    relevant:"Debe ordenar por criticidad, vencimiento e impacto.",
+    mvp:"Sí."
+  },
+
+  attention:{
+    title:"Focos de Atención",
+    category:"Health Center",
+    what:"Patrones o áreas que concentran mayor riesgo.",
+    objective:"Facilitar lectura ejecutiva.",
+    value:"Convierte datos en conversación de gestión.",
+    relevant:"Finanzas, cronograma, cliente, riesgos o falta de actualización.",
+    mvp:"Reglas simples."
+  },
+
+  tasks:{
+    title:"Tareas y Acciones",
+    category:"Health Center",
+    what:"Trabajo derivado de alertas y desviaciones.",
+    objective:"Cerrar el ciclo entre detectar y actuar.",
+    value:"Evita que el sistema sea solo observacional.",
+    relevant:"Responsable, fecha, prioridad y estado.",
+    mvp:"Sí."
+  },
+
+  autoActions:{
+    title:"Generación automática de acciones",
+    category:"Health Actions",
+    what:"Creación de una acción cuando se cumple una regla.",
+    objective:"Convertir alertas en trabajo concreto.",
+    value:"Reduce dependencia de interpretación individual.",
+    relevant:"Ejemplo: hito vencido → actualizar estado y definir nueva fecha.",
+    mvp:"Reglas determinísticas."
+  },
+
+  actionOwner:{
+    title:"Asignación de responsable",
+    category:"Health Actions",
+    what:"Persona accountable de resolver o gestionar una acción.",
+    objective:"Evitar tareas sin dueño.",
+    value:"Acelera resolución.",
+    relevant:"Puede derivarse del PM, responsable técnico o responsable de riesgo.",
+    mvp:"Obligatorio."
+  },
+
+  deadline:{
+    title:"Plazo y prioridad",
+    category:"Health Actions",
+    what:"Fecha límite y criticidad de una acción.",
+    objective:"Permitir priorización.",
+    value:"Da contexto temporal y operacional.",
+    relevant:"Prioridad basada en impacto y cercanía al vencimiento.",
+    mvp:"Sí."
+  },
+
+  followUp:{
+    title:"Seguimiento y estatus",
+    category:"Health Actions",
+    what:"Estado de avance de una acción.",
+    objective:"Mantener visibilidad hasta resolución.",
+    value:"Evita alertas olvidadas.",
+    relevant:"Pendiente, en curso, bloqueada y completada.",
+    mvp:"Sí."
+  },
+
+  closure:{
+    title:"Cierre y validación",
+    category:"Health Actions",
+    what:"Confirmación de que la condición que generó la acción fue atendida.",
+    objective:"Cerrar correctamente el ciclo.",
+    value:"Evita declarar resuelto sin revisar el resultado.",
+    relevant:"Puede solicitar soporte o comentario.",
+    mvp:"Comentario y/o imagen."
+  },
+
+  actionHistory:{
+    title:"Historial de acciones",
+    category:"Health Actions",
+    what:"Registro temporal de acciones creadas y cerradas.",
+    objective:"Mantener trazabilidad.",
+    value:"Permite aprender sobre recurrencias y tiempos de resolución.",
+    relevant:"Evento, responsable, fecha, estado y cierre.",
+    mvp:"Automático."
+  },
+
+  resultEarly:{
+    title:"Detección anticipada",
+    category:"Resultado esperado",
+    what:"Identificar señales de deterioro antes de que exista impacto material.",
+    objective:"Cambiar la práctica de reactiva a preventiva.",
+    value:"Menor pérdida económica y mejor experiencia del cliente.",
+    relevant:"Health Trend, Forecast, eventos y Health Gates.",
+    mvp:"Resultado principal a validar."
+  },
+
+  resultVisibility:{
+    title:"Visibilidad homogénea",
+    category:"Resultado esperado",
+    what:"Todos los proyectos representados bajo un mismo lenguaje.",
+    objective:"Crear comparabilidad.",
+    value:"Simplifica gobernanza y decisiones.",
+    relevant:"Depende de adopción y actualización.",
+    mvp:"Resultado esencial."
+  },
+
+  resultFast:{
+    title:"Actualización rápida",
+    category:"Resultado esperado",
+    what:"Health Review sostenible en menos de un minuto.",
+    objective:"Maximizar adopción.",
+    value:"Minimiza carga administrativa.",
+    relevant:"Debe medirse como KPI de producto.",
+    mvp:"Meta explícita."
+  },
+
+  resultDecision:{
+    title:"Decisiones basadas en datos",
+    category:"Resultado esperado",
+    what:"Utilizar información estructurada y comparable para decidir.",
+    objective:"Reducir decisiones tardías o basadas en percepción.",
+    value:"Mejora calidad de gobierno.",
+    relevant:"Score + contexto + acciones.",
+    mvp:"Sí."
+  },
+
+  resultImprove:{
+    title:"Mejora continua",
+    category:"Resultado esperado",
+    what:"Utilizar tendencias e historial para mejorar la gestión.",
+    objective:"Aprender de patrones de desviación.",
+    value:"Madurez operativa creciente.",
+    relevant:"Evolución posterior del framework.",
+    mvp:"Se comienza capturando historial."
+  },
+
+  resultLoad:{
+    title:"Menor carga operativa",
+    category:"Resultado esperado",
+    what:"Eliminar reportes duplicados y minimizar captura.",
+    objective:"Devolver tiempo a la ejecución.",
+    value:"Mejora adopción y productividad.",
+    relevant:"No pedir información ya conocida.",
+    mvp:"Criterio clave de éxito."
+  },
+
+  principleObjective:{
+    title:"Objetividad sobre percepciones",
+    category:"Principio PHF",
+    what:"La salud debe apoyarse en criterios observables.",
+    objective:"Reducir subjetividad.",
+    value:"Información comparable.",
+    relevant:"Score, métricas y Health Gates.",
+    mvp:"Obligatorio."
+  },
+
+  principleSimple:{
+    title:"Simplicidad y bajo esfuerzo",
+    category:"Principio PHF",
+    what:"Cada interacción debe justificar el esfuerzo que exige.",
+    objective:"Asegurar sostenibilidad.",
+    value:"Mayor adopción.",
+    relevant:"Health Review <1 minuto.",
+    mvp:"Obligatorio."
+  },
+
+  principleCommon:{
+    title:"Modelo común, ejecución flexible",
+    category:"Principio PHF",
+    what:"Estandarizar gobierno, no metodología de entrega.",
+    objective:"Servir a proyectos heterogéneos.",
+    value:"Menos resistencia.",
+    relevant:"No sustituir herramientas del cliente.",
+    mvp:"Obligatorio."
+  },
+
+  principleValue:{
+    title:"Información al servicio del PM y la práctica",
+    category:"Principio PHF",
+    what:"La actualización debe beneficiar a quien la realiza.",
+    objective:"Evitar captura únicamente para dirección.",
+    value:"Mejor adopción.",
+    relevant:"Agenda, tareas, alertas y timeline.",
+    mvp:"Obligatorio."
+  },
+
+  principleAction:{
+    title:"Cada alerta genera acción",
+    category:"Principio PHF",
+    what:"Una alerta sin responsable ni siguiente paso es ruido.",
+    objective:"Hacer accionable la salud.",
+    value:"Mayor capacidad de reacción.",
+    relevant:"Health Actions.",
+    mvp:"Obligatorio."
+  },
+
+  principleAnticipate:{
+    title:"Anticipar, no solo reportar",
+    category:"Principio PHF",
+    what:"El sistema observa eventos futuros además del estado actual.",
+    objective:"Intervenir antes del impacto.",
+    value:"Prevención.",
+    relevant:"Timeline y Forecast.",
+    mvp:"Sí."
+  },
+
+  principleTrust:{
+    title:"Confianza = información útil",
+    category:"Principio PHF",
+    what:"Un dato desactualizado o sin suficiente contexto pierde utilidad.",
+    objective:"Hacer explícita la confianza.",
+    value:"Mejores decisiones.",
+    relevant:"Health Confidence.",
+    mvp:"Sí."
+  },
+
+  principleAutomate:{
+    title:"Automatizar para simplificar",
+    category:"Principio PHF",
+    what:"La automatización solo se justifica cuando reduce esfuerzo o aumenta confiabilidad.",
+    objective:"Evitar automatización por tecnología.",
+    value:"Menor complejidad.",
+    relevant:"Las integraciones avanzadas quedan fuera del MVP.",
+    mvp:"Aplicar selectivamente."
+  }
+
+};
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+const backdrop =
+  document.getElementById("modalBackdrop");
+
+const closeModalBtn =
+  document.getElementById("closeModal");
+
+const acceptModalBtn =
+  document.getElementById("acceptModal");
+
+const modalTitle =
+  document.getElementById("modalTitle");
+
+const modalCategory =
+  document.getElementById("modalCategory");
+
+const modalWhat =
+  document.getElementById("modalWhat");
+
+const modalObjective =
+  document.getElementById("modalObjective");
+
+const modalValue =
+  document.getElementById("modalValue");
+
+const modalRelevant =
+  document.getElementById("modalRelevant");
+
+const modalMvp =
+  document.getElementById("modalMvp");
+
+const notes =
+  document.getElementById("validationNotes");
+
+
+let activeKey = null;
+
+
+function openInfo(key){
+
+  const item = D[key];
+
+  if(!item){
+    return;
+  }
+
+  activeKey = key;
+
+  modalTitle.textContent =
+    item.title;
+
+  modalCategory.textContent =
+    item.category;
+
+  modalWhat.textContent =
+    item.what;
+
+  modalObjective.textContent =
+    item.objective;
+
+  modalValue.textContent =
+    item.value;
+
+  modalRelevant.textContent =
+    item.relevant;
+
+  modalMvp.textContent =
+    item.mvp;
+
+  notes.value =
+    localStorage.getItem(
+      "phf-note-" + key
+    ) || "";
+
+  backdrop.classList.add("open");
+
+  document.body.style.overflow =
+    "hidden";
+
+  setTimeout(
+    () => closeModalBtn.focus(),
+    30
+  );
+
+}
+
+
+function closeInfo(){
+
+  if(activeKey){
+
+    localStorage.setItem(
+      "phf-note-" + activeKey,
+      notes.value
+    );
+
+  }
+
+  backdrop.classList.remove("open");
+
+  document.body.style.overflow =
+    "";
+
+  activeKey = null;
+
+}
+
+
+document
+  .querySelectorAll(".js-info")
+  .forEach(el => {
+
+    el.addEventListener(
+      "click",
+      () => {
+
+        openInfo(
+          el.dataset.key
+        );
+
+      }
+    );
+
+  });
+
+
+closeModalBtn
+  .addEventListener(
+    "click",
+    closeInfo
+  );
+
+
+acceptModalBtn
+  .addEventListener(
+    "click",
+    closeInfo
+  );
+
+
+backdrop
+  .addEventListener(
+    "click",
+    e => {
+
+      if(
+        e.target === backdrop
+      ){
+        closeInfo();
+      }
+
+    }
+  );
+
+
+document
+  .addEventListener(
+    "keydown",
+    e => {
+
+      if(
+        e.key === "Escape" &&
+        backdrop.classList.contains("open")
+      ){
+        closeInfo();
+      }
+
+    }
+  );
+
+</script>
+
+</body>
+</html>
