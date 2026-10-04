@@ -11,7 +11,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
 - **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 171 criterios de aceptación. Ninguna historia se considera implementada por la existencia de estos documentos.
 - **Decisiones abiertas:** D01–D10 en [DECISIONES.md](producto/DECISIONES.md), incluidas fórmulas, vigencia de revisión, calendario, permisos, acciones y entorno técnico.
-- **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`. Al preparar BIT-0002 no existe remoto configurado; se solicitó su URL al usuario y la subida queda pendiente hasta definir el destino.
+- **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Siguiente paso funcional:** refinar R0, comenzando por stack/identidad y permisos (D06/D05), reglas de salud (D01) y vigencia de revisión (D02). Después desarrollar el primer incremento de R1.
 
 ## Cómo se mantiene
@@ -103,6 +103,32 @@ Especificar el producto y backlog, validar reglas de negocio y elegir stack. El 
 1. Configurar el remoto que indique el usuario y subir `main` sin forzar historia.
 2. Resolver las decisiones R0 y refinar las historias de la primera entrega antes de implementar políticas dependientes.
 3. Al continuar, leer el estado actual y esta entrada; registrar el siguiente conjunto de cambios como BIT-0003.
+
+## BIT-0003 — Repositorio privado en GitHub
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** crear el repositorio privado solicitado por el usuario y publicar el historial local.
+
+**Identificación del commit:** prefijo `BIT-0003`.
+
+### Trabajo realizado y archivos
+
+- El usuario indicó la cuenta `iztaneo` y solicitó crear el repositorio privado. Se eligió `PHS`, consistente con el nombre del proyecto local.
+- Se comprobó la sesión autenticada de GitHub y que `iztaneo/PHS` no existía antes de la creación.
+- Se creó [iztaneo/PHS](https://github.com/iztaneo/PHS) con visibilidad privada y se vinculó `origin` mediante `git@github.com:iztaneo/PHS.git`.
+- Se actualizó esta bitácora y su resumen para retomar. Los commits anteriores conservan su historia.
+
+### Decisiones, validación y límites
+
+- GitHub confirmó `visibility: PRIVATE` y repositorio vacío antes de subir archivos.
+- Se revisó la lista de archivos versionados; la entrega contiene prototipo, SQL, pruebas y documentación. No se incluyen archivos ignorados, bases temporales ni credenciales de autenticación.
+- Este commit registra la creación y el destino autorizado. A continuación se sube `main` con su historial, sin force push, y se comprueba que el SHA remoto coincida con el local. La confirmación de transferencia queda en Git; no se crea otro commit solo para anotar el hash o el resultado del push.
+- No hay cambios funcionales ni de esquema que requieran repetir pruebas de PostgreSQL.
+
+### Pendientes y siguiente paso
+
+Completar/verificar la transferencia de `main` y, si falla, conservar el commit local para reintentar. Después continuar el refinamiento R0 y las decisiones D01–D10. El siguiente conjunto de cambios se registrará como BIT-0004.
 
 ## Plantilla para próximas entradas
 
