@@ -1,6 +1,6 @@
 # Decisiones de producto y arquitectura pendientes
 
-Las decisiones de negocio siguen **pendientes**, salvo D01 y las confirmaciones parciales de D05 y D06 registradas en [Decisiones confirmadas](#decisiones-confirmadas). D06 cuenta con una [propuesta tecnológica detallada](../STACK-TECNOLOGICO.md) y [ADR-001](../adr/001-stack-mvp.md); el stack y la identidad del MVP están confirmados, pero faltan infraestructura, volumen piloto y validación de integración. Las recomendaciones permiten preparar trabajo y pruebas, pero no representan aprobación del usuario. Responsable = función que debe resolver, no persona ya asignada. Las historias bloqueadas pueden investigarse, pero no aceptarse con una política inventada.
+Las decisiones de negocio siguen **pendientes**, salvo D01, D09 y las confirmaciones parciales de D05 y D06 registradas en [Decisiones confirmadas](#decisiones-confirmadas). D06 cuenta con una [propuesta tecnológica detallada](../STACK-TECNOLOGICO.md) y [ADR-001](../adr/001-stack-mvp.md); el stack y la identidad del MVP están confirmados, pero faltan infraestructura, volumen piloto y validación de integración. Las recomendaciones permiten preparar trabajo y pruebas, pero no representan aprobación del usuario. Responsable = función que debe resolver, no persona ya asignada. Las historias bloqueadas pueden investigarse, pero no aceptarse con una política inventada.
 
 | ID | Decisión y discrepancia | Propuesta para resolver | Responsable | Afecta |
 | --- | --- | --- | --- | --- |
@@ -12,7 +12,7 @@ Las decisiones de negocio siguen **pendientes**, salvo D01 y las confirmaciones 
 | D06 | Stack, despliegue, identidad corporativa y volumen piloto. PostgreSQL ya elegido. | Propuesta: TypeScript, React/Vite, NestJS, PostgreSQL, Kysely/pg, SQL/dbmate, worker con outbox, OIDC y Docker. Confirmar entorno, volumen y versiones compatibles; ver STACK-TECNOLOGICO.md. **Confirmado 2026-10-03 (parcial):** stack TypeScript/React/NestJS, identidad validada en la base de datos para el MVP (OIDC pospuesto) y arquitectura de microservicios con base compartida (ADR-002). | Responsable técnico | PHS-003, 005, 017, 033, 041, 042 |
 | D07 | Disponibilidad, volumen de prueba, respaldo, recuperación, retención e información sensible. | Dimensionar piloto; proponer RPO 24 h / RTO 4 h y retención definida por negocio. Restaurar antes de liberar. | Operación + dueño del dato | PHS-038, 041, 042 |
 | D08 | Proyecto pausado/cerrado: ¿sigue evaluándose? ¿Permite acciones pendientes, reapertura o cancelación de hitos? | Conservar historia; declarar por estado qué cálculos, revisiones y alertas continúan. No esconder acciones abiertas al cerrar. | Dueño PHF + líder | PHS-014, 015, 020, 021, 025, 033, 037 |
-| D09 | Evidencias: formatos, tamaño, expiración, adjuntos posteriores a validación y contenido sensible. | Texto y PNG/JPEG/WebP; límite inicial sugerido 5 MB por imagen. Evidencia del envío queda fijada; incorporación posterior identificada como adenda. | Dueño de producto + responsable técnico | PHS-017, 023, 024, 042 |
+| D09 | Evidencias: formatos, tamaño, expiración, adjuntos posteriores a validación y contenido sensible. | Texto y PNG/JPEG/WebP; límite inicial sugerido 5 MB por imagen. Evidencia del envío queda fijada; incorporación posterior identificada como adenda. **Confirmado 2026-10-04:** imágenes, PDF y Office; 10 MB; adendas; retiro con motivo. Pendiente: expiración y restricción adicional de acceso. | Dueño de producto + responsable técnico | PHS-017, 023, 024, 042 |
 | D10 | Promedio de portafolio, exclusión de cerrados, datos incompletos, monedas y uso de provisional/oficial. | Media simple solo sobre evaluaciones oficiales disponibles; mostrar cobertura/frescura; agrupar importes por moneda. Confirmar si requiere ponderación comercial. | Dirección + finanzas | PHS-037 |
 
 ## Decisiones confirmadas
@@ -26,6 +26,26 @@ Confirmadas por el usuario (dueño del proyecto, único desarrollador y aprobado
 | D06 (parcial) | Arquitectura de microservicios: gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma), base PostgreSQL compartida con el esquema actual y comunicación REST + eventos por outbox. Ver [ADR-002](../adr/002-microservicios.md). Confirmada el 2026-10-03, BIT-0008. | El usuario no quiere una arquitectura monolítica; eligió conservar la integridad del esquema probado y no añadir un broker. | Protocolo de envío de revisión entre Salud y Proyectos, identidad entre servicios, roles de base por servicio y validación en el esqueleto. |
 | D01 | Reglas del motor versión 1, en [REGLAS-PHF-v1.md](REGLAS-PHF-v1.md). Confirmado el 2026-10-03, BIT-0018: avance por peso de cada hito; desviación financiera contra el avance real; sin datos no hay score ("Sin evaluación") y Gobernanza sin ciclo queda sin dato; pesos, topes, semáforo y demás coeficientes del prototipo adoptados como versión 1. | El conteo simple iguala hitos de distinto tamaño; el gasto contra calendario no detecta al proyecto que gasta sin avanzar; un número inventado oculta la falta de información. | Los detalles propuestos (avance comprometido, redondeo, casos sin dato) también fueron confirmados por el usuario. Quedan la captura del peso del hito y la calibración con proyectos reales. |
 | D05 (parcial) | Durante el piloto, un mismo usuario puede proponer y aprobar sus cambios y validar sus propias revisiones. Cada decisión conserva autor y queda auditada. Se mantiene el modelo de roles PM/líder/Dirección/administrador para separar funciones cuando haya más usuarios. | En el piloto habrá una sola persona operando. | Regla de separación de funciones posterior al piloto, alcance por rol, acceso a datos económicos y responsables externos. |
+
+### D09 — Evidencias (confirmado el 2026-10-04, BIT-0020)
+
+Elegido por el usuario entre las alternativas presentadas:
+
+| Tema | Decisión |
+| --- | --- |
+| Formatos | Texto, imágenes (PNG, JPEG, WebP), PDF y documentos de Office. |
+| Tamaño | Hasta 10 MB por archivo. |
+| Evidencia posterior al cierre o la validación | Se acepta, marcada como adenda con fecha y autor. La evidencia original queda fijada. |
+| Retiro por error o contenido sensible | PM o líder retiran la evidencia con motivo: el archivo se elimina del almacenamiento y deja de verse; se conserva el registro de quién la subió, quién la retiró, cuándo y por qué. |
+
+Propuesto y no objetado por el usuario: los archivos se guardan en una carpeta privada del servidor, fuera de la base, mediante un adaptador (la infraestructura definitiva sigue en D06); ve una evidencia quien puede consultar el proyecto, y cada descarga verifica el permiso en el servidor; la sube quien puede actualizar el elemento; se valida el tipo real del archivo y se sanea su nombre; se conservan mientras exista el proyecto, hasta que D07 defina la retención.
+
+Consecuencias de diseño, propuestas para PHS-017 y aún no confirmadas:
+
+- Office significa los formatos actuales (`.docx`, `.xlsx`, `.pptx`). Se rechazan los que admiten macros (`.docm`, `.xlsm`, `.pptm`) y los formatos antiguos (`.doc`, `.xls`, `.ppt`), que no se pueden validar con la misma seguridad.
+- Todo archivo se entrega como descarga, nunca se muestra incrustado en la página, salvo las imágenes.
+- `evidence` es de solo inserción: el retiro se registra en una tabla aparte y la adenda es una marca fijada al subir. Ambas requieren una migración nueva.
+- Quedan pendientes de D09: expiración, y si alguna evidencia debe restringirse a menos personas que las que ven el proyecto.
 
 ### D05 — Perfiles y alcance (confirmado el 2026-10-03, BIT-0012)
 

@@ -16,7 +16,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
 - **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 175 criterios de aceptación desde BIT-0008. Ninguna historia se considera implementada por la existencia de estos documentos.
-- **Decisiones abiertas:** D02–D04 y D07–D10 completas; D06 parcialmente confirmada; de D05 solo quedan la separación de funciones tras el piloto y los responsables externos. D01 confirmada como reglas versión 1 ([REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md)); faltan el peso del hito y la calibración. Ver [DECISIONES.md](producto/DECISIONES.md).
+- **Decisiones abiertas:** D02–D04, D07, D08 y D10 completas; D09 confirmada salvo expiración y restricción adicional de acceso; D06 parcialmente confirmada; de D05 solo quedan la separación de funciones tras el piloto y los responsables externos. D01 confirmada como reglas versión 1 ([REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md)); faltan el peso del hito y la calibración. Ver [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
@@ -713,6 +713,36 @@ Tomados al implementar, no confirmados por el usuario: registrar economía exige
 ### Pendientes y siguiente paso
 
 El motor completo y la evaluación (PHS-025/026) requieren crear el servicio Salud. Evidencias (PHS-017) requiere el servicio Plataforma y D09. Siguiente entrada: BIT-0020.
+
+## BIT-0020 — Decisión D09: evidencias
+
+**Fecha:** 2026-10-04, America/Mexico_City.
+
+**Objetivo:** definir con el usuario la política de evidencias antes de construir PHS-017.
+
+**Relación:** D09, PHS-017, PHS-023, PHS-024, NF-10, RN-12. Solo documentación.
+
+**Identificación:** commit con prefijo `BIT-0020`.
+
+### Decisiones confirmadas por el usuario
+
+Formatos: texto, imágenes, PDF y Office. Tamaño máximo de 10 MB por archivo. Evidencia posterior al cierre o la validación aceptada como adenda. Retiro con motivo por PM o líder, eliminando el archivo y conservando el registro.
+
+### Trabajo realizado y archivos
+
+[DECISIONES.md](producto/DECISIONES.md) (sección D09 y fila de la tabla) y esta bitácora.
+
+### Supuestos propuestos
+
+No objetados por el usuario: carpeta privada con adaptador, visibilidad igual a la del proyecto, carga por quien puede actualizar el elemento, validación del tipo real y conservación mientras exista el proyecto. Propuestos y sin confirmar: solo formatos actuales de Office y sin macros; entrega como descarga; tabla aparte para retiros y marca de adenda, con migración nueva.
+
+### Validación y límites
+
+Se contrastó con la tabla `evidence` de la migración inicial: es de solo inserción y no tiene dónde registrar un retiro ni una adenda. No hay código de evidencias todavía. El servicio Plataforma, dueño de esa tabla según ADR-002, no existe.
+
+### Pendientes y siguiente paso
+
+Construir PHS-017 con el servicio Plataforma. Siguen abiertas la expiración (D07) y la restricción adicional de acceso. Siguiente entrada: BIT-0021.
 
 ## Plantilla para próximas entradas
 
