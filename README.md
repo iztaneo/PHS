@@ -6,7 +6,13 @@ El repositorio contiene un prototipo navegable y el diseño inicial de arquitect
 
 ## Contenido
 
+- [Bitácora y estado actual del proyecto](docs/BITACORA.md).
+- [Instrucciones para mantener la memoria en cada commit](AGENTS.md).
 - [Prototipo y guía de uso](Project-Health-System-Prototype/README.md).
+- [Especificación funcional](docs/producto/ESPECIFICACION.md).
+- [Backlog priorizado](docs/producto/BACKLOG.md).
+- [Plan de entregas y aceptación](docs/producto/PLAN-ENTREGAS.md).
+- [Decisiones pendientes](docs/producto/DECISIONES.md).
 - [Arquitectura propuesta](docs/ARQUITECTURA-PHS.md).
 - [Diseño de PostgreSQL y diagrama](docs/DATABASE-PHS.md).
 - [Migración inicial](db/migrations/001_initial.sql).
