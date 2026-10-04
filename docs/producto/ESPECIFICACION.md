@@ -10,7 +10,7 @@ El MVP incluye acceso real, proyectos, equipo, líneas base, hitos, riesgos, obs
 
 Fuera del MVP propuesto: SaaS multiempresa, aplicación móvil nativa, IA predictiva, sincronización con herramientas externas, correo automático, importación masiva de datos locales y gestión documental avanzada. Estas exclusiones son una propuesta de alcance, no una cancelación definitiva.
 
-Supuestos de trabajo: una empresa, varias prácticas, interfaz en español, usuarios autenticados por identidad corporativa, importes de cada proyecto en una sola moneda y despliegue inicialmente centralizado. El [stack propuesto](../STACK-TECNOLOGICO.md) concreta React/Vite, NestJS y PostgreSQL. Restricciones del equipo, proveedor de identidad, infraestructura y compatibilidad de dependencias permanecen pendientes.
+Supuestos de trabajo: una empresa, varias prácticas, interfaz en español, usuarios autenticados (decisión del 2026-10-03: credenciales propias validadas en la base de datos para el MVP; identidad corporativa pospuesta), importes de cada proyecto en una sola moneda y despliegue inicialmente centralizado. El [stack propuesto](../STACK-TECNOLOGICO.md) concreta React/Vite, NestJS y PostgreSQL. Restricciones del equipo, proveedor de identidad, infraestructura y compatibilidad de dependencias permanecen pendientes.
 
 ## 2. Fuentes y precedencia
 
@@ -38,7 +38,7 @@ Clasificación: **derivado** = presente en F1–F4; **propuesto** = adaptación 
 | Decidir cambios / validar revisión | No por defecto | En su alcance | Solo delegación explícita | No por defecto |
 | Gestionar usuarios y catálogos | No | No por defecto | No por defecto | Sí |
 
-El responsable de una acción o riesgo debe tener acceso al proyecto y capacidad explícita de actualizarlo. Ser responsable técnico o integrante no concede aprobación. Un usuario puede acumular roles; la política de autoaprobación queda en D05. Los permisos se aplican a API, archivos, búsquedas, conteos y exportaciones futuras, además de la UI. Ningún selector visual concede un rol.
+El responsable de una acción o riesgo debe tener acceso al proyecto y capacidad explícita de actualizarlo. Ser responsable técnico o integrante no concede aprobación. Un usuario puede acumular roles; durante el piloto se permite la autoaprobación auditada (D05, confirmado el 2026-10-03); la regla posterior al piloto sigue pendiente. Los permisos se aplican a API, archivos, búsquedas, conteos y exportaciones futuras, además de la UI. Ningún selector visual concede un rol.
 
 ## 4. Recorridos y pantallas
 

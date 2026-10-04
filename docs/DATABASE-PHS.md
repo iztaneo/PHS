@@ -6,7 +6,7 @@ Propuesta inicial implementada como DDL para PostgreSQL 17 o posterior. Basada e
 
 Una sola base PostgreSQL cubre los datos transaccionales, consultas de portafolio, historial y una bandeja de trabajos persistentes. No se necesita otra base para el MVP. Esto no sustituye el backend, el motor de cálculo o el proceso que ejecuta trabajos programados. El dimensionamiento queda pendiente del volumen real.
 
-Supuesto: aplicación interna de una empresa con varias prácticas. Un cliente puede tener proyectos en varias prácticas. No implementa aislamiento SaaS entre empresas. Los usuarios se identifican por emisor y sujeto de un proveedor de identidad; no se almacenan contraseñas.
+Supuesto: aplicación interna de una empresa con varias prácticas. Un cliente puede tener proyectos en varias prácticas. No implementa aislamiento SaaS entre empresas. Los usuarios se identifican por emisor y sujeto de un proveedor de identidad; no se almacenan contraseñas. Aclaración del 2026-10-03 (BIT-0005): el usuario decidió validar la identidad del MVP en esta base; la migración inicial no cambia y la credencial local se añadirá en una migración nueva (PHS-004/PHS-005), guardando solo el hash.
 
 - UUID para entidades de negocio; `date` para compromisos y `timestamptz` para operaciones.
 - Dinero y horas con `numeric`, sin aritmética monetaria de punto flotante. La moneda del proyecto debe conservarse durante su vida; las observaciones usan esa moneda.

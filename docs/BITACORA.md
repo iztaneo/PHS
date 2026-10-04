@@ -7,13 +7,14 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migración inicial, pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Todavía no implementado:** backend de negocio, interfaz multiusuario conectada a PostgreSQL, autenticación real, motor de producción y workers.
-- **Decisión confirmada:** usar PostgreSQL como base de datos del MVP.
-- **Stack propuesto:** TypeScript, React/Vite, NestJS para API y worker, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate, OIDC y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan restricciones del equipo, proveedor de identidad e infraestructura.
+- **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
+- **Stack:** TypeScript, React/Vite, NestJS para API y worker, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
 - **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 171 criterios de aceptación. Ninguna historia se considera implementada por la existencia de estos documentos.
-- **Decisiones abiertas:** D01–D10 en [DECISIONES.md](producto/DECISIONES.md), incluidas fórmulas, vigencia de revisión, calendario, permisos, acciones y entorno técnico.
+- **Decisiones abiertas:** D01–D04 y D07–D10 completas; D05 y D06 parcialmente confirmadas. Ver [DECISIONES.md](producto/DECISIONES.md).
+- **Hallazgos de revisión sin corregir:** lista en BIT-0005, a resolver en PHS-004 mediante una migración nueva.
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
-- **Siguiente paso funcional:** resolver los pendientes D06 de la propuesta de stack y completar contratos/prueba de compatibilidad de PHS-003; refinar permisos (D05), reglas PHF (D01) y vigencia de revisión (D02). Después desarrollar el primer incremento de R1.
+- **Siguiente paso funcional:** crear el esqueleto del monorepo (pnpm, web, API, worker) con versiones fijadas y la prueba mínima de punta a punta de PHS-003; después PHS-004 (dbmate, migración `002` con credencial local y hallazgos de BIT-0005) y PHS-005 (inicio de sesión contra la base). D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -163,6 +164,51 @@ Completar/verificar la transferencia de `main` y, si falla, conservar el commit 
 ### Pendientes y siguiente paso
 
 Confirmar restricciones de equipo/infraestructura y proveedor de identidad; completar contratos OpenAPI y validar versiones exactas con un esqueleto mínimo antes de implementar PHS-004–008. D01–D10 siguen sin aprobación completa. Siguiente entrada: BIT-0005.
+
+## BIT-0005 — Revisión del proyecto y decisiones de stack, identidad y aprobación
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** revisar el estado del repositorio y registrar las decisiones que el usuario confirmó a partir de esa revisión.
+
+**Relación:** D05, D06, PHS-003, PHS-004, PHS-005 y ADR-001. Ninguna historia se declara terminada.
+
+**Identificación:** commit con prefijo `BIT-0005`.
+
+### Decisiones confirmadas por el usuario
+
+- Se usará TypeScript/React/NestJS. Una sola persona desarrolla y aprueba.
+- La identidad del MVP se valida en la base de datos; el usuario quiere primero un MVP funcional. OIDC queda pospuesto.
+- La autoaprobación se permite dentro de la aplicación solo durante el piloto, auditada; se conserva el modelo de roles.
+
+### Trabajo realizado y archivos
+
+- Se registraron las decisiones en [DECISIONES.md](producto/DECISIONES.md) (sección nueva y filas D05/D06), [ADR-001](adr/001-stack-mvp.md) (estado y Revisión 1) y [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md) (estado, fila de identidad, §6 y §9).
+- Aclaraciones fechadas en [DATABASE-PHS.md](DATABASE-PHS.md) y [ESPECIFICACION.md](producto/ESPECIFICACION.md) sobre identidad y autoaprobación. Se actualizó el estado para retomar de esta bitácora.
+- No se modificaron el SQL, las pruebas, el backlog ni el prototipo.
+
+### Validación de la revisión
+
+- En una instancia temporal de PostgreSQL 17.9, ya eliminada, la migración aplicó sobre una base vacía y creó 28 tablas; `001_integrity.sql` pasó con sus 11 rechazos.
+- Se contaron 45 historias y 171 criterios en el backlog; `main` coincidía con `origin/main` en `7ccc4cd` antes de este commit.
+- Con 20 inserciones adicionales de prueba (no versionadas), el esquema rechazó una baseline originada en una decisión rechazada y un salto de versión 2 → 4; ninguno está cubierto por `001_integrity.sql`.
+- Límites: el prototipo no se ejecutó en navegador; el backlog y los tres HTML no se leyeron completos.
+
+### Hallazgos sin corregir (para PHS-004)
+
+1. Varias columnas de texto aceptan cadena vacía (nombre de proyecto, hito, práctica y cliente, correo, `resolution_note`), mientras otras lo impiden.
+2. `review_cycle` acepta ciclos solapados del mismo proyecto.
+3. Un hito sin actividad puede eliminarse con `DELETE`; riesgos, renovaciones y tareas tampoco tienen protección (estos últimos no se probaron).
+4. Se aceptan fechas imposibles: hito completado en el futuro y `outbox_message.processed_at` anterior a su creación.
+5. Claves foráneas sin índice, por ejemplo `evidence.milestone_id` y `health_task.event_id`.
+6. `ARQUITECTURA-PHS.md` §5 lista entidades que el esquema resolvió con snapshots JSONB y `activity`; su §10 duplica la lista de decisiones.
+7. `Project-Health-System-Prototype/app.py` escucha en `0.0.0.0`.
+
+También se confirmó que la base permite hoy lo que la documentación ya asigna al backend: retroceder o anular el puntero de baseline, moneda de baseline distinta a la del proyecto, reenvío de revisión sin devolución previa y `TRUNCATE` de historial por el propietario.
+
+### Pendientes y siguiente paso
+
+Crear el esqueleto del monorepo y la prueba mínima de PHS-003; luego PHS-004 con la migración `002` (credencial local y hallazgos 1–5) y PHS-005. Siguen pendientes infraestructura, volumen piloto y D01–D04, D07–D10. Siguiente entrada: BIT-0006.
 
 ## Plantilla para próximas entradas
 

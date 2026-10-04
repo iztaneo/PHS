@@ -1,6 +1,6 @@
 # Stack tecnológico PHS
 
-Fecha: 2026-10-03, America/Mexico_City. Estado: **selección técnica inicial propuesta** para el MVP; no se ha instalado ni se ha validado todavía la combinación de dependencias. PostgreSQL está confirmado por el usuario. Se solicitó información sobre restricciones del equipo; al redactar no hay preferencia adicional confirmada.
+Fecha: 2026-10-03, America/Mexico_City. Estado: selección técnica para el MVP; **TypeScript/React/NestJS confirmados por el usuario el 2026-10-03 y la identidad del MVP se valida en la base de datos** (ver §6 y BIT-0005). Texto original de la propuesta: no se ha instalado ni se ha validado todavía la combinación de dependencias. PostgreSQL está confirmado por el usuario. Se solicitó información sobre restricciones del equipo; al redactar no hay preferencia adicional confirmada.
 
 La decisión y sus alternativas se resumen en [ADR-001](adr/001-stack-mvp.md). Completa la parte de selección de tecnologías de PHS-003; quedan contratos, proveedor de identidad, infraestructura y pruebas de compatibilidad antes de dar esa historia por terminada.
 
@@ -20,7 +20,7 @@ La decisión y sus alternativas se resumen en [ADR-001](adr/001-stack-mvp.md). C
 | Migraciones | dbmate con SQL versionado | Un solo historial de migraciones; conservar triggers e índices particulares del esquema. |
 | Motor PHF | Paquete TypeScript independiente + decimal.js | Reglas versionadas, cálculo reproducible y manejo decimal de importes. |
 | Procesos automáticos | Worker Node/Nest independiente + outbox PostgreSQL | Evaluaciones, vencimientos, generación de acciones y entregas internas persistentes. |
-| Identidad | OpenID Connect mediante `openid-client` | Integración con el proveedor corporativo por definir. |
+| Identidad | Credenciales propias validadas en PostgreSQL (MVP); OpenID Connect pospuesto | Usuario y hash de contraseña en la base; adaptador para incorporar OIDC después. |
 | Evidencias | Adaptador de archivos privados; interfaz compatible con almacenamiento de objetos | Directorio privado en desarrollo; destino de producción por definir con infraestructura. |
 | Pruebas | Vitest, Testing Library, Testcontainers y Playwright | Dominio/componentes, PostgreSQL real y recorridos completos de navegador. |
 | Desarrollo y empaquetado | pnpm workspaces + Docker Compose | Un repositorio, dependencias bloqueadas y entorno local reproducible. |
@@ -93,6 +93,10 @@ Esta elección ahorra un servicio de infraestructura, pero obliga a implementar 
 
 ## 6. Identidad y autorización
 
+**Decisión del usuario, 2026-10-03:** en el MVP la identidad se valida en la base de datos de la aplicación; OIDC queda pospuesto. Lo que sigue sobre OIDC se conserva como diseño de la integración futura. La sesión de servidor con cookie, el mismo origen y la verificación de permisos en cada caso de uso se mantienen.
+
+Para la credencial local, PHS-005 debe definir: tabla de credenciales separada de `app_user`, hash con algoritmo resistente (por ejemplo Argon2id) y parámetros registrados, alta por administrador, cambio y restablecimiento de contraseña, límite de intentos, mensajes que no revelen si el usuario existe y ausencia total de contraseñas en logs, auditoría y respuestas. Durante el piloto se permite la autoaprobación auditada (D05).
+
 Se propone OIDC con Authorization Code y PKCE, integrado desde el backend con `openid-client`; el proveedor corporativo sigue pendiente. La biblioteca implementa cliente OAuth/OIDC, no un directorio de usuarios ni los permisos de negocio. [openid-client](https://github.com/panva/openid-client).
 
 La API mantendrá sesión de servidor y entregará cookie `HttpOnly`, `Secure` en HTTPS, con política SameSite y protección CSRF acordes al flujo. Las sesiones persistentes requieren tabla y adaptador definidos en PHS-005; no están en las 28 tablas de negocio originales. El backend valida emisor, audiencia, estado/nonce y caducidad mediante la biblioteca y el protocolo correspondiente.
@@ -126,8 +130,8 @@ No se han contratado servicios, creado pipelines ni instalado paquetes en esta e
 
 La selección de tecnologías queda documentada. Para convertirla en base ejecutable:
 
-1. Confirmar o incorporar restricciones del equipo y organización sobre lenguajes/infraestructura.
-2. Definir proveedor de identidad, entorno de despliegue, almacenamiento y volumen piloto.
+1. ~~Confirmar restricciones del equipo sobre lenguajes~~ — confirmado el 2026-10-03: TypeScript/React/NestJS, equipo de una persona. Sigue pendiente la infraestructura.
+2. Definir entorno de despliegue, almacenamiento y volumen piloto. Identidad del MVP: validada en la base de datos (decidido el 2026-10-03).
 3. Fijar versiones exactas compatibles: Node 24, Nest 12 y paquetes relacionados, React 19, Vite, TypeScript y herramientas; compilar y ejecutar una prueba mínima de punta a punta.
 4. Completar OpenAPI y contratos JSON iniciales, patrón de sesión y protocolo del worker.
 5. En PHS-004 adaptar migraciones y agregar únicamente las brechas decididas; conservar trazabilidad.

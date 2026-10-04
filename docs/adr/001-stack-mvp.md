@@ -1,7 +1,7 @@
 # ADR-001 — Stack del MVP PHS
 
 - Fecha: 2026-10-03, America/Mexico_City.
-- Estado: propuesta técnica inicial; PostgreSQL confirmado, restricciones del equipo aún no confirmadas.
+- Estado: **aceptada por el usuario el 2026-10-03** en cuanto a TypeScript, React, NestJS y PostgreSQL; identidad revisada (ver [Revisión 1](#revisión-1--2026-10-03)). Infraestructura y versiones exactas siguen pendientes.
 - Relación: D06 y PHS-003; detalles en [STACK-TECNOLOGICO.md](../STACK-TECNOLOGICO.md).
 
 ## Contexto
@@ -37,3 +37,11 @@ Esta tabla expresa juicio de diseño para los requisitos presentes, no benchmark
 ## Revisión de la decisión
 
 Revisar ante restricción corporativa, proveedor obligatorio, incompatibilidad demostrada o resultados del piloto. Registrar una nueva revisión con motivo en lugar de sustituir silenciosamente la decisión.
+
+## Revisión 1 — 2026-10-03
+
+- El usuario confirmó TypeScript/React/NestJS. El equipo es una sola persona que desarrolla y aprueba; no hay restricción corporativa adicional.
+- Cambio respecto de la selección original: la identidad del MVP se valida en la base de datos de la aplicación, sin proveedor OIDC. Motivo: obtener primero un MVP funcional.
+- Consecuencias: la aplicación pasa a custodiar credenciales. Requiere hash de contraseña con un algoritmo adecuado (por ejemplo Argon2id), alta de usuarios por un administrador, restablecimiento, límite de intentos y sesión de servidor con cookie `HttpOnly`. Nunca guardar ni registrar contraseñas en claro. El esquema actual no tiene esa tabla; se añade en PHS-004/PHS-005.
+- Se conserva el acceso por adaptador para poder incorporar OIDC después sin cambiar los casos de uso; `app_user(identity_issuer, identity_subject)` admite un emisor local.
+- La autoaprobación durante el piloto (D05) es una regla de autorización de negocio y no modifica esta selección.
