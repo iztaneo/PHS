@@ -1,12 +1,11 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { Briefcase, LogOut, Menu, ShieldCheck, UserRound, X } from 'lucide-react';
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { Admin } from './Admin';
 import { ApiError, api, errorMessage, type SessionUser } from './api';
 import { Projects } from './Projects';
+import { Badge, Button, Card, Empty, Field, Input, Loading, Notice, PageHeader } from './ui';
 
 type View = { name: 'loading' } | { name: 'login'; notice?: string } | { name: 'signed-in'; user: SessionUser };
-
-const page = { fontFamily: 'system-ui, sans-serif', maxWidth: 960, margin: '32px auto', padding: '0 16px' } as const;
-const field = { display: 'block', width: '100%', maxWidth: 420, padding: 8, margin: '4px 0 16px', boxSizing: 'border-box' } as const;
 
 export function App() {
   const [view, setView] = useState<View>({ name: 'loading' });
@@ -18,22 +17,42 @@ export function App() {
         setView({ name: 'login', notice: error instanceof ApiError && error.status === 401 ? undefined : errorMessage(error) }));
   }, []);
 
-  return (
-    <main style={page}>
-      <h1>Project Health System</h1>
-      {view.name === 'loading' && <p>Cargando…</p>}
-      {view.name === 'login' && (
-        <LoginForm notice={view.notice} onSignedIn={(user) => setView({ name: 'signed-in', user })} />
-      )}
-      {view.name === 'signed-in' && view.user.mustChangePassword && (
+  if (view.name === 'loading') return <Centered><Loading /></Centered>;
+  if (view.name === 'login') {
+    return <Centered><LoginForm notice={view.notice} onSignedIn={(user) => setView({ name: 'signed-in', user })} /></Centered>;
+  }
+  if (view.user.mustChangePassword) {
+    return (
+      <Centered>
         <PasswordForm
           onChanged={() => setView({ name: 'signed-in', user: { ...view.user, mustChangePassword: false } })}
           onSessionLost={() => setView({ name: 'login', notice: errorMessage(new ApiError(401, 'authentication_required')) })}
         />
-      )}
-      {view.name === 'signed-in' && !view.user.mustChangePassword && (
-        <Home user={view.user} onSignedOut={(notice) => setView({ name: 'login', notice })} />
-      )}
+      </Centered>
+    );
+  }
+  return <Shell user={view.user} onSignedOut={(notice) => setView({ name: 'login', notice })} />;
+}
+
+function Brand() {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="grid size-9 place-items-center rounded-xl bg-brand text-sm font-semibold text-white">PH</span>
+      <span className="leading-tight">
+        <span className="block text-sm font-semibold text-ink">Project Health</span>
+        <span className="block text-xs text-muted">System</span>
+      </span>
+    </div>
+  );
+}
+
+function Centered({ children }: { children: ReactNode }) {
+  return (
+    <main className="grid min-h-dvh place-items-center bg-canvas px-4 py-10">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 flex justify-center"><Brand /></div>
+        {children}
+      </div>
     </main>
   );
 }
@@ -57,17 +76,19 @@ function LoginForm({ notice, onSignedIn }: { notice?: string; onSignedIn: (user:
   }
 
   return (
-    <form onSubmit={submit}>
-      <h2>Iniciar sesión</h2>
-      {error && <p role="alert">{error}</p>}
-      <label htmlFor="email">Correo</label>
-      <input id="email" type="email" autoComplete="username" required style={field}
-        value={email} onChange={(event) => setEmail(event.target.value)} />
-      <label htmlFor="password">Contraseña</label>
-      <input id="password" type="password" autoComplete="current-password" required style={field}
-        value={password} onChange={(event) => setPassword(event.target.value)} />
-      <button type="submit" disabled={busy}>{busy ? 'Entrando…' : 'Entrar'}</button>
-    </form>
+    <Card>
+      <form onSubmit={submit} className="space-y-4">
+        <h1 className="text-xl font-semibold tracking-tight">Iniciar sesión</h1>
+        {error && <Notice tone="red">{error}</Notice>}
+        <Field label="Correo" htmlFor="email">
+          <Input id="email" type="email" autoComplete="username" required value={email} onChange={(event) => setEmail(event.target.value)} />
+        </Field>
+        <Field label="Contraseña" htmlFor="password">
+          <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} />
+        </Field>
+        <Button type="submit" variant="primary" disabled={busy} className="w-full">{busy ? 'Entrando…' : 'Entrar'}</Button>
+      </form>
+    </Card>
   );
 }
 
@@ -100,29 +121,41 @@ function PasswordForm({ onChanged, onSessionLost }: { onChanged: () => void; onS
   }
 
   return (
-    <form onSubmit={submit}>
-      <h2>Cambia tu contraseña</h2>
-      <p>Tu contraseña es temporal. Debes cambiarla antes de continuar.</p>
-      {error && <p role="alert">{error}</p>}
-      <label htmlFor="current">Contraseña actual</label>
-      <input id="current" type="password" autoComplete="current-password" required style={field}
-        value={current} onChange={(event) => setCurrent(event.target.value)} />
-      <label htmlFor="next">Nueva contraseña (mínimo 12 caracteres)</label>
-      <input id="next" type="password" autoComplete="new-password" required minLength={12} maxLength={128} style={field}
-        value={next} onChange={(event) => setNext(event.target.value)} />
-      <label htmlFor="repeat">Confirma la nueva contraseña</label>
-      <input id="repeat" type="password" autoComplete="new-password" required style={field}
-        value={repeat} onChange={(event) => setRepeat(event.target.value)} />
-      <button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Cambiar contraseña'}</button>
-    </form>
+    <Card>
+      <form onSubmit={submit} className="space-y-4">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Cambia tu contraseña</h1>
+          <p className="mt-1 text-sm text-muted">Tu contraseña es temporal. Debes cambiarla antes de continuar.</p>
+        </div>
+        {error && <Notice tone="red">{error}</Notice>}
+        <Field label="Contraseña actual" htmlFor="current">
+          <Input id="current" type="password" autoComplete="current-password" required value={current} onChange={(event) => setCurrent(event.target.value)} />
+        </Field>
+        <Field label="Nueva contraseña" htmlFor="next" hint="Mínimo 12 caracteres.">
+          <Input id="next" type="password" autoComplete="new-password" required minLength={12} maxLength={128} value={next} onChange={(event) => setNext(event.target.value)} />
+        </Field>
+        <Field label="Confirma la nueva contraseña" htmlFor="repeat">
+          <Input id="repeat" type="password" autoComplete="new-password" required value={repeat} onChange={(event) => setRepeat(event.target.value)} />
+        </Field>
+        <Button type="submit" variant="primary" disabled={busy} className="w-full">{busy ? 'Guardando…' : 'Cambiar contraseña'}</Button>
+      </form>
+    </Card>
   );
 }
 
 const ROLE_TEXT = { pm: 'PM', lead: 'Líder', director: 'Dirección' } as const;
+type Section = 'projects' | 'roles' | 'admin';
 
-function Home({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?: string) => void }) {
-  const [tab, setTab] = useState<'projects' | 'roles' | 'admin'>('projects');
+function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?: string) => void }) {
+  const [section, setSection] = useState<Section>('projects');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string>();
+
+  const items: { key: Section; label: string; icon: ReactNode }[] = [
+    { key: 'projects', label: 'Proyectos', icon: <Briefcase size={18} aria-hidden /> },
+    { key: 'roles', label: 'Mis roles', icon: <UserRound size={18} aria-hidden /> },
+    ...(user.isAdmin ? [{ key: 'admin' as const, label: 'Administración', icon: <ShieldCheck size={18} aria-hidden /> }] : []),
+  ];
 
   async function signOut() {
     try {
@@ -133,31 +166,71 @@ function Home({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?:
     }
   }
 
+  const nav = (
+    <nav aria-label="Principal" className="flex flex-1 flex-col gap-1">
+      {items.map((item) => (
+        <button key={item.key} type="button" aria-current={section === item.key ? 'page' : undefined}
+          onClick={() => { setSection(item.key); setMenuOpen(false); }}
+          className={`flex min-h-10 items-center gap-3 rounded-control px-3 text-sm font-medium ${section === item.key ? 'bg-brand-soft text-brand-strong' : 'text-ink-soft hover:bg-subtle'}`}>
+          {item.icon}{item.label}
+        </button>
+      ))}
+    </nav>
+  );
+  const account = (
+    <div className="border-t border-line pt-4">
+      <p className="truncate text-sm font-medium text-ink">{user.displayName}</p>
+      <p className="mb-3 truncate text-xs text-muted">{user.email}</p>
+      <Button variant="ghost" size="sm" onClick={signOut} className="w-full justify-start"><LogOut size={16} aria-hidden />Cerrar sesión</Button>
+    </div>
+  );
+
   return (
-    <section>
-      <nav style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
-        <button type="button" onClick={() => setTab('projects')} aria-current={tab === 'projects'}>Proyectos</button>
-        <button type="button" onClick={() => setTab('roles')} aria-current={tab === 'roles'}>Mis roles</button>
-        {user.isAdmin && (
-          <button type="button" onClick={() => setTab('admin')} aria-current={tab === 'admin'}>Administración</button>
-        )}
-        <span style={{ marginLeft: 'auto' }}>{user.displayName} · {user.email}</span>
-        <button type="button" onClick={signOut}>Cerrar sesión</button>
-      </nav>
-      {error && <p role="alert">{error}</p>}
-      {tab === 'admin' && user.isAdmin && <Admin currentUserId={user.id} />}
-      {tab === 'projects' && <Projects user={user} />}
-      {tab === 'roles' && (
-        <>
-          <h2>Mis roles</h2>
-          {user.memberships.length === 0 && !user.isAdmin && <p>Aún no tienes roles asignados. Pide acceso a un administrador.</p>}
-          <ul>
-            {user.isAdmin && <li>Administrador (usuarios, prácticas y catálogos; sin acceso a proyectos por este rol)</li>}
-            {user.memberships.map((m) => <li key={`${m.practiceId}-${m.role}`}>{ROLE_TEXT[m.role]} en {m.practiceName}</li>)}
-          </ul>
-          <p>Los roles se actualizan al volver a iniciar sesión o recargar la página.</p>
-        </>
+    <div className="min-h-dvh bg-canvas lg:pl-64">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col gap-6 border-r border-line bg-surface p-5 lg:flex">
+        <Brand />{nav}{account}
+      </aside>
+
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-surface px-4 py-3 lg:hidden">
+        <Brand />
+        <Button variant="ghost" size="sm" aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
+          {menuOpen ? <X size={20} aria-hidden /> : <Menu size={20} aria-hidden />}
+        </Button>
+      </header>
+      {menuOpen && (
+        <div className="sticky top-[61px] z-10 flex flex-col gap-4 border-b border-line bg-surface p-4 lg:hidden">{nav}{account}</div>
       )}
-    </section>
+
+      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+        {error && <div className="mb-4"><Notice tone="red">{error}</Notice></div>}
+        {section === 'admin' && user.isAdmin && <Admin currentUserId={user.id} />}
+        {section === 'projects' && <Projects user={user} />}
+        {section === 'roles' && (
+          <>
+            <PageHeader title="Mis roles" subtitle="Lo que puedes ver y hacer depende de estos roles." />
+            {user.memberships.length === 0 && !user.isAdmin ? (
+              <Empty title="Aún no tienes roles asignados">Pide acceso a un administrador.</Empty>
+            ) : (
+              <Card>
+                <ul className="divide-y divide-line">
+                  {user.isAdmin && (
+                    <li className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+                      <Badge tone="blue">Administrador</Badge>
+                      <span className="text-sm text-muted">Usuarios, prácticas y catálogos. Este rol no da acceso a proyectos.</span>
+                    </li>
+                  )}
+                  {user.memberships.map((m) => (
+                    <li key={`${m.practiceId}-${m.role}`} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+                      <Badge>{ROLE_TEXT[m.role]}</Badge><span className="text-sm text-ink">{m.practiceName}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+            <p className="mt-4 text-xs text-muted">Los roles se actualizan al recargar la página.</p>
+          </>
+        )}
+      </main>
+    </div>
   );
 }

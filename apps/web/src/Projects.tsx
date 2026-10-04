@@ -1,16 +1,20 @@
+import { ArrowLeft, Plus, Search } from 'lucide-react';
 import { type FormEvent, useEffect, useState } from 'react';
 import {
   ApiError, api, errorMessage, type PracticePerson, type ProjectDetail, type ProjectFilters, type ProjectInput,
   type ProjectPage, type ServiceType, type SessionUser,
 } from './api';
 import { BaselineSection, Milestones, Team } from './ProjectSections';
+import { Badge, Button, Card, Empty, Facts, Field, Input, Loading, Notice, PageHeader, Select, Tabs, Textarea, type Tone } from './ui';
 
-const STATUS: Record<string, string> = {
-  planned: 'Por iniciar', active: 'En ejecución', paused: 'Pausado', renewing: 'En renovación', closed: 'Cerrado',
+const STATUS: Record<string, { label: string; tone: Tone }> = {
+  planned: { label: 'Por iniciar', tone: 'neutral' },
+  active: { label: 'En ejecución', tone: 'blue' },
+  paused: { label: 'Pausado', tone: 'amber' },
+  renewing: { label: 'En renovación', tone: 'amber' },
+  closed: { label: 'Cerrado', tone: 'neutral' },
 };
-const input = { padding: 6, marginRight: 8, marginBottom: 8 } as const;
-const wide = { display: 'block', width: '100%', maxWidth: 520, padding: 6, margin: '4px 0 12px', boxSizing: 'border-box' } as const;
-const cell = { padding: '6px 8px', borderBottom: '1px solid #ccc', textAlign: 'left' } as const;
+const StatusBadge = ({ status }: { status: string }) => <Badge tone={STATUS[status]?.tone}>{STATUS[status]?.label ?? status}</Badge>;
 const NO_FILTERS: ProjectFilters = { q: '', clientId: '', serviceTypeCode: '', status: '', page: 1 };
 
 type Screen = { name: 'list' } | { name: 'new' } | { name: 'detail'; id: string; created?: boolean };
@@ -61,62 +65,97 @@ function ProjectList({ canCreate, onNew, onOpen }: { canCreate: boolean; onNew: 
   const pages = page ? Math.max(1, Math.ceil(page.total / page.pageSize)) : 1;
 
   return (
-    <section>
-      <h2>Proyectos</h2>
-      <form onSubmit={(event) => { event.preventDefault(); change({ q: search.trim() }); }}>
-        <input aria-label="Buscar por nombre o código" placeholder="Buscar por nombre o código" style={input}
-          value={search} onChange={(event) => setSearch(event.target.value)} />
-        <button type="submit" style={{ marginRight: 8 }}>Buscar</button>
-        <select aria-label="Cliente" style={input} value={filters.clientId} onChange={(event) => change({ clientId: event.target.value })}>
-          <option value="">Todos los clientes</option>
-          {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select aria-label="Tipo de servicio" style={input} value={filters.serviceTypeCode} onChange={(event) => change({ serviceTypeCode: event.target.value })}>
-          <option value="">Todos los tipos</option>
-          {types.map((t) => <option key={t.code} value={t.code}>{t.name}</option>)}
-        </select>
-        <select aria-label="Estado" style={input} value={filters.status} onChange={(event) => change({ status: event.target.value })}>
-          <option value="">Todos los estados</option>
-          {Object.entries(STATUS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-        </select>
-        {filtered && <button type="button" onClick={() => { setSearch(''); setFilters(NO_FILTERS); }}>Limpiar</button>}
-      </form>
-      {canCreate && <p><button type="button" onClick={onNew}>Crear proyecto</button></p>}
-      {error && <p role="alert">{error}</p>}
-      {!page && !error && <p>Consultando…</p>}
+    <>
+      <PageHeader title="Proyectos" subtitle="Los proyectos y servicios a tu alcance."
+        actions={canCreate && <Button variant="primary" onClick={onNew}><Plus size={16} aria-hidden />Crear proyecto</Button>} />
+      <Card className="mb-4">
+        <form className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto]"
+          onSubmit={(event) => { event.preventDefault(); change({ q: search.trim() }); }}>
+          <div className="relative">
+            <Search size={16} aria-hidden className="pointer-events-none absolute left-3 top-3 text-muted" />
+            <Input aria-label="Buscar por nombre o código" placeholder="Buscar por nombre o código" className="pl-9"
+              value={search} onChange={(event) => setSearch(event.target.value)} />
+          </div>
+          <Select aria-label="Cliente" value={filters.clientId} onChange={(event) => change({ clientId: event.target.value })}>
+            <option value="">Todos los clientes</option>
+            {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Select>
+          <Select aria-label="Tipo de servicio" value={filters.serviceTypeCode} onChange={(event) => change({ serviceTypeCode: event.target.value })}>
+            <option value="">Todos los tipos</option>
+            {types.map((t) => <option key={t.code} value={t.code}>{t.name}</option>)}
+          </Select>
+          <Select aria-label="Estado" value={filters.status} onChange={(event) => change({ status: event.target.value })}>
+            <option value="">Todos los estados</option>
+            {Object.entries(STATUS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
+          </Select>
+          <div className="flex gap-2">
+            <Button type="submit">Buscar</Button>
+            {filtered && <Button variant="ghost" onClick={() => { setSearch(''); setFilters(NO_FILTERS); }}>Limpiar</Button>}
+          </div>
+        </form>
+      </Card>
+      {error && <Notice tone="red">{error}</Notice>}
+      {!page && !error && <Loading />}
       {page && page.total === 0 && (
-        <p>{filtered ? 'Ningún proyecto coincide con la búsqueda.'
-          : canCreate ? 'Aún no hay proyectos a tu alcance. Crea el primero.'
-          : 'No hay proyectos a tu alcance. Pide a un administrador un rol de PM o líder para crear proyectos.'}</p>
+        <Empty title={filtered ? 'Ningún proyecto coincide con la búsqueda' : 'Aún no hay proyectos a tu alcance'}>
+          {!filtered && (canCreate ? 'Crea el primero para empezar a gobernar su salud.'
+            : 'Pide a un administrador un rol de PM o líder para crear proyectos.')}
+        </Empty>
       )}
       {page && page.total > 0 && (
         <>
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead>
-              <tr>{['Código', 'Proyecto', 'Cliente', 'Tipo', 'Estado', 'PM', 'Práctica'].map((h) => <th key={h} style={cell}>{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {page.items.map((project) => (
-                <tr key={project.id}>
-                  <td style={cell}>{project.code}</td>
-                  <td style={cell}><button type="button" onClick={() => onOpen(project.id)}>{project.name}</button></td>
-                  <td style={cell}>{project.clientName}</td>
-                  <td style={cell}>{project.serviceTypeName}</td>
-                  <td style={cell}>{STATUS[project.status] ?? project.status}</td>
-                  <td style={cell}>{project.pmName}</td>
-                  <td style={cell}>{project.practiceName}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p>
-            {page.total} proyecto(s) · página {page.page} de {pages}{' '}
-            <button type="button" disabled={page.page <= 1} onClick={() => change({ page: page.page - 1 })}>Anterior</button>{' '}
-            <button type="button" disabled={page.page >= pages} onClick={() => change({ page: page.page + 1 })}>Siguiente</button>
-          </p>
+          <ul className="grid gap-3 md:hidden">
+            {page.items.map((project) => (
+              <li key={project.id}>
+                <button type="button" onClick={() => onOpen(project.id)}
+                  className="w-full rounded-card border border-line bg-surface p-4 text-left shadow-card">
+                  <span className="flex items-start justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="block text-xs text-muted">{project.code}</span>
+                      <span className="block font-medium text-ink">{project.name}</span>
+                    </span>
+                    <StatusBadge status={project.status} />
+                  </span>
+                  <span className="mt-2 block text-sm text-muted">{project.clientName} · {project.serviceTypeName}</span>
+                  <span className="block text-sm text-muted">PM {project.pmName} · {project.practiceName}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-hidden rounded-card border border-line bg-surface shadow-card md:block">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-line bg-subtle text-xs uppercase tracking-wide text-muted">
+                <tr>{['Proyecto', 'Cliente', 'Tipo', 'Estado', 'PM', 'Práctica'].map((h) => <th key={h} className="px-4 py-3 font-medium">{h}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {page.items.map((project) => (
+                  <tr key={project.id} className="hover:bg-subtle">
+                    <td className="px-4 py-3">
+                      <button type="button" onClick={() => onOpen(project.id)} className="text-left">
+                        <span className="block font-medium text-brand-strong hover:underline">{project.name}</span>
+                        <span className="block text-xs text-muted">{project.code}</span>
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">{project.clientName}</td>
+                    <td className="px-4 py-3">{project.serviceTypeName}</td>
+                    <td className="px-4 py-3"><StatusBadge status={project.status} /></td>
+                    <td className="px-4 py-3">{project.pmName}</td>
+                    <td className="px-4 py-3">{project.practiceName}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
+            <span>{page.total} proyecto(s) · página {page.page} de {pages}</span>
+            <span className="flex gap-2">
+              <Button size="sm" disabled={page.page <= 1} onClick={() => change({ page: page.page - 1 })}>Anterior</Button>
+              <Button size="sm" disabled={page.page >= pages} onClick={() => change({ page: page.page + 1 })}>Siguiente</Button>
+            </span>
+          </div>
         </>
       )}
-    </section>
+    </>
   );
 }
 
@@ -135,42 +174,56 @@ function ProjectFields({ values, set, people, types, editing, canReassign, dates
     .map((p) => <option key={p.id} value={p.id}>{p.displayName}{p.email && ` · ${p.email}`}</option>);
   return (
     <>
-      <label htmlFor="p-name">Nombre</label>
-      <input id="p-name" required maxLength={200} style={wide} value={values.name} onChange={(e) => set({ name: e.target.value })} />
-      <label htmlFor="p-type">Tipo de servicio</label>
-      <select id="p-type" required style={wide} value={values.serviceTypeCode} onChange={(e) => set({ serviceTypeCode: e.target.value })}>
-        <option value="">Selecciona…</option>
-        {types.filter((t) => t.active || t.code === values.serviceTypeCode).map((t) => <option key={t.code} value={t.code}>{t.name}</option>)}
-      </select>
-      <label htmlFor="p-pm">PM</label>
-      <select id="p-pm" required disabled={editing && !canReassign} style={wide} value={values.pmId} onChange={(e) => set({ pmId: e.target.value })}>
-        <option value="">Selecciona…</option>{options('pm')}
-      </select>
-      <label htmlFor="p-lead">Líder</label>
-      <select id="p-lead" required disabled={editing && !canReassign} style={wide} value={values.leadId} onChange={(e) => set({ leadId: e.target.value })}>
-        <option value="">Selecciona…</option>{options('lead')}
-      </select>
-      <label htmlFor="p-tech">Responsable técnico</label>
-      <select id="p-tech" required style={wide} value={values.technicalOwnerId} onChange={(e) => set({ technicalOwnerId: e.target.value })}>
-        <option value="">Selecciona…</option>{options()}
-      </select>
-      <label htmlFor="p-sponsor">Sponsor (opcional)</label>
-      <select id="p-sponsor" style={wide} value={values.sponsorId} onChange={(e) => set({ sponsorId: e.target.value })}>
-        <option value="">Sin sponsor</option>{options()}
-      </select>
-      <label htmlFor="p-start">Inicio</label>
-      <input id="p-start" type="date" required disabled={datesLocked} style={wide} value={values.startsOn} onChange={(e) => set({ startsOn: e.target.value })} />
-      <label htmlFor="p-end">Fin</label>
-      <input id="p-end" type="date" required disabled={datesLocked} style={wide} value={values.endsOn} onChange={(e) => set({ endsOn: e.target.value })} />
-      {datesLocked && <p>Las fechas forman parte de la línea base vigente; se modifican mediante un cambio aprobado.</p>}
-      <label htmlFor="p-contact">Contacto del cliente para este proyecto</label>
-      <input id="p-contact" maxLength={500} style={wide} value={values.clientContact} onChange={(e) => set({ clientContact: e.target.value })} />
-      <label htmlFor="p-escalation">Escalación de este proyecto</label>
-      <textarea id="p-escalation" rows={2} maxLength={2000} style={wide} value={values.escalationNotes} onChange={(e) => set({ escalationNotes: e.target.value })} />
-      <label htmlFor="p-desc">Descripción</label>
-      <textarea id="p-desc" rows={3} maxLength={4000} style={wide} value={values.description} onChange={(e) => set({ description: e.target.value })} />
+      <Field label="Nombre" htmlFor="p-name" className="sm:col-span-2">
+        <Input id="p-name" required maxLength={200} value={values.name} onChange={(e) => set({ name: e.target.value })} />
+      </Field>
+      <Field label="Tipo de servicio" htmlFor="p-type">
+        <Select id="p-type" required value={values.serviceTypeCode} onChange={(e) => set({ serviceTypeCode: e.target.value })}>
+          <option value="">Selecciona…</option>
+          {types.filter((t) => t.active || t.code === values.serviceTypeCode).map((t) => <option key={t.code} value={t.code}>{t.name}</option>)}
+        </Select>
+      </Field>
+      <Field label="PM" htmlFor="p-pm" hint={editing && !canReassign ? 'Solo un líder puede reasignar al PM.' : undefined}>
+        <Select id="p-pm" required disabled={editing && !canReassign} value={values.pmId} onChange={(e) => set({ pmId: e.target.value })}>
+          <option value="">Selecciona…</option>{options('pm')}
+        </Select>
+      </Field>
+      <Field label="Líder" htmlFor="p-lead">
+        <Select id="p-lead" required disabled={editing && !canReassign} value={values.leadId} onChange={(e) => set({ leadId: e.target.value })}>
+          <option value="">Selecciona…</option>{options('lead')}
+        </Select>
+      </Field>
+      <Field label="Responsable técnico" htmlFor="p-tech">
+        <Select id="p-tech" required value={values.technicalOwnerId} onChange={(e) => set({ technicalOwnerId: e.target.value })}>
+          <option value="">Selecciona…</option>{options()}
+        </Select>
+      </Field>
+      <Field label="Sponsor (opcional)" htmlFor="p-sponsor">
+        <Select id="p-sponsor" value={values.sponsorId} onChange={(e) => set({ sponsorId: e.target.value })}>
+          <option value="">Sin sponsor</option>{options()}
+        </Select>
+      </Field>
+      <Field label="Inicio" htmlFor="p-start">
+        <Input id="p-start" type="date" required disabled={datesLocked} value={values.startsOn} onChange={(e) => set({ startsOn: e.target.value })} />
+      </Field>
+      <Field label="Fin" htmlFor="p-end" hint={datesLocked ? 'Las fechas son parte de la línea base; se modifican con un cambio aprobado.' : undefined}>
+        <Input id="p-end" type="date" required disabled={datesLocked} value={values.endsOn} onChange={(e) => set({ endsOn: e.target.value })} />
+      </Field>
+      <Field label="Contacto del cliente para este proyecto" htmlFor="p-contact" className="sm:col-span-2">
+        <Input id="p-contact" maxLength={500} value={values.clientContact} onChange={(e) => set({ clientContact: e.target.value })} />
+      </Field>
+      <Field label="Escalación de este proyecto" htmlFor="p-escalation" className="sm:col-span-2">
+        <Textarea id="p-escalation" rows={2} maxLength={2000} value={values.escalationNotes} onChange={(e) => set({ escalationNotes: e.target.value })} />
+      </Field>
+      <Field label="Descripción" htmlFor="p-desc" className="sm:col-span-2">
+        <Textarea id="p-desc" rows={3} maxLength={4000} value={values.description} onChange={(e) => set({ description: e.target.value })} />
+      </Field>
     </>
   );
+}
+
+function BackButton({ onBack }: { onBack: () => void }) {
+  return <Button variant="ghost" size="sm" onClick={onBack} className="mb-3 -ml-2"><ArrowLeft size={16} aria-hidden />Volver a proyectos</Button>;
 }
 
 function ProjectForm({ user, practices, onCancel, onSaved }: {
@@ -214,21 +267,31 @@ function ProjectForm({ user, practices, onCancel, onSaved }: {
   }
 
   return (
-    <form onSubmit={submit}>
-      <h2>Crear proyecto</h2>
-      {error && <p role="alert" style={{ color: '#a00' }}>{error}</p>}
-      <label htmlFor="p-practice">Práctica</label>
-      <select id="p-practice" required style={wide} value={values.practiceId} onChange={(e) => set({ practiceId: e.target.value })}>
-        {practices.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-      </select>
-      <label htmlFor="p-code">Código</label>
-      <input id="p-code" required maxLength={40} style={wide} value={values.code} onChange={(e) => set({ code: e.target.value })} />
-      <label htmlFor="p-client">Cliente</label>
-      <input id="p-client" required maxLength={200} style={wide} value={values.clientName} onChange={(e) => set({ clientName: e.target.value })} />
-      <ProjectFields values={values} set={set} people={people} types={types} editing={false} canReassign datesLocked={false} />
-      <button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar proyecto'}</button>{' '}
-      <button type="button" onClick={onCancel}>Cancelar</button>
-    </form>
+    <>
+      <BackButton onBack={onCancel} />
+      <PageHeader title="Crear proyecto" subtitle="Registra qué se gobierna y quién responde." />
+      <Card>
+        <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {error && <div className="sm:col-span-2"><Notice tone="red">{error}</Notice></div>}
+          <Field label="Práctica" htmlFor="p-practice">
+            <Select id="p-practice" required value={values.practiceId} onChange={(e) => set({ practiceId: e.target.value })}>
+              {practices.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+            </Select>
+          </Field>
+          <Field label="Código" htmlFor="p-code">
+            <Input id="p-code" required maxLength={40} value={values.code} onChange={(e) => set({ code: e.target.value })} />
+          </Field>
+          <Field label="Cliente" htmlFor="p-client" className="sm:col-span-2" hint="Si el cliente ya existe, se reutiliza.">
+            <Input id="p-client" required maxLength={200} value={values.clientName} onChange={(e) => set({ clientName: e.target.value })} />
+          </Field>
+          <ProjectFields values={values} set={set} people={people} types={types} editing={false} canReassign datesLocked={false} />
+          <div className="flex flex-wrap gap-2 sm:col-span-2">
+            <Button type="submit" variant="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar proyecto'}</Button>
+            <Button onClick={onCancel}>Cancelar</Button>
+          </div>
+        </form>
+      </Card>
+    </>
   );
 }
 
@@ -241,6 +304,9 @@ function toValues(project: ProjectDetail): FormValues {
   };
 }
 
+type Tab = 'card' | 'team' | 'milestones' | 'baseline';
+const TABS = [['card', 'Ficha'], ['team', 'Equipo'], ['milestones', 'Hitos'], ['baseline', 'Línea base']] as const;
+
 function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; onBack: () => void }) {
   const [project, setProject] = useState<ProjectDetail>();
   const [values, setValues] = useState<FormValues>();
@@ -252,7 +318,7 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
   const [conflict, setConflict] = useState(false);
   const [notice, setNotice] = useState(created ? 'Proyecto creado.' : undefined);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<'card' | 'team' | 'milestones' | 'baseline'>('card');
+  const [tab, setTab] = useState<Tab>('card');
 
   async function load(keepForm = false) {
     try {
@@ -295,7 +361,7 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
   }
 
   if (!project || !values) {
-    return <section><p><button type="button" onClick={onBack}>Volver a proyectos</button></p>{error ? <p role="alert">{error}</p> : <p>Cargando…</p>}</section>;
+    return <><BackButton onBack={onBack} />{error ? <Notice tone="red">{error}</Notice> : <Loading />}</>;
   }
   const canEdit = project.capabilities.editOperation;
   // People the user may not list (no create permission in the practice) still appear by name.
@@ -304,56 +370,58 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
     .map((p) => ({ ...p, email: '', roles: ['pm', 'lead'] as PracticePerson['roles'] }));
 
   return (
-    <section>
-      <p><button type="button" onClick={onBack}>Volver a proyectos</button></p>
-      <h2>{project.code} · {project.name}</h2>
-      <p>
-        {project.clientName} · {project.practiceName} · {STATUS[project.status] ?? project.status} · moneda {project.currency} ·
-        zona {project.timezone} · versión {project.revision}
-      </p>
-      {notice && <p role="status" style={{ background: '#eef6ee', padding: 8 }}>{notice}</p>}
-      {!project.hasBaseline && tab !== 'baseline' && (
-        <p style={{ background: '#fff6dd', padding: 8 }}>
-          Siguiente paso: registra el equipo y los hitos, y después publica la línea base.{' '}
-          <button type="button" onClick={() => setTab('baseline')}>Ir a línea base</button>
-        </p>
-      )}
-      <nav style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
-        {([['card', 'Ficha'], ['team', 'Equipo'], ['milestones', 'Hitos'], ['baseline', 'Línea base']] as const).map(([key, label]) => (
-          <button key={key} type="button" aria-current={tab === key} onClick={() => setTab(key)}>{label}</button>
-        ))}
-      </nav>
+    <>
+      <BackButton onBack={onBack} />
+      <PageHeader title={project.name}
+        subtitle={<>{project.code} · {project.clientName} · {project.practiceName}</>}
+        actions={<><StatusBadge status={project.status} /><Badge>{project.hasBaseline ? 'Con línea base' : 'Sin línea base'}</Badge></>} />
+      <div className="mb-4 space-y-3">
+        {notice && <Notice tone="green">{notice}</Notice>}
+        {!project.hasBaseline && tab !== 'baseline' && (
+          <Notice tone="amber" role="status">
+            Siguiente paso: registra el equipo y los hitos, y después publica la línea base.{' '}
+            <button type="button" className="font-medium underline" onClick={() => setTab('baseline')}>Ir a línea base</button>
+          </Notice>
+        )}
+        {error && <Notice tone="red">{error}</Notice>}
+        {conflict && (
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => { setConflict(false); setError(undefined); void load(true); }}>
+              Conservar mis cambios y reintentar sobre la versión actual
+            </Button>
+            <Button variant="ghost" onClick={() => { setConflict(false); setError(undefined); void load(); }}>Descartar mis cambios</Button>
+          </div>
+        )}
+      </div>
+      <Tabs items={TABS} value={tab} onChange={setTab} />
       {tab === 'team' && <Team project={project} people={known} onChanged={() => void load(true)} />}
       {tab === 'milestones' && <Milestones project={project} people={known} onChanged={() => void load(true)} />}
       {tab === 'baseline' && <BaselineSection project={project} people={known} onChanged={() => void load(true)} />}
-      {error && <p role="alert" style={{ color: '#a00' }}>{error}</p>}
-      {conflict && (
-        <p>
-          <button type="button" onClick={() => { setConflict(false); setError(undefined); void load(true); }}>
-            Conservar mis cambios y reintentar sobre la versión actual
-          </button>{' '}
-          <button type="button" onClick={() => { setConflict(false); setError(undefined); void load(); }}>Descartar mis cambios</button>
-        </p>
+      {tab === 'card' && (
+        <Card title="Ficha del proyecto" actions={<span className="text-xs text-muted">Moneda {project.currency} · zona {project.timezone} · versión {project.revision}</span>}>
+          {canEdit ? (
+            <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <ProjectFields values={values} set={(patch) => setValues((v) => ({ ...v!, ...patch }))} people={known} types={types}
+                editing canReassign={project.capabilities.decide} datesLocked={project.hasBaseline} />
+              <div className="sm:col-span-2">
+                <Button type="submit" variant="primary" disabled={busy}>{busy ? 'Guardando…' : 'Guardar cambios'}</Button>
+              </div>
+            </form>
+          ) : (
+            <Facts items={[
+              ['Tipo de servicio', project.serviceTypeName],
+              ['Vigencia', `${project.startsOn} a ${project.endsOn}`],
+              ['PM', project.pm.displayName],
+              ['Líder', project.lead.displayName],
+              ['Responsable técnico', project.technicalOwner.displayName],
+              ['Sponsor', project.sponsor?.displayName ?? 'Sin sponsor'],
+              ['Contacto del cliente para este proyecto', project.clientContact || 'Sin definir'],
+              ['Escalación', project.escalationNotes || 'Sin definir'],
+              ['Descripción', project.description || 'Sin descripción'],
+            ]} />
+          )}
+        </Card>
       )}
-      {tab === 'card' && (canEdit ? (
-        <form onSubmit={submit}>
-          <ProjectFields values={values} set={(patch) => setValues((v) => ({ ...v!, ...patch }))} people={known} types={types}
-            editing canReassign={project.capabilities.decide} datesLocked={project.hasBaseline} />
-          <button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar cambios'}</button>
-        </form>
-      ) : (
-        <dl>
-          <dt>Tipo de servicio</dt><dd>{project.serviceTypeName}</dd>
-          <dt>PM</dt><dd>{project.pm.displayName}</dd>
-          <dt>Líder</dt><dd>{project.lead.displayName}</dd>
-          <dt>Responsable técnico</dt><dd>{project.technicalOwner.displayName}</dd>
-          <dt>Sponsor</dt><dd>{project.sponsor?.displayName ?? 'Sin sponsor'}</dd>
-          <dt>Vigencia</dt><dd>{project.startsOn} a {project.endsOn}</dd>
-          <dt>Contacto del cliente para este proyecto</dt><dd>{project.clientContact || 'Sin definir'}</dd>
-          <dt>Escalación</dt><dd>{project.escalationNotes || 'Sin definir'}</dd>
-          <dt>Descripción</dt><dd>{project.description || 'Sin descripción'}</dd>
-        </dl>
-      ))}
-    </section>
+    </>
   );
 }

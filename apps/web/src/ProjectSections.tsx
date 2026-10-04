@@ -3,10 +3,7 @@ import {
   ApiError, api, errorMessage, type Baseline, type Member, type Milestone, type MilestoneStatus, type PracticePerson,
   type ProjectDetail,
 } from './api';
-
-const input = { padding: 6, marginRight: 8, marginBottom: 8 } as const;
-const cell = { padding: '6px 8px', borderBottom: '1px solid #ccc', textAlign: 'left', verticalAlign: 'top' } as const;
-const table = { borderCollapse: 'collapse', width: '100%', marginBottom: 12 } as const;
+import { Badge, Button, Card, Empty, Facts, Field, Input, Loading, Notice, Select, Textarea, type Tone } from './ui';
 
 interface SectionProps {
   project: ProjectDetail;
@@ -68,66 +65,79 @@ export function Team({ project, people, onChanged }: SectionProps) {
     }
   }
 
+  const responsibles: [string, string][] = [
+    ['PM', project.pm.displayName], ['Líder', project.lead.displayName], ['Responsable técnico', project.technicalOwner.displayName],
+    ...(project.sponsor ? [['Sponsor', project.sponsor.displayName] as [string, string]] : []),
+  ];
+
   return (
-    <section>
-      <h3>Equipo</h3>
-      <p>
-        Responsables: PM {project.pm.displayName} · Líder {project.lead.displayName} · Técnico {project.technicalOwner.displayName}
-        {project.sponsor && ` · Sponsor ${project.sponsor.displayName}`}. Se cambian en la ficha.
-      </p>
-      {error && <p role="alert" style={{ color: '#a00' }}>{error}</p>}
-      {pending && (
-        <p role="alert" style={{ background: '#fff6dd', padding: 8 }}>
-          {pending.text} Reasigna esos elementos antes de quitarlo, o confirma que los conserva: seguirá pudiendo consultar el proyecto.{' '}
-          <button type="button" onClick={() => remove(pending.member, true)}>Quitar y conservar sus responsabilidades</button>{' '}
-          <button type="button" onClick={() => setPending(undefined)}>No quitar</button>
-        </p>
-      )}
-      {!members && !error && <p>Cargando…</p>}
-      {members?.length === 0 && <p>Aún no hay integrantes además de los responsables.</p>}
-      {members && members.length > 0 && (
-        <table style={table}>
-          <thead><tr>{['Integrante', 'Función', 'Asignación', ''].map((h) => <th key={h} style={cell}>{h}</th>)}</tr></thead>
-          <tbody>
-            {members.map((m) => (
-              <tr key={m.userId}>
-                <td style={cell}>{m.displayName}{!m.active && ' (deshabilitado)'}<br />{m.email}</td>
-                <td style={cell}>{MEMBER_ROLE[m.role]}</td>
-                <td style={cell}>{m.allocationPct === null ? 'Sin definir' : `${m.allocationPct}%`}</td>
-                <td style={cell}>{canEdit && <button type="button" disabled={busy} onClick={() => remove(m, false)}>Quitar</button>}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {canEdit && (
-        <form onSubmit={add}>
-          <select aria-label="Persona" required style={input} value={userId} onChange={(e) => setUserId(e.target.value)}>
-            <option value="">Agregar o actualizar integrante…</option>
-            {people.map((p) => <option key={p.id} value={p.id}>{p.displayName}{p.email && ` · ${p.email}`}</option>)}
-          </select>
-          <select aria-label="Función" style={input} value={role} onChange={(e) => setRole(e.target.value as Member['role'])}>
-            <option value="contributor">Colaborador</option>
-            <option value="viewer">Lector</option>
-          </select>
-          <input aria-label="Asignación en porcentaje" type="number" min={0} max={100} placeholder="% asignación" style={{ ...input, width: 110 }}
-            value={allocation} onChange={(e) => setAllocation(e.target.value)} />
-          <button type="submit" disabled={busy}>Guardar integrante</button>
-        </form>
-      )}
-    </section>
+    <div className="space-y-4">
+      <Card title="Responsables" actions={<span className="text-xs text-muted">Se cambian en la ficha</span>}>
+        <Facts items={responsibles} />
+      </Card>
+      <Card title="Equipo">
+        <div className="space-y-3">
+          {error && <Notice tone="red">{error}</Notice>}
+          {pending && (
+            <Notice tone="amber" role="alert">
+              <p>{pending.text} Reasigna esos elementos antes de quitarlo, o confirma que los conserva: seguirá pudiendo consultar el proyecto.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button size="sm" onClick={() => remove(pending.member, true)}>Quitar y conservar sus responsabilidades</Button>
+                <Button size="sm" variant="ghost" onClick={() => setPending(undefined)}>No quitar</Button>
+              </div>
+            </Notice>
+          )}
+          {!members && !error && <Loading />}
+          {members?.length === 0 && <Empty title="Aún no hay integrantes">Además de los responsables, agrega a quienes colaboran o consultan.</Empty>}
+          {members && members.length > 0 && (
+            <ul className="divide-y divide-line">
+              {members.map((m) => (
+                <li key={m.userId} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 first:pt-0">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">{m.displayName}{!m.active && ' (deshabilitado)'}</p>
+                    <p className="truncate text-xs text-muted">{m.email}</p>
+                  </div>
+                  <Badge tone={m.role === 'contributor' ? 'blue' : 'neutral'}>{MEMBER_ROLE[m.role]}</Badge>
+                  <span className="w-24 text-sm text-muted">{m.allocationPct === null ? 'Sin definir' : `${m.allocationPct}%`}</span>
+                  {canEdit && <Button size="sm" variant="danger" disabled={busy} onClick={() => remove(m, false)}>Quitar</Button>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {canEdit && (
+            <form onSubmit={add} className="grid grid-cols-1 gap-3 border-t border-line pt-4 sm:grid-cols-[2fr_1fr_1fr_auto]">
+              <Select aria-label="Persona" required value={userId} onChange={(e) => setUserId(e.target.value)}>
+                <option value="">Agregar o actualizar integrante…</option>
+                {people.map((p) => <option key={p.id} value={p.id}>{p.displayName}{p.email && ` · ${p.email}`}</option>)}
+              </Select>
+              <Select aria-label="Función" value={role} onChange={(e) => setRole(e.target.value as Member['role'])}>
+                <option value="contributor">Colaborador</option>
+                <option value="viewer">Lector</option>
+              </Select>
+              <Input aria-label="Asignación en porcentaje" type="number" min={0} max={100} placeholder="% asignación"
+                value={allocation} onChange={(e) => setAllocation(e.target.value)} />
+              <Button type="submit" variant="primary" disabled={busy}>Guardar</Button>
+            </form>
+          )}
+        </div>
+      </Card>
+    </div>
   );
 }
 
-const STATUS: Record<MilestoneStatus, string> = {
-  pending: 'Pendiente', in_progress: 'En curso', completed: 'Cumplido', rescheduled: 'Reprogramado', cancelled: 'Cancelado',
+const STATUS: Record<MilestoneStatus, { label: string; tone: Tone }> = {
+  pending: { label: 'Pendiente', tone: 'neutral' },
+  in_progress: { label: 'En curso', tone: 'blue' },
+  completed: { label: 'Cumplido', tone: 'green' },
+  rescheduled: { label: 'Reprogramado', tone: 'amber' },
+  cancelled: { label: 'Cancelado', tone: 'neutral' },
 };
-const NEXT: Record<MilestoneStatus, { to: string; label: string; note: boolean }[]> = {
-  pending: [{ to: 'in_progress', label: 'Iniciar', note: false }, { to: 'completed', label: 'Completar', note: true }, { to: 'cancelled', label: 'Cancelar', note: true }],
-  in_progress: [{ to: 'completed', label: 'Completar', note: true }, { to: 'cancelled', label: 'Cancelar', note: true }],
-  rescheduled: [{ to: 'in_progress', label: 'Iniciar', note: false }, { to: 'completed', label: 'Completar', note: true }, { to: 'cancelled', label: 'Cancelar', note: true }],
-  completed: [{ to: 'in_progress', label: 'Reabrir', note: true }],
-  cancelled: [{ to: 'pending', label: 'Reabrir', note: true }],
+const NEXT: Record<MilestoneStatus, { to: string; label: string }[]> = {
+  pending: [{ to: 'in_progress', label: 'Iniciar' }, { to: 'completed', label: 'Completar' }, { to: 'cancelled', label: 'Cancelar' }],
+  in_progress: [{ to: 'completed', label: 'Completar' }, { to: 'cancelled', label: 'Cancelar' }],
+  rescheduled: [{ to: 'in_progress', label: 'Iniciar' }, { to: 'completed', label: 'Completar' }, { to: 'cancelled', label: 'Cancelar' }],
+  completed: [{ to: 'in_progress', label: 'Reabrir' }],
+  cancelled: [{ to: 'pending', label: 'Reabrir' }],
 };
 
 export function Milestones({ project, people, onChanged }: SectionProps) {
@@ -152,82 +162,96 @@ export function Milestones({ project, people, onChanged }: SectionProps) {
   const note = (m: Milestone) => notes[m.id]?.trim() ?? '';
 
   return (
-    <section>
-      <h3>Hitos</h3>
-      {error && <p role="alert" style={{ color: '#a00' }}>{error}</p>}
-      {!items && !error && <p>Cargando…</p>}
-      {items?.length === 0 && <p>Aún no hay hitos. {canEdit && 'Registra los entregables antes de publicar la línea base.'}</p>}
-      {items && items.length > 0 && (
-        <table style={table}>
-          <thead><tr>{['Hito', 'Responsable', 'Fecha', 'Estado', 'Acciones'].map((h) => <th key={h} style={cell}>{h}</th>)}</tr></thead>
-          <tbody>
-            {items.map((m) => (
-              <tr key={m.id}>
-                <td style={cell}><strong>{m.title}</strong>{m.critical && ' · Crítico'}<br />{m.deliverable}</td>
-                <td style={cell}>{m.owner.displayName}</td>
-                <td style={cell}>
-                  {m.dueOn}
-                  {m.committedDueOn && m.committedDueOn !== m.dueOn && <><br />Comprometida: {m.committedDueOn}</>}
-                  {!m.committedDueOn && project.hasBaseline && <><br />Fuera de la línea base</>}
-                </td>
-                <td style={cell}>
-                  {STATUS[m.status]}{m.overdue && <strong> · Vencido</strong>}
-                  {m.completedOn && <><br />Cumplido el {m.completedOn}: {m.completionNote}</>}
-                </td>
-                <td style={cell}>
-                  {m.canUpdate && (
-                    <>
-                      <input aria-label={`Comentario para ${m.title}`} placeholder="Comentario" style={{ ...input, width: 150 }}
-                        value={notes[m.id] ?? ''} onChange={(e) => setNotes({ ...notes, [m.id]: e.target.value })} />
-                      {NEXT[m.status].map((action) => (
-                        <button key={action.to} type="button" disabled={busy} style={{ marginRight: 4 }}
-                          onClick={() => run(async () => {
-                            await api.transitionMilestone(project.id, m.id, m.revision, action.to, note(m) || undefined);
-                            setNotes({ ...notes, [m.id]: '' });
-                            await load();
-                          })}>{action.label}</button>
-                      ))}
-                    </>
-                  )}
-                  {canEdit && m.status !== 'completed' && m.status !== 'cancelled' && (
-                    <div>
-                      <input aria-label={`Nueva fecha de ${m.title}`} type="date" style={input}
-                        value={dates[m.id] ?? ''} onChange={(e) => setDates({ ...dates, [m.id]: e.target.value })} />
-                      <button type="button" disabled={busy || !dates[m.id]}
-                        onClick={() => run(async () => {
-                          await api.updateMilestone(project.id, m.id, m.revision, { dueOn: dates[m.id], ...(note(m) ? { reason: note(m) } : {}) });
-                          setDates({ ...dates, [m.id]: '' }); setNotes({ ...notes, [m.id]: '' });
-                          await load();
-                        })}>{m.committedDueOn ? 'Reprogramar (usa el comentario como motivo)' : 'Cambiar fecha'}</button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-4">
+      {error && <Notice tone="red">{error}</Notice>}
+      {!items && !error && <Loading />}
+      {items?.length === 0 && (
+        <Empty title="Aún no hay hitos">{canEdit && 'Registra los entregables antes de publicar la línea base.'}</Empty>
       )}
+      {items?.map((m) => (
+        <Card key={m.id}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-medium text-ink">{m.title}</p>
+              {m.deliverable && <p className="text-sm text-muted">{m.deliverable}</p>}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {m.critical && <Badge tone="red">Crítico</Badge>}
+              {m.overdue && <Badge tone="red">Vencido</Badge>}
+              <Badge tone={STATUS[m.status].tone}>{STATUS[m.status].label}</Badge>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Facts items={[
+              ['Responsable', m.owner.displayName],
+              ['Fecha', <>{m.dueOn}{m.committedDueOn && m.committedDueOn !== m.dueOn && <span className="text-muted"> · comprometida {m.committedDueOn}</span>}
+                {!m.committedDueOn && project.hasBaseline && <span className="text-muted"> · fuera de la línea base</span>}</>],
+              ...(m.completedOn ? [['Cumplimiento', `${m.completedOn}: ${m.completionNote ?? ''}`] as [string, string]] : []),
+            ]} />
+          </div>
+          {(m.canUpdate || canEdit) && (
+            <div className="mt-4 space-y-3 border-t border-line pt-4">
+              <Input aria-label={`Comentario para ${m.title}`} placeholder="Comentario (obligatorio al completar, cancelar, reabrir o reprogramar)"
+                value={notes[m.id] ?? ''} onChange={(e) => setNotes({ ...notes, [m.id]: e.target.value })} />
+              <div className="flex flex-wrap items-center gap-2">
+                {m.canUpdate && NEXT[m.status].map((action) => (
+                  <Button key={action.to} size="sm" disabled={busy} variant={action.to === 'cancelled' ? 'danger' : 'secondary'}
+                    onClick={() => run(async () => {
+                      await api.transitionMilestone(project.id, m.id, m.revision, action.to, note(m) || undefined);
+                      setNotes({ ...notes, [m.id]: '' });
+                      await load();
+                    })}>{action.label}</Button>
+                ))}
+                {canEdit && m.status !== 'completed' && m.status !== 'cancelled' && (
+                  <span className="flex flex-wrap items-center gap-2 sm:ml-auto">
+                    <Input aria-label={`Nueva fecha de ${m.title}`} type="date" className="w-auto min-h-8"
+                      value={dates[m.id] ?? ''} onChange={(e) => setDates({ ...dates, [m.id]: e.target.value })} />
+                    <Button size="sm" disabled={busy || !dates[m.id]}
+                      onClick={() => run(async () => {
+                        await api.updateMilestone(project.id, m.id, m.revision, { dueOn: dates[m.id], ...(note(m) ? { reason: note(m) } : {}) });
+                        setDates({ ...dates, [m.id]: '' }); setNotes({ ...notes, [m.id]: '' });
+                        await load();
+                      })}>{m.committedDueOn ? 'Reprogramar' : 'Cambiar fecha'}</Button>
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </Card>
+      ))}
       {canEdit && (
-        <form onSubmit={add}>
-          <input aria-label="Nombre del hito" placeholder="Nombre del hito" required maxLength={200} style={input}
-            value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          <input aria-label="Entregable" placeholder="Entregable" maxLength={2000} style={input}
-            value={form.deliverable} onChange={(e) => setForm({ ...form, deliverable: e.target.value })} />
-          <select aria-label="Responsable del hito" required style={input} value={form.ownerId} onChange={(e) => setForm({ ...form, ownerId: e.target.value })}>
-            <option value="">Responsable…</option>
-            {people.map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}
-          </select>
-          <input aria-label="Fecha compromiso" type="date" required style={input}
-            value={form.dueOn} onChange={(e) => setForm({ ...form, dueOn: e.target.value })} />
-          <label style={{ marginRight: 8 }}>
-            <input type="checkbox" checked={form.critical} onChange={(e) => setForm({ ...form, critical: e.target.checked })} /> Crítico
-          </label>
-          <button type="submit" disabled={busy}>Registrar hito</button>
-        </form>
+        <Card title="Registrar hito">
+          <form onSubmit={add} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Nombre del hito" htmlFor="m-title">
+              <Input id="m-title" required maxLength={200} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </Field>
+            <Field label="Entregable" htmlFor="m-deliverable">
+              <Input id="m-deliverable" maxLength={2000} value={form.deliverable} onChange={(e) => setForm({ ...form, deliverable: e.target.value })} />
+            </Field>
+            <Field label="Responsable" htmlFor="m-owner">
+              <Select id="m-owner" required value={form.ownerId} onChange={(e) => setForm({ ...form, ownerId: e.target.value })}>
+                <option value="">Selecciona…</option>
+                {people.map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}
+              </Select>
+            </Field>
+            <Field label="Fecha compromiso" htmlFor="m-due">
+              <Input id="m-due" type="date" required value={form.dueOn} onChange={(e) => setForm({ ...form, dueOn: e.target.value })} />
+            </Field>
+            <label className="flex items-center gap-2 text-sm text-ink-soft">
+              <input type="checkbox" className="size-4" checked={form.critical} onChange={(e) => setForm({ ...form, critical: e.target.checked })} />
+              Hito crítico
+            </label>
+            <div className="sm:col-span-2"><Button type="submit" variant="primary" disabled={busy}>Registrar hito</Button></div>
+          </form>
+        </Card>
       )}
-    </section>
+    </div>
   );
 }
+
+const TEAM_ROLE: Record<string, string> = {
+  pm: 'PM', lead: 'Líder', technical_owner: 'Responsable técnico', sponsor: 'Sponsor', contributor: 'Colaborador', viewer: 'Lector',
+};
 
 export function BaselineSection({ project, onChanged }: SectionProps) {
   const [baselines, setBaselines] = useState<Baseline[]>();
@@ -261,60 +285,86 @@ export function BaselineSection({ project, onChanged }: SectionProps) {
     hidden ? 'No visible para tu perfil' : value === null ? 'Desconocido' : `${value} ${unit}`;
 
   return (
-    <section>
-      <h3>Línea base</h3>
-      {error && <p role="alert" style={{ color: '#a00' }}>{error}</p>}
-      {!baselines && !error && <p>Cargando…</p>}
-      {baselines && !current && !project.capabilities.editOperation && <p>El proyecto aún no tiene línea base.</p>}
+    <div className="space-y-4">
+      {error && <Notice tone="red">{error}</Notice>}
+      {!baselines && !error && <Loading />}
+      {baselines && !current && !project.capabilities.editOperation && <Empty title="El proyecto aún no tiene línea base" />}
       {baselines && !current && project.capabilities.editOperation && (
-        <form onSubmit={publish}>
-          <p>Revisa lo que quedará comprometido. Después de publicar, la línea base no se puede modificar: los compromisos solo cambian mediante un cambio aprobado.</p>
-          <ul>
-            <li>Vigencia: {project.startsOn} a {project.endsOn} · moneda {project.currency}</li>
-            <li>Equipo: PM {project.pm.displayName}, líder {project.lead.displayName}, técnico {project.technicalOwner.displayName}
-              {members.map((m) => `, ${m.displayName} (${MEMBER_ROLE[m.role]}${m.allocationPct === null ? '' : ` ${m.allocationPct}%`})`)}</li>
-            <li>{open.length} hito(s):{open.length === 0 && ' ninguno. La línea base quedará sin compromisos de entrega.'}
-              <ul>{open.map((m) => <li key={m.id}>{m.dueOn} · {m.title}{m.critical && ' · Crítico'} · {m.owner.displayName}</li>)}</ul>
-            </li>
-          </ul>
-          <label htmlFor="b-scope">Alcance</label>
-          <textarea id="b-scope" required rows={3} maxLength={4000} style={{ display: 'block', width: '100%', maxWidth: 520, marginBottom: 12 }}
-            value={form.scope} onChange={(e) => setForm({ ...form, scope: e.target.value })} />
-          <input aria-label="Presupuesto" placeholder={`Presupuesto (${project.currency})`} inputMode="decimal" pattern="\d{1,16}(\.\d{1,2})?" style={input}
-            value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} />
-          <input aria-label="Esfuerzo en horas" placeholder="Esfuerzo (horas)" inputMode="decimal" pattern="\d{1,16}(\.\d{1,2})?" style={input}
-            value={form.effortHours} onChange={(e) => setForm({ ...form, effortHours: e.target.value })} />
-          {form.budget.trim() === '' && <p style={{ background: '#fff6dd', padding: 8 }}>Sin presupuesto: se guardará como desconocido y la salud financiera no podrá evaluarse.</p>}
-          <button type="submit" disabled={busy}>{busy ? 'Publicando…' : 'Publicar línea base v1'}</button>
-        </form>
+        <>
+          <Card title="Lo que quedará comprometido">
+            <Facts items={[
+              ['Vigencia', `${project.startsOn} a ${project.endsOn}`],
+              ['Moneda', project.currency],
+              ['Responsables', `PM ${project.pm.displayName} · líder ${project.lead.displayName} · técnico ${project.technicalOwner.displayName}`],
+              ['Equipo', members.length ? members.map((m) => `${m.displayName} (${MEMBER_ROLE[m.role]}${m.allocationPct === null ? '' : ` ${m.allocationPct}%`})`).join(', ') : 'Sin integrantes adicionales'],
+            ]} />
+            <h4 className="mb-2 mt-5 text-xs font-medium uppercase tracking-wide text-muted">{open.length} hito(s)</h4>
+            {open.length === 0 ? <p className="text-sm text-muted">Ninguno. La línea base quedará sin compromisos de entrega.</p> : (
+              <ul className="divide-y divide-line text-sm">
+                {open.map((m) => (
+                  <li key={m.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
+                    <span className="w-24 text-muted">{m.dueOn}</span>
+                    <span className="min-w-0 flex-1 text-ink">{m.title}</span>
+                    {m.critical && <Badge tone="red">Crítico</Badge>}
+                    <span className="text-muted">{m.owner.displayName}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <Card title="Publicar línea base v1">
+            <form onSubmit={publish} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Notice tone="blue">Después de publicar, la línea base no se puede modificar: los compromisos solo cambian mediante un cambio aprobado.</Notice>
+              </div>
+              <Field label="Alcance" htmlFor="b-scope" className="sm:col-span-2">
+                <Textarea id="b-scope" required rows={3} maxLength={4000} value={form.scope} onChange={(e) => setForm({ ...form, scope: e.target.value })} />
+              </Field>
+              <Field label={`Presupuesto (${project.currency})`} htmlFor="b-budget" hint="Opcional. Hasta dos decimales.">
+                <Input id="b-budget" inputMode="decimal" pattern="\d{1,16}(\.\d{1,2})?" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} />
+              </Field>
+              <Field label="Esfuerzo (horas)" htmlFor="b-effort" hint="Opcional.">
+                <Input id="b-effort" inputMode="decimal" pattern="\d{1,16}(\.\d{1,2})?" value={form.effortHours} onChange={(e) => setForm({ ...form, effortHours: e.target.value })} />
+              </Field>
+              {form.budget.trim() === '' && (
+                <div className="sm:col-span-2"><Notice tone="amber">Sin presupuesto: se guardará como desconocido y la salud financiera no podrá evaluarse.</Notice></div>
+              )}
+              <div className="sm:col-span-2"><Button type="submit" variant="primary" disabled={busy}>{busy ? 'Publicando…' : 'Publicar línea base v1'}</Button></div>
+            </form>
+          </Card>
+        </>
       )}
       {current && (
         <>
-          <p>
-            <strong>Versión {current.version}</strong> · vigente · publicada por {current.createdBy.displayName} el {new Date(current.createdAt).toLocaleDateString('es-MX')}
-          </p>
-          <ul>
-            <li>Vigencia: {current.startsOn} a {current.endsOn}</li>
-            <li>Alcance: {current.scope}</li>
-            <li>Presupuesto: {amount(current.budget, current.financialsHidden, current.currency)}</li>
-            <li>Esfuerzo: {amount(current.effortHours, current.financialsHidden, 'horas')}</li>
-            <li>Equipo: {current.team.map((t) => `${t.display_name} (${t.role})`).join(', ')}</li>
-          </ul>
-          {current.milestones.length === 0 ? <p>Sin hitos comprometidos.</p> : (
-            <table style={table}>
-              <thead><tr>{['Hito comprometido', 'Entregable', 'Fecha', 'Responsable'].map((h) => <th key={h} style={cell}>{h}</th>)}</tr></thead>
-              <tbody>
+          <Card title={`Línea base v${current.version}`} actions={<Badge tone="green">Vigente</Badge>}>
+            <Facts items={[
+              ['Publicada', `${new Date(current.createdAt).toLocaleDateString('es-MX')} por ${current.createdBy.displayName}`],
+              ['Vigencia', `${current.startsOn} a ${current.endsOn}`],
+              ['Presupuesto', amount(current.budget, current.financialsHidden, current.currency)],
+              ['Esfuerzo', amount(current.effortHours, current.financialsHidden, 'horas')],
+              ['Alcance', current.scope],
+              ['Equipo', current.team.map((t) => `${t.display_name} (${TEAM_ROLE[t.role] ?? t.role})`).join(', ')],
+            ]} />
+          </Card>
+          <Card title="Hitos comprometidos">
+            {current.milestones.length === 0 ? <p className="text-sm text-muted">Sin hitos comprometidos.</p> : (
+              <ul className="divide-y divide-line text-sm">
                 {current.milestones.map((m) => (
-                  <tr key={m.id}>
-                    <td style={cell}>{m.title}{m.critical && ' · Crítico'}</td><td style={cell}>{m.deliverable}</td>
-                    <td style={cell}>{m.due_on}</td><td style={cell}>{m.owner_name}</td>
-                  </tr>
+                  <li key={m.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0">
+                    <span className="w-24 text-muted">{m.due_on}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium text-ink">{m.title}</span>
+                      {m.deliverable && <span className="block text-muted">{m.deliverable}</span>}
+                    </span>
+                    {m.critical && <Badge tone="red">Crítico</Badge>}
+                    <span className="text-muted">{m.owner_name}</span>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          )}
+              </ul>
+            )}
+          </Card>
         </>
       )}
-    </section>
+    </div>
   );
 }

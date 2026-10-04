@@ -2,16 +2,18 @@ import { type FormEvent, useEffect, useState } from 'react';
 import {
   api, errorMessage, type AdminUser, type Practice, type PracticeRole, type ServiceType,
 } from './api';
+import { Badge, Button, Card, Empty, Input, Loading, Notice, PageHeader, Tabs } from './ui';
 
 const ROLES: { key: PracticeRole; label: string }[] = [
   { key: 'pm', label: 'PM' },
   { key: 'lead', label: 'Líder' },
   { key: 'director', label: 'Dirección' },
 ];
-const input = { padding: 6, marginRight: 8 } as const;
-const cell = { padding: '6px 8px', borderBottom: '1px solid #ccc', textAlign: 'left', verticalAlign: 'top' } as const;
+type Tab = 'users' | 'practices' | 'types';
+const TABS = [['users', 'Usuarios'], ['practices', 'Prácticas'], ['types', 'Tipos de servicio']] as const;
 
 export function Admin({ currentUserId }: { currentUserId: string }) {
+  const [tab, setTab] = useState<Tab>('users');
   const [users, setUsers] = useState<AdminUser[]>();
   const [practices, setPractices] = useState<Practice[]>([]);
   const [types, setTypes] = useState<ServiceType[]>([]);
@@ -43,37 +45,47 @@ export function Admin({ currentUserId }: { currentUserId: string }) {
   const replaceUser = (user: AdminUser) => setUsers((list) => list?.map((u) => (u.id === user.id ? user : u)));
 
   return (
-    <section>
-      <h2>Administración</h2>
-      {error && <p role="alert" style={{ color: '#a00' }}>{error}</p>}
-      {notice && <p role="status" style={{ background: '#eef6ee', padding: 8 }}>{notice}</p>}
+    <>
+      <PageHeader title="Administración" subtitle="Usuarios, prácticas, roles y catálogos." />
+      <div className="mb-4 space-y-3">
+        {error && <Notice tone="red">{error}</Notice>}
+        {notice && <Notice tone="green"><span className="break-words">{notice}</span></Notice>}
+      </div>
+      <Tabs items={TABS} value={tab} onChange={setTab} />
 
-      <h3>Usuarios</h3>
-      <NewUser onCreate={(email, name, isAdmin) => run(async () => {
-        const created = await api.admin.createUser(email, name, isAdmin);
-        return `Usuario ${created.user.email} creado. Contraseña temporal (se muestra una sola vez): ${created.temporaryPassword}`;
-      })} />
-      {!users && !error && <p>Cargando…</p>}
-      {users && (
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-          <thead>
-            <tr><th style={cell}>Usuario</th><th style={cell}>Estado</th><th style={cell}>Roles por práctica</th><th style={cell}>Acciones</th></tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id}>
-                <td style={cell}><strong>{user.displayName}</strong><br />{user.email}</td>
-                <td style={cell}>{user.active ? 'Activo' : 'Deshabilitado'}{user.isAdmin && <><br />Administrador</>}</td>
-                <td style={cell}>
-                  {practices.length === 0 && 'Crea una práctica para asignar roles.'}
+      {tab === 'users' && (
+        <div className="space-y-4">
+          <Card title="Nuevo usuario">
+            <NewUser onCreate={(email, name, isAdmin) => run(async () => {
+              const created = await api.admin.createUser(email, name, isAdmin);
+              return `Usuario ${created.user.email} creado. Contraseña temporal (se muestra una sola vez): ${created.temporaryPassword}`;
+            })} />
+          </Card>
+          {!users && !error && <Loading />}
+          <div className="grid gap-4 xl:grid-cols-2">
+            {users?.map((user) => (
+              <Card key={user.id}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-ink">{user.displayName}</p>
+                    <p className="truncate text-sm text-muted">{user.email}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {user.isAdmin && <Badge tone="blue">Administrador</Badge>}
+                    <Badge tone={user.active ? 'green' : 'neutral'}>{user.active ? 'Activo' : 'Deshabilitado'}</Badge>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2 border-t border-line pt-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">Roles por práctica</p>
+                  {practices.length === 0 && <p className="text-sm text-muted">Crea una práctica para asignar roles.</p>}
                   {practices.map((practice) => (
-                    <div key={practice.id}>
-                      {practice.name}:{' '}
+                    <div key={practice.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                      <span className="min-w-28 font-medium text-ink-soft">{practice.name}</span>
                       {ROLES.map((role) => {
                         const granted = user.memberships.some((m) => m.practiceId === practice.id && m.role === role.key);
                         return (
-                          <label key={role.key} style={{ marginRight: 8 }}>
-                            <input type="checkbox" checked={granted} aria-label={`${role.label} en ${practice.name} para ${user.email}`}
+                          <label key={role.key} className="flex items-center gap-1.5">
+                            <input type="checkbox" className="size-4" checked={granted} aria-label={`${role.label} en ${practice.name} para ${user.email}`}
                               onChange={() => run(async () => { replaceUser(await api.admin.setMembership(user.id, practice.id, role.key, !granted)); })} />
                             {role.label}
                           </label>
@@ -81,51 +93,76 @@ export function Admin({ currentUserId }: { currentUserId: string }) {
                       })}
                     </div>
                   ))}
-                </td>
-                <td style={cell}>
-                  <button type="button" onClick={() => run(async () => {
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
+                  <Button size="sm" variant={user.active ? 'danger' : 'secondary'} onClick={() => run(async () => {
                     const result = await api.admin.updateUser(user.id, { active: !user.active });
                     const r = result.responsibilities;
                     const open = r ? r.projectsAsPm + r.projectsAsLead + r.projectsAsTechnicalOwner : 0;
                     return open > 0
                       ? `${user.email} deshabilitado. Tiene responsabilidades por reasignar: ${r!.projectsAsPm} como PM, ${r!.projectsAsLead} como líder y ${r!.projectsAsTechnicalOwner} como responsable técnico.`
                       : undefined;
-                  })}>{user.active ? 'Deshabilitar' : 'Habilitar'}</button>{' '}
-                  <button type="button" onClick={() => run(async () => { await api.admin.updateUser(user.id, { isAdmin: !user.isAdmin }); })}>
+                  })}>{user.active ? 'Deshabilitar' : 'Habilitar'}</Button>
+                  <Button size="sm" onClick={() => run(async () => { await api.admin.updateUser(user.id, { isAdmin: !user.isAdmin }); })}>
                     {user.isAdmin ? 'Quitar administrador' : 'Hacer administrador'}
-                  </button>{' '}
-                  <button type="button" disabled={user.id === currentUserId} onClick={() => run(async () => {
+                  </Button>
+                  <Button size="sm" disabled={user.id === currentUserId} onClick={() => run(async () => {
                     const reset = await api.admin.resetPassword(user.id);
                     return `Contraseña temporal de ${user.email} (se muestra una sola vez): ${reset.temporaryPassword}`;
-                  })}>Restablecer contraseña</button>
-                </td>
-              </tr>
+                  })}>Restablecer contraseña</Button>
+                </div>
+              </Card>
             ))}
-          </tbody>
-        </table>
+          </div>
+        </div>
       )}
 
-      <h3>Prácticas</h3>
-      <PairForm first="Código" second="Nombre" button="Crear práctica"
-        onSubmit={(code, name) => run(async () => { await api.admin.createPractice(code, name); })} />
-      {practices.length === 0 ? <p>Aún no hay prácticas.</p> : (
-        <ul>{practices.map((p) => <li key={p.id}><strong>{p.code}</strong> · {p.name} · {p.timezone}</li>)}</ul>
+      {tab === 'practices' && (
+        <div className="space-y-4">
+          <Card title="Nueva práctica">
+            <PairForm first="Código" second="Nombre" button="Crear práctica"
+              onSubmit={(code, name) => run(async () => { await api.admin.createPractice(code, name); })} />
+          </Card>
+          {practices.length === 0 ? <Empty title="Aún no hay prácticas">Crea la primera para poder asignar roles y registrar proyectos.</Empty> : (
+            <Card>
+              <ul className="divide-y divide-line">
+                {practices.map((p) => (
+                  <li key={p.id} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+                    <Badge>{p.code}</Badge><span className="flex-1 text-sm font-medium text-ink">{p.name}</span>
+                    <span className="text-xs text-muted">{p.timezone}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+        </div>
       )}
 
-      <h3>Tipos de servicio</h3>
-      <PairForm first="Código (minúsculas)" second="Nombre" button="Agregar tipo"
-        onSubmit={(code, name) => run(async () => { await api.admin.createServiceType(code, name); })} />
-      <ul>
-        {types.map((type) => (
-          <li key={type.code}>
-            {type.name} ({type.code}) · {type.active ? 'Activo' : 'Inactivo para nuevos proyectos'}{' '}
-            <button type="button" onClick={() => run(async () => { await api.admin.setServiceTypeActive(type.code, !type.active); })}>
-              {type.active ? 'Desactivar' : 'Activar'}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
+      {tab === 'types' && (
+        <div className="space-y-4">
+          <Card title="Nuevo tipo de servicio">
+            <PairForm first="Código (minúsculas)" second="Nombre" button="Agregar tipo"
+              onSubmit={(code, name) => run(async () => { await api.admin.createServiceType(code, name); })} />
+          </Card>
+          <Card>
+            <ul className="divide-y divide-line">
+              {types.map((type) => (
+                <li key={type.code} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-ink">{type.name}</span>
+                    <span className="block text-xs text-muted">{type.code}</span>
+                  </span>
+                  <Badge tone={type.active ? 'green' : 'neutral'}>{type.active ? 'Activo' : 'Inactivo para nuevos proyectos'}</Badge>
+                  <Button size="sm" onClick={() => run(async () => { await api.admin.setServiceTypeActive(type.code, !type.active); })}>
+                    {type.active ? 'Desactivar' : 'Activar'}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -139,15 +176,15 @@ function NewUser({ onCreate }: { onCreate: (email: string, name: string, isAdmin
     setEmail(''); setName(''); setIsAdmin(false);
   }
   return (
-    <form onSubmit={submit} style={{ marginBottom: 12 }}>
-      <input aria-label="Correo del nuevo usuario" placeholder="Correo" type="email" required style={input}
+    <form onSubmit={submit} className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_1fr_auto_auto]">
+      <Input aria-label="Correo del nuevo usuario" placeholder="nombre@empresa.com" type="email" required
         value={email} onChange={(event) => setEmail(event.target.value)} />
-      <input aria-label="Nombre del nuevo usuario" placeholder="Nombre" required style={input}
+      <Input aria-label="Nombre del nuevo usuario" placeholder="Nombre completo" required
         value={name} onChange={(event) => setName(event.target.value)} />
-      <label style={{ marginRight: 8 }}>
-        <input type="checkbox" checked={isAdmin} onChange={(event) => setIsAdmin(event.target.checked)} /> Administrador
+      <label className="flex items-center gap-2 text-sm text-ink-soft">
+        <input type="checkbox" className="size-4" checked={isAdmin} onChange={(event) => setIsAdmin(event.target.checked)} /> Administrador
       </label>
-      <button type="submit">Crear usuario</button>
+      <Button type="submit" variant="primary">Crear usuario</Button>
     </form>
   );
 }
@@ -163,10 +200,10 @@ function PairForm({ first, second, button, onSubmit }: {
     setA(''); setB('');
   }
   return (
-    <form onSubmit={submit} style={{ marginBottom: 12 }}>
-      <input aria-label={first} placeholder={first} required style={input} value={a} onChange={(event) => setA(event.target.value)} />
-      <input aria-label={second} placeholder={second} required style={input} value={b} onChange={(event) => setB(event.target.value)} />
-      <button type="submit">{button}</button>
+    <form onSubmit={submit} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_2fr_auto]">
+      <Input aria-label={first} placeholder={first} required value={a} onChange={(event) => setA(event.target.value)} />
+      <Input aria-label={second} placeholder={second} required value={b} onChange={(event) => setB(event.target.value)} />
+      <Button type="submit" variant="primary">{button}</Button>
     </form>
   );
 }

@@ -13,6 +13,7 @@ El repositorio contiene un prototipo navegable y el diseño inicial de arquitect
 - [Backlog priorizado](docs/producto/BACKLOG.md).
 - [Plan de entregas y aceptación](docs/producto/PLAN-ENTREGAS.md).
 - [Decisiones pendientes](docs/producto/DECISIONES.md).
+- [Diseño de interfaz](docs/producto/DISENO-UI.md).
 - [Arquitectura propuesta](docs/ARQUITECTURA-PHS.md).
 - [Stack tecnológico propuesto](docs/STACK-TECNOLOGICO.md).
 - [Decisión técnica ADR-001](docs/adr/001-stack-mvp.md) y [ADR-002: microservicios](docs/adr/002-microservicios.md).

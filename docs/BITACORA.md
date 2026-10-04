@@ -7,6 +7,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–008 (la 008 añade contacto por proyecto y fecha comprometida del hito; 31 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects`, `packages/service-kit` y `packages/contracts`; ver README para arrancarlo.
+- **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011). PHS-006 y PHS-007 — reglas de acceso de D05, consulta de proyectos por alcance y pantalla de administración (BIT-0013). PHS-008 y PHS-009 — auditoría, control de versiones, idempotencia y alta, lista y edición de proyectos (BIT-0015). PHS-010, PHS-015 y PHS-011 — equipo y contacto por proyecto, hitos y línea base inicial (BIT-0016). Con esto existe todo el recorrido de R1, pendiente de aceptación.
 - **Todavía no implementado:** riesgos, economía, renovaciones, evidencias, cambios aprobados, revisiones, evaluación de salud, servicios Salud y Plataforma, motor de producción y procesos programados.
@@ -606,6 +607,42 @@ Tomados al implementar, no confirmados por el usuario:
 ### Pendientes y siguiente paso
 
 Aceptación de R1 (PHS-004 a PHS-011 y PHS-015) por el usuario. Para R2 hace falta cerrar D01 (fórmulas del motor). Siguiente entrada: BIT-0017.
+
+## BIT-0017 — Sistema de diseño y rediseño responsivo
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** definir una interfaz más cuidada antes de continuar con la funcionalidad, a petición del usuario.
+
+**Relación:** NF-06, PHS-041, STACK-TECNOLOGICO. No cambia API, base de datos ni reglas de negocio.
+
+**Identificación:** commit con prefijo `BIT-0017`.
+
+### Decisiones confirmadas por el usuario
+
+Dirección A (clara y sobria, como el prototipo), muy limpia, muy ejecutiva y responsiva para teléfono; menú lateral; sistema de diseño más rediseño de las pantallas existentes.
+
+### Trabajo realizado y archivos
+
+- [DISENO-UI.md](producto/DISENO-UI.md): decisiones, principios, tokens, componentes y reglas de adaptación.
+- `apps/web`: Tailwind CSS e iconos (`package.json`, `vite.config.ts`, `src/index.css`, `src/main.tsx`); componentes base en `src/ui.tsx`; `App.tsx` con menú lateral en escritorio y menú desplegable en teléfono; `Projects.tsx`, `ProjectSections.tsx` y `Admin.tsx` rediseñados. La lógica y las llamadas a la API no cambiaron.
+- `pnpm-lock.yaml`, [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md), [README](../README.md) y esta bitácora.
+
+### Decisiones y supuestos
+
+Tomados al implementar, no confirmados por el usuario: valores exactos de color y tipografía; componentes propios en lugar de shadcn/ui; administración separada en tres pestañas; usuarios e hitos como tarjetas; listas como tarjetas en teléfono y tabla en escritorio; el menú muestra solo las secciones que existen.
+
+### Validación y límites
+
+- `build`, `typecheck` y las 65 pruebas de código pasan; las pruebas no cubren la interfaz.
+- Revisado en navegador con una pila de vista previa aparte, conectada a la base de pruebas para no tocar los datos del usuario: acceso, lista de proyectos, ficha, equipo, hitos, línea base y administración a 1280 px; las mismas pantallas a 375 px sin desborde horizontal; menú de teléfono que abre y cierra.
+- Defecto encontrado y corregido: la barra de pestañas mostraba una barra de desplazamiento vertical.
+- Límites: sin modo oscuro; contraste y lector de pantalla sin verificar con herramientas; no se probó en un teléfono real ni en Safari; las pantallas futuras aún no existen.
+- La base local de desarrollo no se recreó: conserva la contraseña que el usuario ya cambió.
+
+### Pendientes y siguiente paso
+
+Validación visual por el usuario. Después, R2. Siguiente entrada: BIT-0018.
 
 ## Plantilla para próximas entradas
 
