@@ -5,7 +5,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 ## Estado actual para retomar
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
-- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migración inicial, pruebas de integridad, especificación funcional, backlog y plan de entregas.
+- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001 (inicial) y 002 (credencial local), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Todavía no implementado:** backend de negocio, interfaz multiusuario conectada a PostgreSQL, autenticación real, motor de producción y workers.
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS para API y worker, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
@@ -14,7 +14,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Decisiones abiertas:** D01–D04 y D07–D10 completas; D05 y D06 parcialmente confirmadas. Ver [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de revisión sin corregir:** lista en BIT-0005, a resolver en PHS-004 mediante una migración nueva.
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
-- **Siguiente paso funcional:** crear el esqueleto del monorepo (pnpm, web, API, worker) con versiones fijadas y la prueba mínima de punta a punta de PHS-003; después PHS-004 (dbmate, migración `002` con credencial local y hallazgos de BIT-0005) y PHS-005 (inicio de sesión contra la base). D01 y D02 pueden resolverse antes de R2/R3.
+- **Siguiente paso funcional:** crear el esqueleto del monorepo (pnpm, web, API, worker) con versiones fijadas y la prueba mínima de punta a punta de PHS-003; después PHS-004 (dbmate y una migración `003` con los hallazgos 1–5 de BIT-0005) y PHS-005 (inicio de sesión contra `user_credential`, hash Argon2id y sesiones). D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -209,6 +209,38 @@ También se confirmó que la base permite hoy lo que la documentación ya asigna
 ### Pendientes y siguiente paso
 
 Crear el esqueleto del monorepo y la prueba mínima de PHS-003; luego PHS-004 con la migración `002` (credencial local y hallazgos 1–5) y PHS-005. Siguen pendientes infraestructura, volumen piloto y D01–D04, D07–D10. Siguiente entrada: BIT-0006.
+
+## BIT-0006 — Credencial local de usuarios en la base de datos
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** a petición del usuario, preparar la base para guardar la identidad de los usuarios, conforme a la decisión D06 registrada en BIT-0005.
+
+**Relación:** D06, PHS-004 y PHS-005; avance de esquema, sin declarar terminada ninguna historia. No hay backend que use la tabla.
+
+**Identificación:** commit con prefijo `BIT-0006`.
+
+### Trabajo realizado y archivos
+
+- [002_user_credentials.sql](../db/migrations/002_user_credentials.sql): correo obligatorio, sin espacios sobrantes y único sin distinguir mayúsculas; valores por defecto de emisor `local` y sujeto generado; tabla `user_credential` con hash Argon2id en formato PHC, cambio obligatorio inicial, contador de intentos, bloqueo temporal y último acceso.
+- [002_credentials.sql](../db/tests/002_credentials.sql): recorrido válido y 8 rechazos (correo duplicado con otra capitalización, vacío y con espacios; contraseña en texto plano; hash bcrypt; segunda credencial; usuario inexistente; intentos negativos).
+- [DATABASE-PHS.md](DATABASE-PHS.md) (sección de identidad local, diccionario, instalación y validación), [README](../README.md) y esta bitácora.
+- La migración 001 no se modificó.
+
+### Decisiones y supuestos
+
+- Supuesto de diseño no confirmado por el usuario: el correo es el nombre de acceso y solo se admite Argon2id; cambiar de algoritmo requiere otra migración.
+- Las sesiones quedan fuera: dependen del mecanismo que se elija en PHS-005.
+- Corrige el hallazgo 1 de BIT-0005 solo para el correo; los demás hallazgos siguen pendientes.
+
+### Validación y límites
+
+- Instancia temporal de PostgreSQL 17.9, eliminada al terminar: 001 y 002 aplican sobre base vacía (29 tablas); pasan `001_integrity.sql` (11 rechazos) y `002_credentials.sql` (8 rechazos). Reaplicar 002 falla sin dejar cambios parciales.
+- No se probó sobre una base con usuarios previos ni se verificó un hash generado por una biblioteca real; la prueba usa una cadena PHC con formato válido.
+
+### Pendientes y siguiente paso
+
+Esqueleto del monorepo y PHS-003; adaptación a dbmate en PHS-004; PHS-005 con alta de usuarios, verificación Argon2id, bloqueo por intentos, restablecimiento y sesiones. Siguiente entrada: BIT-0007.
 
 ## Plantilla para próximas entradas
 

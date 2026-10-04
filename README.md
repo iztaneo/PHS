@@ -17,8 +17,8 @@ El repositorio contiene un prototipo navegable y el diseño inicial de arquitect
 - [Stack tecnológico propuesto](docs/STACK-TECNOLOGICO.md).
 - [Decisión técnica ADR-001](docs/adr/001-stack-mvp.md).
 - [Diseño de PostgreSQL y diagrama](docs/DATABASE-PHS.md).
-- [Migración inicial](db/migrations/001_initial.sql).
-- [Pruebas de integridad](db/tests/001_integrity.sql).
+- [Migración inicial](db/migrations/001_initial.sql) y [credenciales locales](db/migrations/002_user_credentials.sql).
+- Pruebas de [integridad](db/tests/001_integrity.sql) y de [credenciales](db/tests/002_credentials.sql).
 
 ## Abrir el prototipo
 
