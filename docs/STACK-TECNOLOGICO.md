@@ -99,7 +99,7 @@ Para la credencial local, PHS-005 debe definir: tabla de credenciales separada d
 
 Se propone OIDC con Authorization Code y PKCE, integrado desde el backend con `openid-client`; el proveedor corporativo sigue pendiente. La biblioteca implementa cliente OAuth/OIDC, no un directorio de usuarios ni los permisos de negocio. [openid-client](https://github.com/panva/openid-client).
 
-La API mantendrá sesión de servidor y entregará cookie `HttpOnly`, `Secure` en HTTPS, con política SameSite y protección CSRF acordes al flujo. Las sesiones persistentes requieren tabla y adaptador definidos en PHS-005; no están en las 28 tablas de negocio originales. El backend valida emisor, audiencia, estado/nonce y caducidad mediante la biblioteca y el protocolo correspondiente.
+La API mantendrá sesión de servidor y entregará cookie `HttpOnly`, `Secure` en HTTPS, con política SameSite y protección CSRF acordes al flujo. Las sesiones persistentes requieren tabla y adaptador definidos en PHS-005; no están en las 28 tablas de negocio originales. (Actualización del 2026-10-03, BIT-0007: la tabla propia `user_session` existe en la migración 003; el adaptador sigue pendiente.) El backend valida emisor, audiencia, estado/nonce y caducidad mediante la biblioteca y el protocolo correspondiente.
 
 El frontend no guarda tokens de acceso en localStorage. Proponemos servir web y `/api` bajo el mismo origen para simplificar sesión y despliegue. Los permisos por práctica/proyecto se verifican en cada caso de uso según D05, con independencia de los roles que presente el proveedor.
 

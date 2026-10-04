@@ -52,7 +52,7 @@ erDiagram
 
 | Módulo | Tablas | Contenido |
 | --- | --- | --- |
-| Acceso | `app_user`, `user_credential`, `practice`, `practice_membership` | Identidad, credencial local (solo hash), práctica y roles PM/líder/dirección/administración. |
+| Acceso | `app_user`, `user_credential`, `user_session`, `practice`, `practice_membership` | Identidad, credencial local (solo hash), sesiones de servidor, práctica y roles PM/líder/dirección/administración. |
 | Proyectos | `client`, `service_type`, `project`, `project_member` | Cliente, tipo de servicio, fechas, moneda, responsables y equipo. |
 | Operación | `milestone`, `risk`, `renewal` | Compromisos y estados actuales. El vencimiento se deriva de la fecha; no es un estado persistido. |
 | Economía | `financial_observation` | Observaciones acumuladas de costo y esfuerzo; fecha efectiva y fecha de registro. Correcciones enlazan la observación sustituida. No sumar acumulados. |
@@ -70,7 +70,18 @@ Decisión D06 del 2026-10-03: el MVP valida la identidad en esta base. `002_user
 - `app_user`: el correo es el nombre de acceso; no puede estar vacío ni tener espacios al inicio o final y es único sin distinguir mayúsculas (`lower(email)`). Un usuario local recibe por defecto emisor `local` y un sujeto generado, de modo que un proveedor OIDC pueda convivir después.
 - `user_credential`: una fila por usuario con `password_hash` en formato PHC de Argon2id (el CHECK rechaza texto plano y otros algoritmos), `must_change_password` (verdadero al crearla), `password_changed_at`, `failed_attempts`, `locked_until`, `last_login_at` y quién la creó.
 
-La base solo comprueba el formato del hash. Corresponde al backend (PHS-005): calcular y verificar Argon2id, elegir sus parámetros, la política de contraseñas, contar intentos y bloquear, responder sin revelar si el correo existe y no escribir nunca contraseñas ni hashes en `audit_entry`, `activity`, outbox o logs. Un usuario sin fila en `user_credential` o con `active = false` no puede iniciar sesión. Las sesiones no están en esta migración; se definen con el mecanismo de sesión de PHS-005.
+La base solo comprueba el formato del hash. Corresponde al backend (PHS-005): calcular y verificar Argon2id, elegir sus parámetros, la política de contraseñas, contar intentos y bloquear, responder sin revelar si el correo existe y no escribir nunca contraseñas ni hashes en `audit_entry`, `activity`, outbox o logs. Un usuario sin fila en `user_credential` o con `active = false` no puede iniciar sesión. Las sesiones se añadieron después, en la migración 003.
+
+## Sesiones (migración 003)
+
+Decisión del usuario del 2026-10-03: tabla de sesiones propia en lugar de la tabla de una biblioteca o de tokens firmados sin estado. `003_user_session.sql` crea `user_session`:
+
+- `token_hash`: SHA-256 en hexadecimal del token aleatorio que viaja en la cookie. El token en claro no se guarda; quien lea la tabla no puede suplantar una sesión.
+- `expires_at`: límite absoluto. La caducidad por inactividad la calcula el backend con `last_seen_at`.
+- `revoked_at` y `revoke_reason` (`logout`, `password_change`, `user_disabled`, `admin`): siempre juntos. Revocar todas las sesiones de un usuario es un solo UPDATE.
+- `ip_address` y `user_agent` opcionales, para mostrar sesiones activas. Son datos personales: su retención entra en D07.
+
+Una sesión es válida si no está revocada, no ha expirado y su usuario sigue activo; esta última condición la comprueba el backend en cada petición. También le corresponde generar el token con un generador criptográfico, rotarlo al iniciar sesión, limitar la frecuencia de actualización de `last_seen_at`, revocar al cambiar contraseña o desactivar al usuario y borrar periódicamente las sesiones vencidas. La tabla es mutable y admite borrado: no forma parte del historial de negocio; los inicios y cierres de sesión relevantes se registran en `audit_entry` sin incluir el token ni su hash.
 
 ## Líneas base
 
@@ -140,14 +151,18 @@ Archivos:
 
 - `db/migrations/001_initial.sql`: migración transaccional para una base vacía; no borra ni reemplaza objetos. Falla si `phs` ya existe.
 - `db/migrations/002_user_credentials.sql`: identidad local; se aplica una vez después de la 001 y falla si ya se aplicó.
+- `db/migrations/003_user_session.sql`: sesiones de servidor; se aplica una vez después de la 002.
+- `db/tests/003_sessions.sql`: ciclo de vida de la sesión y 7 rechazos esperados; se revierte.
 - `db/tests/001_integrity.sql`: recorrido válido y pruebas de restricciones; todas las filas de prueba se revierten.
 - `db/tests/002_credentials.sql`: credencial local y 8 rechazos esperados; también se revierte.
 
 ```sh
 psql -X -v ON_ERROR_STOP=1 -d phs -f db/migrations/001_initial.sql
 psql -X -v ON_ERROR_STOP=1 -d phs -f db/migrations/002_user_credentials.sql
+psql -X -v ON_ERROR_STOP=1 -d phs -f db/migrations/003_user_session.sql
 psql -X -v ON_ERROR_STOP=1 -d phs -f db/tests/001_integrity.sql
 psql -X -v ON_ERROR_STOP=1 -d phs -f db/tests/002_credentials.sql
+psql -X -v ON_ERROR_STOP=1 -d phs -f db/tests/003_sessions.sql
 ```
 
 La base destino debe crearse y autorizarse explícitamente en el entorno elegido. No ejecutar sobre una base ajena. El script solo contiene el catálogo de tipos de servicio; no contiene usuarios ni proyectos demo permanentes.
@@ -161,3 +176,5 @@ Definir política de validación de revisiones, plazos/retención de evidencias,
 La migración se aplicó correctamente en una instancia temporal aislada de PostgreSQL 17.9. Pasó el recorrido proyecto → baseline inicial → cambio aprobado → nueva baseline → revisión → evaluación → evento → tarea. Se comprobaron 11 rechazos esperados: referencias cruzadas, modificación/borrado de historia, fechas inválidas, decisiones duplicadas, score incoherente, evento abierto duplicado y cierre sin soporte. También se verificó la recurrencia de un evento y que resolverlo no complete silenciosamente su tarea. Todos los datos del escenario se revirtieron. No se ejecutaron pruebas de carga, de permisos de aplicación ni de concurrencia entre sesiones.
 
 Actualización del 2026-10-03 (BIT-0006): sobre otra instancia temporal de PostgreSQL 17.9 se aplicaron 001 y 002 en una base vacía (29 tablas) y pasaron ambos archivos de pruebas, incluidos los 8 rechazos de la credencial local. No se probó la migración 002 sobre una base con usuarios existentes: fallaría si hubiera correos vacíos o repetidos.
+
+Actualización del 2026-10-03 (BIT-0007): en otra instancia temporal de PostgreSQL 17.9 se aplicaron 001–003 sobre una base vacía (30 tablas) y pasaron los tres archivos de pruebas, incluidos los 7 rechazos de sesiones. No se probaron concurrencia ni volumen de sesiones.

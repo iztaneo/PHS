@@ -5,7 +5,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 ## Estado actual para retomar
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
-- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001 (inicial) y 002 (credencial local), pruebas de integridad, especificación funcional, backlog y plan de entregas.
+- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001 (inicial), 002 (credencial local) y 003 (sesiones), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Todavía no implementado:** backend de negocio, interfaz multiusuario conectada a PostgreSQL, autenticación real, motor de producción y workers.
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS para API y worker, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
@@ -14,7 +14,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Decisiones abiertas:** D01–D04 y D07–D10 completas; D05 y D06 parcialmente confirmadas. Ver [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de revisión sin corregir:** lista en BIT-0005, a resolver en PHS-004 mediante una migración nueva.
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
-- **Siguiente paso funcional:** crear el esqueleto del monorepo (pnpm, web, API, worker) con versiones fijadas y la prueba mínima de punta a punta de PHS-003; después PHS-004 (dbmate y una migración `003` con los hallazgos 1–5 de BIT-0005) y PHS-005 (inicio de sesión contra `user_credential`, hash Argon2id y sesiones). D01 y D02 pueden resolverse antes de R2/R3.
+- **Siguiente paso funcional:** crear el esqueleto del monorepo (pnpm, web, API, worker) con versiones fijadas y la prueba mínima de punta a punta de PHS-003; después PHS-004 (dbmate y una migración `004` con los hallazgos 1–5 de BIT-0005) y PHS-005 (inicio de sesión contra `user_credential` y `user_session`, con hash Argon2id). D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -241,6 +241,37 @@ Crear el esqueleto del monorepo y la prueba mínima de PHS-003; luego PHS-004 co
 ### Pendientes y siguiente paso
 
 Esqueleto del monorepo y PHS-003; adaptación a dbmate en PHS-004; PHS-005 con alta de usuarios, verificación Argon2id, bloqueo por intentos, restablecimiento y sesiones. Siguiente entrada: BIT-0007.
+
+## BIT-0007 — Tabla propia de sesiones
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** guardar en la base las sesiones de los usuarios que inician sesión con credencial local.
+
+**Relación:** D06, PHS-004 y PHS-005; avance de esquema sin backend que lo use. Ninguna historia se declara terminada.
+
+**Identificación:** commit con prefijo `BIT-0007`.
+
+### Decisión confirmada
+
+El usuario eligió una tabla de sesiones propia frente a la tabla de una biblioteca de sesiones o tokens firmados sin estado. Motivos expuestos: migraciones SQL como única fuente del esquema, revocación inmediata y vínculo por clave foránea con `app_user`.
+
+### Trabajo realizado y archivos
+
+- [003_user_session.sql](../db/migrations/003_user_session.sql): `user_session` con hash SHA-256 del token, límite absoluto, último uso, revocación con motivo, IP y agente opcionales e índices por usuario activo y por expiración.
+- [003_sessions.sql](../db/tests/003_sessions.sql): ciclo crear → usar → cerrar → revocar todas → borrar, y 7 rechazos (token sin hash, hash duplicado, expiración pasada, usuario inexistente, revocación sin motivo, motivo desconocido y revocación anterior a la creación).
+- [DATABASE-PHS.md](DATABASE-PHS.md), [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md) (nota fechada en §6), [README](../README.md) y esta bitácora. Aclaración: la migración `003` que BIT-0006 reservaba para los hallazgos de BIT-0005 pasa a ser la `004`.
+- No se modificaron las migraciones 001 ni 002.
+
+### Supuestos, validación y límites
+
+- Supuestos de diseño no confirmados: SHA-256 del token, cuatro motivos de revocación y registro opcional de IP/agente, cuya retención queda para D07.
+- Instancia temporal de PostgreSQL 17.9, eliminada al terminar: 001–003 aplican sobre base vacía (30 tablas); pasan los tres archivos de pruebas con 11, 8 y 7 rechazos.
+- La base no comprueba que el usuario siga activo ni la inactividad; lo hará el backend. No se probaron concurrencia ni volumen.
+
+### Pendientes y siguiente paso
+
+Esqueleto del monorepo y PHS-003; PHS-004 (dbmate y migración `004`); PHS-005 con alta de usuarios, verificación Argon2id, emisión y rotación del token, cookie `HttpOnly`, revocación y limpieza de sesiones vencidas. Siguiente entrada: BIT-0008.
 
 ## Plantilla para próximas entradas
 
