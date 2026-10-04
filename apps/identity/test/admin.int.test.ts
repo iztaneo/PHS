@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { adminUser, createdUser, newSession, practice as practiceSchema, updatedUser } from '@phs/contracts';
 import { createPool, loadEnv } from '@phs/service-kit';
 import { afterAll, describe, expect, it } from 'vitest';
 import { AdminError, AdminService } from '../src/admin.service.js';
@@ -25,6 +26,7 @@ describe.skipIf(!pool)('identity administration', () => {
     const by = await actor();
     const email = mail();
     const created = await admin.createUser(by, { email, displayName: 'Nueva', isAdmin: false });
+    expect(() => createdUser.strict().parse(created)).not.toThrow();
     expect(created.temporaryPassword.length).toBeGreaterThanOrEqual(12);
     expect(created.user).toMatchObject({ email, active: true, isAdmin: false, memberships: [] });
     const session = await auth.login(email, created.temporaryPassword, info());
@@ -43,9 +45,12 @@ describe.skipIf(!pool)('identity administration', () => {
     const { user, temporaryPassword } = await admin.createUser(by, { email: mail(), displayName: 'Roles', isAdmin: false });
     await admin.setMembership(by, user.id, practice.id, 'pm', true);
     await admin.setMembership(by, user.id, practice.id, 'pm', true);
+    expect(() => practiceSchema.strict().parse(practice)).not.toThrow();
     const both = await admin.setMembership(by, user.id, practice.id, 'lead', true);
+    expect(() => adminUser.strict().parse(both)).not.toThrow();
     expect(both.memberships.map((m) => m.role)).toEqual(['lead', 'pm']);
     const session = await auth.login(user.email, temporaryPassword, info());
+    expect(() => newSession.strict().parse(session)).not.toThrow();
     expect(session?.user.memberships).toEqual([
       { practiceId: practice.id, practiceName: 'Práctica', role: 'lead' },
       { practiceId: practice.id, practiceName: 'Práctica', role: 'pm' },
@@ -64,6 +69,7 @@ describe.skipIf(!pool)('identity administration', () => {
     const { user, temporaryPassword } = await admin.createUser(by, { email: mail(), displayName: 'Baja', isAdmin: false });
     const session = await auth.login(user.email, temporaryPassword, info());
     const result = await admin.updateUser(by, user.id, { active: false });
+    expect(() => updatedUser.strict().parse(result)).not.toThrow();
     expect(result.user.active).toBe(false);
     expect(result.responsibilities).toEqual({ projectsAsPm: 0, projectsAsLead: 0, projectsAsTechnicalOwner: 0 });
     expect(await auth.introspect(session!.token)).toBeNull();

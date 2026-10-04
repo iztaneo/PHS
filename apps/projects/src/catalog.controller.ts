@@ -2,15 +2,13 @@ import {
   BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, Inject, NotFoundException,
   Param, Patch, Post, Req, UseGuards,
 } from '@nestjs/common';
-import { z } from 'zod';
+import { createServiceTypeBody, updateServiceTypeBody } from '@phs/contracts';
+import type { z } from 'zod';
 import { CatalogService, type CatalogResult, type ServiceType } from './catalog.service.js';
 import { InternalAuthGuard, type AuthenticatedRequest } from './internal-auth.guard.js';
 
-const createBody = z.object({
-  code: z.string().trim().regex(/^[a-z][a-z0-9_]{1,39}$/),
-  name: z.string().trim().min(1).max(120),
-});
-const updateBody = z.object({ active: z.boolean() });
+const createBody = createServiceTypeBody;
+const updateBody = updateServiceTypeBody;
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);

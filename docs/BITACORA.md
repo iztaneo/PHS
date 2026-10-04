@@ -6,7 +6,8 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–006 aplicadas con dbmate (inicial, credencial local, sesiones, endurecimiento, roles por servicio y administrador global), pruebas de integridad, especificación funcional, backlog y plan de entregas.
-- **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects` y `packages/service-kit`; ver README para arrancarlo.
+- **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects`, `packages/service-kit` y `packages/contracts`; ver README para arrancarlo.
+- **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011). PHS-006 y PHS-007 — reglas de acceso de D05, consulta de proyectos por alcance y pantalla de administración (BIT-0013).
 - **Todavía no implementado:** alta y edición de proyectos y demás funcionalidad de negocio, servicios Salud y Plataforma, motor de producción y procesos programados.
 - **Arquitectura decidida:** microservicios — gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma) sobre un PostgreSQL compartido con el esquema actual; REST y eventos por outbox. Ver [ADR-002](adr/002-microservicios.md) y [mapa de trazabilidad](MAPA-TRAZABILIDAD.md).
@@ -494,6 +495,38 @@ Implementar PHS-006 y PHS-007 con estos perfiles. Siguiente entrada: BIT-0013.
 ### Pendientes y siguiente paso
 
 Aceptación de PHS-005, 006 y 007 por el usuario. Siguiente: PHS-008 y PHS-009. Siguiente entrada: BIT-0014.
+
+## BIT-0014 — Contratos OpenAPI por servicio
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** definir y publicar los contratos de las APIs ya construidas, que el usuario pidió antes de continuar.
+
+**Relación:** PHS-003 (criterio 2), ADR-002, STACK-TECNOLOGICO §7. La historia sigue abierta.
+
+**Identificación:** commit con prefijo `BIT-0014`.
+
+### Trabajo realizado y archivos
+
+- `packages/contracts` (nuevo): esquemas Zod de entrada y salida, tabla de rutas de Identidad, Proyectos y gateway, generador de OpenAPI 3.1 y comando `api:docs`.
+- [docs/api](api/README.md): `gateway.openapi.json` (público, 12 rutas), `identity.openapi.json` (interno, 10) y `projects.openapi.json` (interno, 5), más su guía.
+- `apps/identity`, `apps/projects` y `apps/gateway`: los controladores validan con los esquemas del paquete; `GET /openapi.json` en cada servicio y Swagger UI en `/api/docs/` del gateway, solo con `API_DOCS=true`.
+- Pruebas nuevas: coincidencia entre archivos y contratos, rutas registradas frente a rutas declaradas en cada servicio, y respuestas reales validadas contra los esquemas.
+- `.env.example`, `package.json`, `pnpm-lock.yaml`, [README](../README.md), [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md), [ARQUITECTURA-PHS.md](ARQUITECTURA-PHS.md), [MAPA-TRAZABILIDAD.md](MAPA-TRAZABILIDAD.md), [BACKLOG.md](producto/BACKLOG.md) y esta bitácora.
+
+### Decisiones y supuestos
+
+Tomados al implementar, no confirmados por el usuario: generar OpenAPI desde Zod en lugar de `@nestjs/swagger`; el contrato público compone las rutas propias del gateway con las que reenvía; la documentación se sirve solo con `API_DOCS=true`. Corrección detectada al escribir el contrato: cerrar sesión responde 204 aunque no haya sesión, así que se declara sin autenticación obligatoria.
+
+### Validación y límites
+
+- 46 pruebas de código pasan (7 de contratos, 11 de `service-kit`, 5 del gateway, 8 de Proyectos y 15 de Identidad); `typecheck` sin errores.
+- Con los servicios en ejecución: Swagger UI responde por el gateway y por el proxy de la web, y los tres JSON se sirven con el número de rutas esperado; se revisó la página en el navegador.
+- Límites: las respuestas se validan contra el contrato en las pruebas de integración de los servicios, no en cada respuesta en ejecución ni a través del gateway; los códigos de error están documentados pero no todos tienen una prueba que los provoque; paginación, filtros, concurrencia e idempotencia no están en el contrato porque ninguna ruta actual los usa; la web sigue declarando sus propios tipos en lugar de importarlos del paquete.
+
+### Pendientes y siguiente paso
+
+PHS-008 y PHS-009, añadiendo al contrato versión esperada, idempotencia, paginación y filtros. Siguiente entrada: BIT-0015.
 
 ## Plantilla para próximas entradas
 

@@ -171,7 +171,7 @@ Prefijo propuesto `/api/v1`; toda consulta aplica permisos, paginación y filtro
 | Gobierno | Consultas de portafolio, timeline y auditoría según alcance. |
 | Evidencias | Carga autorizada y descarga temporal de archivos privados. |
 
-Especificar estos contratos en OpenAPI, uno por servicio; el gateway publica el contrato externo. Los comandos de decisión/envío aceptarán una clave de idempotencia; actualizaciones concurrentes devolverán conflicto de versión en lugar de sobrescribir datos ajenos.
+Los contratos de lo ya construido están en OpenAPI, uno por servicio, en [docs/api](api/README.md); el gateway publica el contrato externo. Las filas de esta tabla que aún no tienen implementación siguen siendo conceptuales. Los comandos de decisión/envío aceptarán una clave de idempotencia; actualizaciones concurrentes devolverán conflicto de versión en lugar de sobrescribir datos ajenos.
 
 ## 8. Permisos y operación
 

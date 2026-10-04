@@ -22,7 +22,8 @@
     "db:test": "sh scripts/local-db.sh test",
     "db:setup": "pnpm db:local:start && pnpm db:migrate && pnpm db:logins",
     "db:test:setup": "sh scripts/local-db.sh test-db",
-    "seed:dev": "sh scripts/local-db.sh seed"
+    "seed:dev": "sh scripts/local-db.sh seed",
+    "api:docs": "pnpm --filter @phs/contracts build && pnpm --filter @phs/contracts generate"
   },
   "devDependencies": {
     "dbmate": "2.36.0"

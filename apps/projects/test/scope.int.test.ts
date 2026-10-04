@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { projectSummary, serviceType } from '@phs/contracts';
 import { createPool, loadEnv } from '@phs/service-kit';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CatalogService } from '../src/catalog.service.js';
@@ -57,6 +58,8 @@ describe.skipIf(!ready)('project scope by role (D05)', () => {
   const ids = async (name: string) => (await service.list(u[name]!)).map((p) => p.id).filter((id) => [projectA, projectA2, projectB].includes(id));
 
   it('a PM sees only the projects assigned to them, not those of another PM in the same practice', async () => {
+    const listed = await service.list(u.pmA!);
+    expect(() => projectSummary.strict().array().min(1).parse(listed)).not.toThrow();
     expect(await ids('pmA')).toEqual([projectA]);
     expect(await ids('pmB')).toEqual([projectB]);
     expect(await service.get(u.pmA!, projectA2)).toBeNull();
@@ -99,6 +102,8 @@ describe.skipIf(!ready)('project scope by role (D05)', () => {
     expect(await catalog.setActive(u.pmA!, randomUUID(), code, false)).toBe('forbidden');
     expect(await catalog.setActive(u.admin!, randomUUID(), code, false)).toEqual({ code, name: code, active: false });
     expect(await catalog.setActive(u.admin!, randomUUID(), 'missing_code', false)).toBe('not_found');
+    const types = await catalog.list();
+    expect(() => serviceType.strict().array().parse(types)).not.toThrow();
     expect((await catalog.list()).find((t) => t.code === code)?.active).toBe(false);
   });
 });

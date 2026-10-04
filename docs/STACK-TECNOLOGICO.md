@@ -74,10 +74,11 @@ Versiones fijadas en `package.json` y `pnpm-lock.yaml`: pnpm 12.9.1, TypeScript 
 - No se usa el CLI de Nest: los servicios compilan con `tsc` y arrancan con `node`. Por eso no aplica aquí el mínimo de Node 24.15 del CLI; el esqueleto se probó con Node 24.2.0.
 - Los constructores usan `@Inject(...)` explícito, de modo que Vitest ejecuta las pruebas de Nest sin depender de metadatos de tipos.
 - pnpm se ejecuta con `npx pnpm@12.9.1`: el `corepack` 0.33 de esta máquina falla al iniciar pnpm 12.
-- Aún no se añadieron Kysely, OpenAPI, React Router, TanStack Query, Tailwind/shadcn, Testcontainers, Playwright ni GitHub Actions; entran con la primera historia que los necesite.
+- Aún no se añadieron Kysely, React Router, TanStack Query, Tailwind/shadcn, Testcontainers, Playwright ni GitHub Actions; entran con la primera historia que los necesite.
 - Desde BIT-0010: dbmate 2.36.0 (paquete npm) aplica las migraciones; los servicios usan `IDENTITY_DATABASE_URL` y `PROJECTS_DATABASE_URL` con usuarios restringidos; `scripts/local-db.sh` ofrece un PostgreSQL local sin Docker.
 - Desde BIT-0011: `@node-rs/argon2` 2.2.1 para contraseñas, Zod 4.6.5 para validar cuerpos y Express 5.2.1 como dependencia directa del gateway. El acceso a datos de Identidad usa `pg` con consultas parametrizadas; Kysely sigue sin incorporarse y esa diferencia respecto de la selección está pendiente de decidir. Las pruebas de integración usan la base local `phs_test` en lugar de Testcontainers, porque se trabaja sin Docker.
 - Desde BIT-0013: las reglas de autorización de D05 viven en `packages/service-kit` (`access.ts`) como funciones puras compartidas por los servicios; Zod también en Proyectos.
+- Desde BIT-0014: paquete `packages/contracts` con los esquemas Zod y la tabla de rutas de cada servicio; de ahí se generan los OpenAPI 3.1 de `docs/api`. Diferencia respecto de esta selección: no se usa `@nestjs/swagger`; el documento se construye con la conversión a JSON Schema de Zod, porque así validación y contrato comparten fuente. Swagger UI con `swagger-ui-express` 5.0.1, solo con `API_DOCS=true`.
 - `docker-compose.yml` no se ejecutó: el servicio de Docker no estaba activo. La prueba usó un PostgreSQL 17.9 temporal local.
 
 ## 4. Persistencia y migraciones

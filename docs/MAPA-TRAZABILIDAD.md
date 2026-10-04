@@ -59,7 +59,7 @@ Toda pantalla entra por el gateway. "Servicio" indica quién atiende la operaci�
 | --- | --- | --- |
 | 1 | `user_credential` y `user_session` no tenían historia; PHS-005 y PHS-007 hablaban de un proveedor externo. | Corregido en BIT-0008: criterios añadidos a PHS-005 y PHS-007. |
 | 2 | PHS-004 decía "28 tablas". | Corregido en BIT-0008: 30 tablas. |
-| 3 | La tabla de contratos de la arquitectura no cubría sesión, administración, ciclo de revisión, eventos ni alertas. | Corregido en BIT-0008 a nivel conceptual; OpenAPI sigue pendiente en PHS-003. |
+| 3 | La tabla de contratos de la arquitectura no cubría sesión, administración, ciclo de revisión, eventos ni alertas. | Corregido en BIT-0008 a nivel conceptual. Desde BIT-0014 las rutas implementadas (sesión, administración, proyectos y catálogo) tienen contrato OpenAPI en `docs/api`; ciclo, eventos y alertas lo tendrán al construirse. |
 | 4 | La arquitectura lista entidades (`BaselineMilestone`, `MilestoneUpdate`, `ChangeImpact`, `ReviewRevision`, `TaskUpdate`) que la base resolvió con snapshots JSONB y `activity`. | Aclarado con nota en la arquitectura; el contrato JSONB sigue pendiente en PHS-004. |
 | 5 | Enviar una revisión cruza Proyectos y Salud y deja de ser una transacción única. | Abierta: protocolo propuesto en ADR-002, por validar en PHS-003 y D02. |
 | 6 | La regla de un escritor por tabla no la impone la base. | Abierta: roles de PostgreSQL por servicio en PHS-004/PHS-042. |

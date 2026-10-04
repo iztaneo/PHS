@@ -19,13 +19,16 @@
     "@phs/service-kit": "workspace:*",
     "http-proxy-middleware": "4.2.0",
     "express": "5.2.1",
-    "zod": "4.6.5"
+    "zod": "4.6.5",
+    "@phs/contracts": "workspace:*",
+    "swagger-ui-express": "5.0.1"
   },
   "devDependencies": {
     "@nestjs/testing": "12.1.2",
     "@types/node": "24.10.1",
     "typescript": "6.0.3",
     "vitest": "5.0.3",
-    "@types/express": "5.0.6"
+    "@types/express": "5.0.6",
+    "@types/swagger-ui-express": "4.1.8"
   }
 }

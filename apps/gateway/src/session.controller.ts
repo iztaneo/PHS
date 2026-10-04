@@ -3,15 +3,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { z } from 'zod';
+import { publicLoginBody, publicPasswordBody } from '@phs/contracts';
+import type { z } from 'zod';
 import { SESSION_COOKIE, cookieSecure, readCookie, requestId } from './http.js';
 import { IdentityClient, type SessionInfo, type SessionUser } from './identity.client.js';
 
-const loginBody = z.object({ email: z.string().min(1).max(320), password: z.string().min(1).max(1024) });
-const passwordBody = z.object({
-  currentPassword: z.string().min(1).max(1024),
-  newPassword: z.string().min(1).max(1024),
-});
+const loginBody = publicLoginBody;
+const passwordBody = publicPasswordBody;
 
 interface PublicSession {
   user: SessionUser;

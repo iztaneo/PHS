@@ -2,18 +2,13 @@ import {
   BadRequestException, Body, ConflictException, Controller, Get, Inject, NotFoundException, Param, Patch, Post,
   Put, Req, UseGuards,
 } from '@nestjs/common';
+import { createPracticeBody, createUserBody, membershipBody, updateUserBody } from '@phs/contracts';
 import { z } from 'zod';
 import { AdminGuard } from './admin.guard.js';
 import { AdminError, AdminService, type Actor } from './admin.service.js';
 import { InternalAuthGuard, type InternalRequest } from './internal-auth.guard.js';
 
-const text = (max: number) => z.string().trim().min(1).max(max);
-const createUserBody = z.object({ email: text(320).regex(/^[^\s@]+@[^\s@]+$/), displayName: text(200), isAdmin: z.boolean().default(false) });
-const updateUserBody = z.object({ displayName: text(200).optional(), active: z.boolean().optional(), isAdmin: z.boolean().optional() });
-const practiceBody = z.object({ code: text(20), name: text(200), timezone: text(64).default('America/Mexico_City') });
-const membershipBody = z.object({
-  userId: z.uuid(), practiceId: z.uuid(), role: z.enum(['pm', 'lead', 'director']), granted: z.boolean(),
-});
+const practiceBody = createPracticeBody;
 const idParam = z.uuid();
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {

@@ -8,10 +8,11 @@ import { AuthService } from './auth.service.js';
 import { authConfig } from './config.js';
 import { HealthController } from './health.controller.js';
 import { InternalAuthGuard } from './internal-auth.guard.js';
+import { OpenApiController } from './openapi.controller.js';
 import { SessionController } from './session.controller.js';
 
 @Module({
-  controllers: [HealthController, SessionController, AdminController],
+  controllers: [HealthController, OpenApiController, SessionController, AdminController],
   providers: [
     InternalAuthGuard,
     AdminGuard,

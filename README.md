@@ -17,6 +17,7 @@ El repositorio contiene un prototipo navegable y el diseño inicial de arquitect
 - [Stack tecnológico propuesto](docs/STACK-TECNOLOGICO.md).
 - [Decisión técnica ADR-001](docs/adr/001-stack-mvp.md) y [ADR-002: microservicios](docs/adr/002-microservicios.md).
 - [Mapa pantalla → servicio → tablas → historias](docs/MAPA-TRAZABILIDAD.md).
+- [Contratos OpenAPI por servicio](docs/api/README.md); en local, Swagger UI en `/api/docs/`.
 - [Diseño de PostgreSQL y diagrama](docs/DATABASE-PHS.md).
 - [Migraciones](db/migrations) 001–005 y [pruebas SQL](db/tests).
 
