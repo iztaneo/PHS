@@ -3,11 +3,19 @@ import type pg from 'pg';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, type AuthConfig } from './config.js';
 import { hashPassword, verifyAgainstDummy, verifyPassword } from './passwords.js';
 
+export interface SessionMembership {
+  practiceId: string;
+  practiceName: string;
+  role: 'pm' | 'lead' | 'director';
+}
+
 export interface SessionUser {
   id: string;
   displayName: string;
   email: string;
   mustChangePassword: boolean;
+  isAdmin: boolean;
+  memberships: SessionMembership[];
 }
 
 export interface SessionInfo {
@@ -55,6 +63,16 @@ export class AuthService {
     private readonly config: AuthConfig,
   ) {}
 
+  private async memberships(userId: string): Promise<SessionMembership[]> {
+    const found = await this.pool.query<{ practice_id: string; name: string; role: SessionMembership['role'] }>(
+      `SELECT m.practice_id, p.name, m.role
+         FROM phs.practice_membership m JOIN phs.practice p ON p.id = m.practice_id
+        WHERE m.user_id = $1 ORDER BY p.name, m.role`,
+      [userId],
+    );
+    return found.rows.map((m) => ({ practiceId: m.practice_id, practiceName: m.name, role: m.role }));
+  }
+
   // Returns null for every failure so the caller cannot tell which check failed.
   async login(email: string, password: string, info: ClientInfo): Promise<NewSession | null> {
     const client = await this.pool.connect();
@@ -65,12 +83,13 @@ export class AuthService {
         display_name: string;
         email: string;
         active: boolean;
+        is_admin: boolean;
         password_hash: string;
         must_change_password: boolean;
         failed_attempts: number;
         locked: boolean;
       }>(
-        `SELECT u.id, u.display_name, u.email, u.active, c.password_hash, c.must_change_password,
+        `SELECT u.id, u.display_name, u.email, u.active, u.is_admin, c.password_hash, c.must_change_password,
                 c.failed_attempts, coalesce(c.locked_until > now(), false) AS locked
            FROM phs.app_user u JOIN phs.user_credential c ON c.user_id = u.id
           WHERE lower(u.email) = lower($1)
@@ -115,7 +134,11 @@ export class AuthService {
         token,
         sessionId: created.id,
         expiresAt: created.expires_at.toISOString(),
-        user: { id: row.id, displayName: row.display_name, email: row.email, mustChangePassword: row.must_change_password },
+        user: {
+          id: row.id, displayName: row.display_name, email: row.email,
+          mustChangePassword: row.must_change_password, isAdmin: row.is_admin,
+          memberships: await this.memberships(row.id),
+        },
       };
     } catch (error) {
       await client.query('ROLLBACK').catch(() => undefined);
@@ -134,11 +157,12 @@ export class AuthService {
       display_name: string;
       email: string;
       active: boolean;
+      is_admin: boolean;
       must_change_password: boolean;
     }>(
       `SELECT s.id, s.user_id, s.expires_at,
               s.last_seen_at < now() - make_interval(secs => $3) AS stale,
-              u.display_name, u.email, u.active, c.must_change_password
+              u.display_name, u.email, u.active, u.is_admin, c.must_change_password
          FROM phs.user_session s
          JOIN phs.app_user u ON u.id = s.user_id
          JOIN phs.user_credential c ON c.user_id = u.id
@@ -162,7 +186,11 @@ export class AuthService {
     return {
       sessionId: row.id,
       expiresAt: row.expires_at.toISOString(),
-      user: { id: row.user_id, displayName: row.display_name, email: row.email, mustChangePassword: row.must_change_password },
+      user: {
+        id: row.user_id, displayName: row.display_name, email: row.email,
+        mustChangePassword: row.must_change_password, isAdmin: row.is_admin,
+        memberships: await this.memberships(row.user_id),
+      },
     };
   }
 

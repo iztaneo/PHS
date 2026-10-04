@@ -77,6 +77,7 @@ Versiones fijadas en `package.json` y `pnpm-lock.yaml`: pnpm 12.9.1, TypeScript 
 - Aún no se añadieron Kysely, OpenAPI, React Router, TanStack Query, Tailwind/shadcn, Testcontainers, Playwright ni GitHub Actions; entran con la primera historia que los necesite.
 - Desde BIT-0010: dbmate 2.36.0 (paquete npm) aplica las migraciones; los servicios usan `IDENTITY_DATABASE_URL` y `PROJECTS_DATABASE_URL` con usuarios restringidos; `scripts/local-db.sh` ofrece un PostgreSQL local sin Docker.
 - Desde BIT-0011: `@node-rs/argon2` 2.2.1 para contraseñas, Zod 4.6.5 para validar cuerpos y Express 5.2.1 como dependencia directa del gateway. El acceso a datos de Identidad usa `pg` con consultas parametrizadas; Kysely sigue sin incorporarse y esa diferencia respecto de la selección está pendiente de decidir. Las pruebas de integración usan la base local `phs_test` en lugar de Testcontainers, porque se trabaja sin Docker.
+- Desde BIT-0013: las reglas de autorización de D05 viven en `packages/service-kit` (`access.ts`) como funciones puras compartidas por los servicios; Zod también en Proyectos.
 - `docker-compose.yml` no se ejecutó: el servicio de Docker no estaba activo. La prueba usó un PostgreSQL 17.9 temporal local.
 
 ## 4. Persistencia y migraciones

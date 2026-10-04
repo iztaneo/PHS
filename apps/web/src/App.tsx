@@ -1,10 +1,11 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { ApiError, api, errorMessage, type ServiceStatus, type SessionUser } from './api';
+import { Admin } from './Admin';
+import { ApiError, api, errorMessage, type ProjectSummary, type SessionUser } from './api';
 
 type View = { name: 'loading' } | { name: 'login'; notice?: string } | { name: 'signed-in'; user: SessionUser };
 
-const page = { fontFamily: 'system-ui, sans-serif', maxWidth: 440, margin: '48px auto', padding: '0 16px' } as const;
-const field = { display: 'block', width: '100%', padding: 8, margin: '4px 0 16px', boxSizing: 'border-box' } as const;
+const page = { fontFamily: 'system-ui, sans-serif', maxWidth: 960, margin: '32px auto', padding: '0 16px' } as const;
+const field = { display: 'block', width: '100%', maxWidth: 420, padding: 8, margin: '4px 0 16px', boxSizing: 'border-box' } as const;
 
 export function App() {
   const [view, setView] = useState<View>({ name: 'loading' });
@@ -116,24 +117,19 @@ function PasswordForm({ onChanged, onSessionLost }: { onChanged: () => void; onS
   );
 }
 
-const STATUS_TEXT: Record<ServiceStatus['status'], string> = {
-  ok: 'Disponible',
-  degraded: 'Con problemas',
-  unreachable: 'Sin respuesta',
-};
+const ROLE_TEXT = { pm: 'PM', lead: 'Líder', director: 'Dirección' } as const;
 
 function Home({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?: string) => void }) {
-  const [services, setServices] = useState<ServiceStatus[]>();
-  const [propagated, setPropagated] = useState<string>();
+  const [tab, setTab] = useState<'home' | 'admin'>('home');
+  const [projects, setProjects] = useState<ProjectSummary[]>();
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    api.status().then((status) => setServices(status.services)).catch((failure) => setError(errorMessage(failure)));
-    api.whoami()
-      .then((who) => setPropagated(who.userId === user.id ? 'Proyectos reconoce tu identidad.' : 'Proyectos recibió otra identidad.'))
+    api.projects()
+      .then(setProjects)
       .catch((failure) => {
         if (failure instanceof ApiError && failure.status === 401) onSignedOut(errorMessage(failure));
-        else setPropagated('Proyectos no respondió.');
+        else setError(errorMessage(failure));
       });
   }, [user.id]);
 
@@ -148,23 +144,39 @@ function Home({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?:
 
   return (
     <section>
-      <h2>Hola, {user.displayName}</h2>
-      <p>Sesión iniciada como {user.email}.</p>
+      <nav style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+        <button type="button" onClick={() => setTab('home')} aria-current={tab === 'home'}>Inicio</button>
+        {user.isAdmin && (
+          <button type="button" onClick={() => setTab('admin')} aria-current={tab === 'admin'}>Administración</button>
+        )}
+        <span style={{ marginLeft: 'auto' }}>{user.displayName} · {user.email}</span>
+        <button type="button" onClick={signOut}>Cerrar sesión</button>
+      </nav>
       {error && <p role="alert">{error}</p>}
-      <h3>Servicios</h3>
-      {!services && !error && <p>Consultando…</p>}
-      {services && (
-        <ul>
-          {services.map((service) => (
-            <li key={service.service}>
-              <strong>{service.service}</strong>: {STATUS_TEXT[service.status]}
-              {service.database && ` · base de datos ${service.database === 'ok' ? 'conectada' : 'sin conexión'}`}
-            </li>
-          ))}
-        </ul>
+      {tab === 'admin' && user.isAdmin && <Admin currentUserId={user.id} />}
+      {tab === 'home' && (
+        <>
+          <h2>Hola, {user.displayName}</h2>
+          <h3>Tus roles</h3>
+          {user.memberships.length === 0 && !user.isAdmin && <p>Aún no tienes roles asignados. Pide acceso a un administrador.</p>}
+          <ul>
+            {user.isAdmin && <li>Administrador (usuarios, prácticas y catálogos; sin acceso a proyectos por este rol)</li>}
+            {user.memberships.map((m) => <li key={`${m.practiceId}-${m.role}`}>{ROLE_TEXT[m.role]} en {m.practiceName}</li>)}
+          </ul>
+          <h3>Proyectos a tu alcance</h3>
+          {!projects && !error && <p>Consultando…</p>}
+          {projects?.length === 0 && <p>No hay proyectos a tu alcance. El alta de proyectos llega en la siguiente entrega.</p>}
+          {projects && projects.length > 0 && (
+            <ul>
+              {projects.map((project) => (
+                <li key={project.id}>
+                  <strong>{project.code}</strong> · {project.name} · {project.clientName} · {project.practiceName}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
-      <p>{propagated ?? 'Comprobando identidad en Proyectos…'}</p>
-      <button type="button" onClick={signOut}>Cerrar sesión</button>
     </section>
   );
 }

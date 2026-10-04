@@ -11,7 +11,7 @@ Toda pantalla entra por el gateway. "Servicio" indica quién atiende la operaci�
 | Pantalla | Servicio | Tablas que escribe | Lee de otros | Historias | Reglas / NF |
 | --- | --- | --- | --- | --- | --- |
 | Acceso (inicio y cierre de sesión, cambio de contraseña) | Identidad | `user_credential`, `user_session` | — | PHS-005 | NF-04 |
-| Administración de usuarios, prácticas y catálogos | Identidad; Proyectos para `service_type` | `app_user`, `user_credential`, `practice`, `practice_membership`, `service_type` | — | PHS-006, 007 | NF-04, RN-19 |
+| Administración de usuarios, prácticas y catálogos | Identidad; Proyectos para `service_type` | `app_user`, `user_credential`, `user_session`, `practice`, `practice_membership`, `service_type` | `project` (conteo de responsabilidades) | PHS-006, 007 | NF-04, RN-19 |
 | Proyectos | Proyectos | `project`, `client` | membresías | PHS-009 | RN-01, RN-19 |
 | Ficha del proyecto | Proyectos | `project`, `client`, `project_member`, `financial_observation`, `renewal` | `app_user` | PHS-009, 010, 012, 013, 014 | RN-01, 02, 07, 17, 19 |
 | Línea base | Proyectos | `baseline`, `project.current_baseline_id` | — | PHS-011, 019 | RN-02, 14, 19 |

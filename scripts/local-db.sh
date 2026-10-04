@@ -49,7 +49,7 @@ case "${1:-}" in
     # Development user from .env; the password is passed through the environment, not the command line.
     : "${DEV_USER_EMAIL:?Falta DEV_USER_EMAIL en .env}" "${DEV_USER_NAME:?Falta DEV_USER_NAME en .env}" "${DEV_USER_PASSWORD:?Falta DEV_USER_PASSWORD en .env}"
     (cd apps/identity && PHS_NEW_USER_EMAIL="$DEV_USER_EMAIL" PHS_NEW_USER_NAME="$DEV_USER_NAME" \
-      PHS_NEW_USER_PASSWORD="$DEV_USER_PASSWORD" node dist/cli/create-user.js)
+      PHS_NEW_USER_PASSWORD="$DEV_USER_PASSWORD" PHS_NEW_USER_ADMIN=true node dist/cli/create-user.js)
     ;;
   reset)
     pg_ctl -D "$DATA" -m fast stop >/dev/null 2>&1 || true

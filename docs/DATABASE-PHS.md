@@ -66,7 +66,7 @@ Desde la migración 005 la base impone esta propiedad mediante un rol de Postgre
 
 | Módulo | Tablas | Contenido |
 | --- | --- | --- |
-| Acceso | `app_user`, `user_credential`, `user_session`, `practice`, `practice_membership` | Identidad, credencial local (solo hash), sesiones de servidor, práctica y roles PM/líder/dirección/administración. |
+| Acceso | `app_user`, `user_credential`, `user_session`, `practice`, `practice_membership` | Identidad, credencial local (solo hash), sesiones de servidor, administrador global, práctica y roles PM/líder/dirección. |
 | Proyectos | `client`, `service_type`, `project`, `project_member` | Cliente, tipo de servicio, fechas, moneda, responsables y equipo. |
 | Operación | `milestone`, `risk`, `renewal` | Compromisos y estados actuales. El vencimiento se deriva de la fecha; no es un estado persistido. |
 | Economía | `financial_observation` | Observaciones acumuladas de costo y esfuerzo; fecha efectiva y fecha de registro. Correcciones enlazan la observación sustituida. No sumar acumulados. |
@@ -167,6 +167,10 @@ Los campos `revision` no aumentan solos: el caso de uso debe comprobar versión 
 
 El despliegue crea los usuarios con contraseña y los hace miembros del rol de su servicio; las contraseñas no están en las migraciones. Aplicar la 005 requiere un propietario con permiso para crear roles. El propietario no debe llamarse igual que el esquema (`phs`): PostgreSQL lo tomaría como esquema por defecto mediante `"$user"` y dbmate buscaría ahí su tabla de control.
 
+## Administrador global (migración 006)
+
+`006_global_admin.sql` añade `app_user.is_admin` y retira `admin` de los roles de `practice_membership`, que quedan en `pm`, `lead` y `director`. El administrador es una capacidad global para gestionar usuarios, prácticas y catálogos, y por sí misma no da acceso a datos de negocio (D05). Un usuario puede tener varios roles en una o varias prácticas: la clave primaria es práctica, usuario y rol. La regla de que siempre quede al menos un administrador activo la aplica el servicio Identidad, no la base.
+
 ## Instalación y validación
 
 Desde BIT-0010 las migraciones se aplican con [dbmate](https://github.com/amacneil/dbmate), que ejecuta cada archivo en una transacción y registra las aplicadas en `public.schema_migrations`. Los archivos ya no contienen `BEGIN/COMMIT` propios y no deben aplicarse con `psql -f`. No tienen reversión destructiva: el bloque `migrate:down` falla a propósito; se corrige con una migración nueva o restaurando un respaldo.
@@ -190,8 +194,9 @@ npx pnpm@12.9.1 db:local:stop
 | `003_user_session.sql` | Sesiones de servidor. |
 | `004_integrity_hardening.sql` | Textos obligatorios, sin borrado físico, fechas de outbox. |
 | `005_service_roles.sql` | Roles y permisos por servicio. |
+| `006_global_admin.sql` | Administrador global y roles de práctica. |
 
-Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) y `005_roles.sql` (12 denegaciones de permiso). Se ejecutan con el propietario del esquema.
+Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso) y `006_admin.sql` (3 rechazos). Se ejecutan con el propietario del esquema.
 
 ## Evolución pendiente
 

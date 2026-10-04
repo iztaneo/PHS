@@ -1,8 +1,56 @@
+export type PracticeRole = 'pm' | 'lead' | 'director';
+
+export interface Membership {
+  practiceId: string;
+  practiceName: string;
+  role: PracticeRole;
+}
+
 export interface SessionUser {
   id: string;
   displayName: string;
   email: string;
   mustChangePassword: boolean;
+  isAdmin: boolean;
+  memberships: Membership[];
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string;
+  active: boolean;
+  isAdmin: boolean;
+  memberships: Membership[];
+}
+
+export interface Practice {
+  id: string;
+  code: string;
+  name: string;
+  timezone: string;
+}
+
+export interface ServiceType {
+  code: string;
+  name: string;
+  active: boolean;
+}
+
+export interface Responsibilities {
+  projectsAsPm: number;
+  projectsAsLead: number;
+  projectsAsTechnicalOwner: number;
+}
+
+export interface ProjectSummary {
+  id: string;
+  code: string;
+  name: string;
+  status: string;
+  practiceName: string;
+  clientName: string;
+  capabilities: { view: boolean; editOperation: boolean; proposeAndReview: boolean; decide: boolean; seeFinancials: boolean };
 }
 
 export interface ServiceStatus {
@@ -52,7 +100,25 @@ export const api = {
   changePassword: (currentPassword: string, newPassword: string) =>
     call<void>('POST', '/api/v1/session/password', { currentPassword, newPassword }),
   status: () => call<{ services: ServiceStatus[] }>('GET', '/api/v1/status'),
-  whoami: () => call<{ userId: string; requestId: string }>('GET', '/api/v1/projects/whoami'),
+  projects: () => call<ProjectSummary[]>('GET', '/api/v1/projects'),
+  admin: {
+    users: () => call<AdminUser[]>('GET', '/api/v1/admin/users'),
+    createUser: (email: string, displayName: string, isAdmin: boolean) =>
+      call<{ user: AdminUser; temporaryPassword: string }>('POST', '/api/v1/admin/users', { email, displayName, isAdmin }),
+    updateUser: (id: string, changes: { active?: boolean; isAdmin?: boolean }) =>
+      call<{ user: AdminUser; responsibilities?: Responsibilities }>('PATCH', `/api/v1/admin/users/${id}`, changes),
+    resetPassword: (id: string) =>
+      call<{ temporaryPassword: string }>('POST', `/api/v1/admin/users/${id}/reset-password`),
+    practices: () => call<Practice[]>('GET', '/api/v1/admin/practices'),
+    createPractice: (code: string, name: string) => call<Practice>('POST', '/api/v1/admin/practices', { code, name }),
+    setMembership: (userId: string, practiceId: string, role: PracticeRole, granted: boolean) =>
+      call<AdminUser>('PUT', '/api/v1/admin/memberships', { userId, practiceId, role, granted }),
+    serviceTypes: () => call<ServiceType[]>('GET', '/api/v1/catalog/service-types'),
+    createServiceType: (code: string, name: string) =>
+      call<ServiceType>('POST', '/api/v1/catalog/service-types', { code, name }),
+    setServiceTypeActive: (code: string, active: boolean) =>
+      call<ServiceType>('PATCH', `/api/v1/catalog/service-types/${code}`, { active }),
+  },
 };
 
 const MESSAGES: Record<string, string> = {
@@ -60,6 +126,12 @@ const MESSAGES: Record<string, string> = {
   invalid_current_password: 'La contraseña actual no es correcta.',
   weak_password: 'La nueva contraseña debe tener entre 12 y 128 caracteres y ser distinta de la actual.',
   authentication_required: 'Tu sesión terminó. Inicia sesión de nuevo.',
+  forbidden: 'No tienes permiso para realizar esta operación.',
+  email_taken: 'Ya existe un usuario con ese correo.',
+  code_taken: 'Ya existe un registro con ese código o nombre.',
+  last_admin: 'No se puede dejar el sistema sin un administrador activo.',
+  invalid_request: 'Revisa los datos capturados.',
+  password_change_required: 'Debes cambiar tu contraseña antes de continuar.',
   network_error: 'No se pudo contactar al servidor. Revisa tu conexión e inténtalo de nuevo.',
   identity_unavailable: 'El servicio de identidad no está disponible. Inténtalo de nuevo en unos minutos.',
 };

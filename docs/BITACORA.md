@@ -5,10 +5,10 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 ## Estado actual para retomar
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
-- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–005 aplicadas con dbmate (inicial, credencial local, sesiones, endurecimiento y roles por servicio), pruebas de integridad, especificación funcional, backlog y plan de entregas.
+- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–006 aplicadas con dbmate (inicial, credencial local, sesiones, endurecimiento, roles por servicio y administrador global), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects` y `packages/service-kit`; ver README para arrancarlo.
-- **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011).
-- **Todavía no implementado:** permisos por práctica/proyecto, administración de usuarios, funcionalidad de negocio, servicios Salud y Plataforma, motor de producción y procesos programados.
+- **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011). PHS-006 y PHS-007 — reglas de acceso de D05, consulta de proyectos por alcance y pantalla de administración (BIT-0013).
+- **Todavía no implementado:** alta y edición de proyectos y demás funcionalidad de negocio, servicios Salud y Plataforma, motor de producción y procesos programados.
 - **Arquitectura decidida:** microservicios — gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma) sobre un PostgreSQL compartido con el esquema actual; REST y eventos por outbox. Ver [ADR-002](adr/002-microservicios.md) y [mapa de trazabilidad](MAPA-TRAZABILIDAD.md).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
@@ -19,7 +19,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** PHS-006 (permisos por práctica y proyecto, con los perfiles confirmados en BIT-0012) y PHS-007 (administración de usuarios y prácticas), luego PHS-008 (auditoría y concurrencia). D01 y D02 pueden resolverse antes de R2/R3.
+- **Siguiente paso funcional:** PHS-008 (auditoría y control de concurrencia) y PHS-009 (crear, consultar y editar proyectos), aplicando las reglas de acceso ya implementadas a los comandos. D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -456,6 +456,44 @@ Revisión estática del prototipo (`ROLES`, `centerPM`, `centerLead`, `centerDir
 ### Pendientes y siguiente paso
 
 Implementar PHS-006 y PHS-007 con estos perfiles. Siguiente entrada: BIT-0013.
+
+## BIT-0013 — Permisos por alcance y administración de usuarios
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** implementar PHS-006 y PHS-007 con los perfiles confirmados en BIT-0012.
+
+**Relación:** PHS-006, PHS-007, D05, ADR-002. Ambas historias quedan en revisión, no aceptadas.
+
+**Identificación:** commit con prefijo `BIT-0013`.
+
+### Trabajo realizado y archivos
+
+- [006_global_admin.sql](../db/migrations/006_global_admin.sql) y [006_admin.sql](../db/tests/006_admin.sql): `app_user.is_admin`; roles de práctica `pm`, `lead`, `director`.
+- `packages/service-kit`: `access.ts` con las reglas de D05 como funciones puras y sus pruebas; `withTransaction`, `insertAudit` y `loadAccess`.
+- `apps/identity`: `AdminService`, `AdminController` y `AdminGuard` (usuarios, credencial temporal, restablecimiento, habilitar/deshabilitar, administrador, prácticas y roles); la sesión informa administrador y roles; `create-user` puede crear o promover un administrador.
+- `apps/projects`: `GET /projects` y `GET /projects/:id` filtrados por alcance con capacidades por proyecto; catálogo de tipos de servicio (lectura para todos, cambios solo administrador). Se retiró `GET /whoami`.
+- `apps/gateway`: rutas `/api/v1/admin`, `/api/v1/projects` y `/api/v1/catalog`.
+- `apps/web`: pestaña Administración (solo administradores) e inicio con roles y proyectos a su alcance.
+- `.env.example`, `scripts/local-db.sh`, [DATABASE-PHS.md](DATABASE-PHS.md), [BACKLOG.md](producto/BACKLOG.md), [MAPA-TRAZABILIDAD.md](MAPA-TRAZABILIDAD.md), [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md), [README](../README.md) y esta bitácora.
+
+### Decisiones y supuestos
+
+- Confirmado por el usuario (BIT-0012): perfiles, roles acumulables, responsable de elemento, responsable técnico y sponsor.
+- Tomado al implementar, no confirmado: el administrador es una marca global del usuario y no un rol de práctica; siempre debe quedar un administrador activo; un proyecto ajeno responde 404 igual que uno inexistente; el nombrado como líder del proyecto consulta, pero aprobar exige el rol de líder en la práctica; la contraseña temporal la genera el servidor y se muestra una sola vez; un administrador no puede restablecer su propia contraseña desde la pantalla.
+
+### Validación y límites
+
+- 36 pruebas de código pasan: 11 de `service-kit`, 4 del gateway, 7 de Proyectos y 14 de Identidad; 17 son de integración contra `phs_test`. `typecheck` sin errores y las seis pruebas SQL pasan.
+- Prueba de alcance con el rol restringido de Proyectos: un PM solo ve su proyecto y no el de otro PM de la misma práctica; líder y Dirección ven su práctica y nada de otra; miembro, sponsor y responsable de un riesgo consultan sin datos económicos; administrador y usuario deshabilitado no ven nada.
+- Recorrido por el gateway con dos usuarios de prueba: administración bloqueada hasta cambiar la contraseña temporal; alta de práctica, usuario y roles; duplicados 409; rol inválido 400; un no administrador recibe 403 en administración y en cambios de catálogo; restablecer y deshabilitar terminan la sesión del usuario; la auditoría registró cada operación sin contraseñas ni hashes.
+- En navegador: pestaña Administración, tabla de usuarios, asignación de un rol y su aparición en el inicio.
+- Límites: aún no hay comandos de negocio que proteger; los datos económicos no se exponen todavía; los permisos por elemento (hito, riesgo, acción) se aplicarán con sus historias; no hay paginación ni búsqueda en la lista de usuarios; no se probó concurrencia real de dos administradores, solo el bloqueo previsto.
+- La base local se recreó al terminar: contiene solo el usuario de desarrollo, ahora administrador, con su contraseña temporal.
+
+### Pendientes y siguiente paso
+
+Aceptación de PHS-005, 006 y 007 por el usuario. Siguiente: PHS-008 y PHS-009. Siguiente entrada: BIT-0014.
 
 ## Plantilla para próximas entradas
 

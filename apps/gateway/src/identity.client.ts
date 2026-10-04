@@ -7,6 +7,8 @@ export interface SessionUser {
   displayName: string;
   email: string;
   mustChangePassword: boolean;
+  isAdmin: boolean;
+  memberships: { practiceId: string; practiceName: string; role: 'pm' | 'lead' | 'director' }[];
 }
 
 export interface SessionInfo {

@@ -6,6 +6,7 @@ export interface NewUser {
   displayName: string;
   password: string;
   mustChangePassword: boolean;
+  isAdmin?: boolean;
 }
 
 // Creates a local user with its credential. Returns null when the email is already registered.
@@ -20,8 +21,8 @@ export async function createLocalUser(pool: pg.Pool, user: NewUser): Promise<str
       return null;
     }
     const inserted = await client.query<{ id: string }>(
-      'INSERT INTO phs.app_user(display_name, email) VALUES($1, $2) RETURNING id',
-      [user.displayName, user.email],
+      'INSERT INTO phs.app_user(display_name, email, is_admin) VALUES($1, $2, $3) RETURNING id',
+      [user.displayName, user.email, user.isAdmin ?? false],
     );
     const id = inserted.rows[0]!.id;
     await client.query(

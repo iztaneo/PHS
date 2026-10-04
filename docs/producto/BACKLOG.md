@@ -180,6 +180,8 @@ Como **responsable de acceso**, quiero limitar cada operación al alcance autori
 
 **Datos / artefactos:** practice_membership, project_member, project
 
+**Estado (BIT-0013): en revisión, no aceptada.** Reglas de D05 implementadas como función pura y aplicadas en el servicio Proyectos (consulta de proyectos por alcance) y en la administración. Los criterios 1–4 están probados para consulta; los comandos de edición y aprobación se protegerán con las mismas reglas cuando existan (PHS-009 en adelante), y archivos y conteos con sus historias.
+
 Criterios de aceptación:
 
 1. PM A no obtiene proyecto de PM B fuera de alcance mediante URL, API, búsqueda, conteo ni archivo.
@@ -200,6 +202,8 @@ Como **administrador**, quiero mantener identidades habilitadas y asignaciones, 
 **Datos / artefactos:** app_user, user_credential, user_session, practice, practice_membership, service_type
 
 **Actualización 2026-10-03 (BIT-0008):** credencial local (D06); criterio 5 añadido y criterio 1 sin proveedor externo.
+
+**Estado (BIT-0013): en revisión, no aceptada.** Implementados y probados los cinco criterios: usuarios, credencial temporal y restablecimiento, prácticas, roles acumulables, tipos de servicio y auditoría. Del criterio 3, la reasignación se informa como conteo de proyectos abiertos; el detalle y la reasignación llegan con PHS-009/010. No hay edición del nombre o zona horaria de una práctica desde la pantalla.
 
 Criterios de aceptación:
 

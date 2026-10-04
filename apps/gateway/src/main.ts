@@ -18,7 +18,6 @@ app.use('/api', checkOrigin(allowedOrigins()));
 app.use('/api/v1/session', json({ limit: '10kb' }));
 const identity = app.get(IdentityClient);
 for (const route of proxiedRoutes()) {
-  // Express strips the mount prefix, so /api/v1/projects/x reaches the service as /x.
   app.use(route.prefix, authenticate(identity), createProxyMiddleware({ target: route.target, changeOrigin: true }));
 }
 await app.listen(portFromEnv('GATEWAY_PORT', 3000), '127.0.0.1');
