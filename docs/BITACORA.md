@@ -8,11 +8,12 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migración inicial, pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Todavía no implementado:** backend de negocio, interfaz multiusuario conectada a PostgreSQL, autenticación real, motor de producción y workers.
 - **Decisión confirmada:** usar PostgreSQL como base de datos del MVP.
+- **Stack propuesto:** TypeScript, React/Vite, NestJS para API y worker, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate, OIDC y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan restricciones del equipo, proveedor de identidad e infraestructura.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
 - **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 171 criterios de aceptación. Ninguna historia se considera implementada por la existencia de estos documentos.
 - **Decisiones abiertas:** D01–D10 en [DECISIONES.md](producto/DECISIONES.md), incluidas fórmulas, vigencia de revisión, calendario, permisos, acciones y entorno técnico.
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
-- **Siguiente paso funcional:** refinar R0, comenzando por stack/identidad y permisos (D06/D05), reglas de salud (D01) y vigencia de revisión (D02). Después desarrollar el primer incremento de R1.
+- **Siguiente paso funcional:** resolver los pendientes D06 de la propuesta de stack y completar contratos/prueba de compatibilidad de PHS-003; refinar permisos (D05), reglas PHF (D01) y vigencia de revisión (D02). Después desarrollar el primer incremento de R1.
 
 ## Cómo se mantiene
 
@@ -129,6 +130,39 @@ Especificar el producto y backlog, validar reglas de negocio y elegir stack. El 
 ### Pendientes y siguiente paso
 
 Completar/verificar la transferencia de `main` y, si falla, conservar el commit local para reintentar. Después continuar el refinamiento R0 y las decisiones D01–D10. El siguiente conjunto de cambios se registrará como BIT-0004.
+
+## BIT-0004 — Selección inicial del stack tecnológico
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** definir una propuesta concreta de tecnologías para construir el MVP con base en el prototipo, arquitectura y backlog.
+
+**Relación:** D06 y PHS-003; avance documental, sin declarar la historia ni la decisión completas.
+
+**Identificación:** commit con prefijo `BIT-0004`.
+
+### Trabajo realizado y decisiones
+
+- Se revisaron la arquitectura, el esquema, las decisiones pendientes y los requisitos de aplicación; se consultó documentación oficial actual de las tecnologías.
+- Se propuso TypeScript, React/Vite, NestJS, Node 24 LTS, PostgreSQL 17, Kysely/pg, dbmate, motor independiente, outbox PostgreSQL y worker, OIDC, pruebas automatizadas y contenedores.
+- Se documentaron responsabilidades, estructura futura, manejo de sesiones/evidencias, migraciones y la semántica de trabajos al menos una vez con efectos idempotentes.
+- Se registró ADR-001 con alternativas y motivos. PostgreSQL continúa siendo la única tecnología expresamente confirmada por el usuario; la propuesta restante no se presenta como preferencia ya aprobada del equipo.
+- Se solicitó al usuario información sobre restricciones tecnológicas. Al preparar esta entrada no se recibió otra preferencia; identidad corporativa, infraestructura y volumen piloto siguen pendientes.
+
+### Archivos
+
+[STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md), [ADR-001](adr/001-stack-mvp.md), arquitectura, especificación, registro D06, referencia de avance en PHS-003, README y esta bitácora.
+
+### Validación y límites
+
+- Se contrastaron familias de runtime/frameworks con fuentes oficiales y se documentó el mínimo de Node para CLI Nest 12. PostgreSQL 17.9 fue la versión del ensayo anterior, no un parche de producción fijado.
+- Se revisan enlaces, diff y conservación de IDs/criterios del backlog. No se instalaron dependencias ni se ejecutó una prueba de compatibilidad conjunta.
+- No se modificaron el esquema SQL, las pruebas ni el prototipo. No se contrataron servicios ni se desplegó infraestructura.
+- Este commit se sube a `origin/main` y se verifica la coincidencia de SHA con el remoto conforme a las instrucciones del repositorio.
+
+### Pendientes y siguiente paso
+
+Confirmar restricciones de equipo/infraestructura y proveedor de identidad; completar contratos OpenAPI y validar versiones exactas con un esqueleto mínimo antes de implementar PHS-004–008. D01–D10 siguen sin aprobación completa. Siguiente entrada: BIT-0005.
 
 ## Plantilla para próximas entradas
 

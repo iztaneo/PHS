@@ -109,6 +109,8 @@ Como **equipo técnico**, quiero seleccionar stack y contratos de los casos de u
 
 **Datos / artefactos:** OpenAPI, contratos JSON y decisiones técnicas
 
+**Avance documental:** [stack propuesto](../STACK-TECNOLOGICO.md) y [ADR-001](../adr/001-stack-mvp.md) disponibles. No completa la historia: faltan contratos, restricciones de infraestructura/identidad y prueba de integración.
+
 Criterios de aceptación:
 
 1. Se registran stack, identidad, despliegue, almacenamiento de archivos y forma de ejecutar workers; PostgreSQL se conserva.

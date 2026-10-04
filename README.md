@@ -14,6 +14,8 @@ El repositorio contiene un prototipo navegable y el diseño inicial de arquitect
 - [Plan de entregas y aceptación](docs/producto/PLAN-ENTREGAS.md).
 - [Decisiones pendientes](docs/producto/DECISIONES.md).
 - [Arquitectura propuesta](docs/ARQUITECTURA-PHS.md).
+- [Stack tecnológico propuesto](docs/STACK-TECNOLOGICO.md).
+- [Decisión técnica ADR-001](docs/adr/001-stack-mvp.md).
 - [Diseño de PostgreSQL y diagrama](docs/DATABASE-PHS.md).
 - [Migración inicial](db/migrations/001_initial.sql).
 - [Pruebas de integridad](db/tests/001_integrity.sql).

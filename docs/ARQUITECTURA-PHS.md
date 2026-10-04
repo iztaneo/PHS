@@ -87,7 +87,7 @@ flowchart TD
 | Consultas de gobierno | Portafolio, timeline y vistas según alcance de acceso. |
 | Evidencias y auditoría | Archivos privados, metadatos y registro de quién cambió qué y cuándo. |
 
-La elección de lenguaje, frameworks, versiones y proveedor de infraestructura queda pendiente de las restricciones del equipo. La presencia de `app.py` no establece una preferencia de backend. Esta propuesta es lógica; no selecciona productos ni versiones.
+La arquitectura lógica se concreta en la [selección inicial de stack](STACK-TECNOLOGICO.md): React/Vite, TypeScript, NestJS para API y worker, PostgreSQL y migraciones SQL. Es una propuesta técnica pendiente de restricciones del equipo y validación de integración; identidad corporativa y proveedor de infraestructura siguen por definir. La presencia de `app.py` no establece una preferencia de backend.
 
 ## 5. Modelo de datos inicial
 
