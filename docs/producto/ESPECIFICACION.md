@@ -151,7 +151,7 @@ Los algoritmos de F3 `plannedProgress`, `actualProgress`, `financialDeviation`, 
 | Acción vencida | Fecha anterior a hoy, aún abierta. | Escalar la acción existente; no generar recursivamente otra. |
 | Fin de proyecto superado | Fin anterior a hoy y proyecto no cerrado. | Pedir cierre o cambio aprobado; no hay tarea automática definida en F3. |
 
-Validar estos plazos en D04; por ejemplo, +10 días podría quedar después de una renovación próxima. El diseño definitivo debe limitar plazos según compromiso real y evitar ruido.
+Estos plazos y responsables fueron adoptados por el usuario como regla versión 1 el 2026-10-04 (D04, BIT-0023). Observación que sigue vigente: por ejemplo, +10 días podría quedar después de una renovación próxima. El diseño definitivo debe limitar plazos según compromiso real y evitar ruido.
 
 ## 8. Contratos transversales y no funcionales
 

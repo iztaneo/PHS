@@ -15,7 +15,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
 - **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 175 criterios de aceptación desde BIT-0008. Ninguna historia se considera implementada por la existencia de estos documentos.
-- **Decisiones abiertas:** D07 y D10 completas. D02, D03, D04 y D08 indicadas por el usuario el 2026-10-04, con una interpretación de implementación pendiente de que la confirme. D09 confirmada, incluidas sus consecuencias de diseño, salvo expiración y restricción adicional de acceso; D06 parcialmente confirmada; de D05 solo quedan la separación de funciones tras el piloto y los responsables externos. D01 confirmada como reglas versión 1 ([REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md)); faltan el peso del hito y la calibración. Ver [DECISIONES.md](producto/DECISIONES.md).
+- **Decisiones abiertas:** D07 y D10 completas. D03 y D04 definidas por el usuario el 2026-10-04 (BIT-0023). D02 y D08 indicadas por el usuario con una interpretación de implementación pendiente de que la confirme. D09 confirmada, incluidas sus consecuencias de diseño, salvo expiración y restricción adicional de acceso; D06 parcialmente confirmada; de D05 solo quedan la separación de funciones tras el piloto y los responsables externos. D01 confirmada como reglas versión 1 ([REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md)); faltan el peso del hito y la calibración. Ver [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
@@ -835,6 +835,34 @@ Tomados al implementar, no confirmados por el usuario:
 ### Pendientes y siguiente paso
 
 Confirmar las interpretaciones de D02, D03, D04 y D08. Aceptación de R1 y R2. Después R3. Siguiente entrada: BIT-0023.
+
+## BIT-0023 — Precisiones de D03 y D04
+
+**Fecha:** 2026-10-04, America/Mexico_City.
+
+**Objetivo:** registrar las precisiones que el usuario dio antes de iniciar R3.
+
+**Relación:** D03, D04, D05, PHS-020, PHS-030 a PHS-032. Solo documentación.
+
+**Identificación:** commit con prefijo `BIT-0023`.
+
+### Decisiones indicadas por el usuario
+
+- D03: el ciclo mensual es por mes calendario.
+- D04: usar la regla del prototipo para plazos y responsables de las acciones, y registrarla.
+- D04: un hito que se cumple resuelve su alerta; si no se cumple, el PM registra por qué se desvió y documenta un plan de remediación para cumplir la fecha o, si replanifica, el motivo; debe validarlo Dirección.
+
+### Trabajo realizado y archivos
+
+[DECISIONES.md](producto/DECISIONES.md) (tabla de precisiones y punto abierto), [ESPECIFICACION.md](producto/ESPECIFICACION.md) §7 y esta bitácora.
+
+### Punto resuelto
+
+La validación por Dirección contradecía D05. El usuario eligió entre alternativas: valida el líder y Dirección lo ve; replanificar es un cambio aprobado; la exigencia de causa y plan aplica a toda alerta crítica; y el día de corte semanal es configurable por proyecto.
+
+### Pendientes y siguiente paso
+
+Construir R3. Siguiente entrada: BIT-0024.
 
 ## Plantilla para próximas entradas
 

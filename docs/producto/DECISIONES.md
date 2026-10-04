@@ -40,6 +40,25 @@ Texto del usuario, sin alternativas presentadas previamente. La columna de inter
 
 Se aplican en este orden: D08 con PHS-014; D02, D03 y D04 con el ciclo de revisión y las acciones (R3).
 
+#### Precisiones del usuario del 2026-10-04 (BIT-0023)
+
+| ID | Lo que indicó el usuario | Interpretación para implementar |
+| --- | --- | --- |
+| D03 | Mensual es mes calendario. | Un ciclo mensual vence el mismo día del mes siguiente, ajustado al último día cuando el mes es más corto. Sigue sin definirse el día de corte del ciclo semanal. |
+| D04 | Usar la regla del prototipo y registrarla. | Se adoptan como versión 1 los plazos y responsables de la tabla "Expectativas y acciones candidatas" de [ESPECIFICACION.md](ESPECIFICACION.md) §7: hito vencido, responsable del hito, +2 días, alta; mitigación vencida, responsable del riesgo, +2 días, alta; revisión vencida, PM, +1 día, alta; renovación, responsable de la renovación o líder, +10 días, media; desvío operativo o financiero, PM, +5 días, alta; cambio pendiente, líder, +7 días, media; acción vencida, se escala la existente. |
+| D04 | Si el hito se cumple, se resuelve. Si no se cumple, el PM debe registrar el porqué e identificar por qué se desvió; debe documentar el plan de remediación para cumplir la fecha o, si hay replanificación, describir el porqué; y debe ser validado por Dirección. | Un hito vencido no se cierra solo: exige del PM la causa de la desviación y una de dos salidas, plan de remediación o replanificación con su motivo, y una validación de Dirección. Al cumplirse el hito, el evento se resuelve. |
+
+Esa última precisión contradecía D05 (Dirección solo consulta; el líder aprueba cambios). El usuario la resolvió el mismo día eligiendo entre alternativas:
+
+| Tema | Decisión del usuario |
+| --- | --- |
+| Quién valida el plan de remediación o la replanificación | El líder valida; Dirección lo ve. D05 no cambia. |
+| Replanificar un hito comprometido | Es un cambio aprobado: se propone en el flujo de cambios y, al aprobarse, genera la nueva línea base. |
+| A qué aplica la exigencia de causa y plan | A toda alerta crítica: hito vencido, mitigación de riesgo vencida, desviación de proyecto y desviación financiera. |
+| Día de corte del ciclo semanal | Configurable por proyecto. |
+
+Con esto D03 y D04 quedan definidas para construir. Interpretación de implementación aún sin confirmar: cuando la causa desaparece, el evento se resuelve y su acción automática se cierra sola con una nota del sistema.
+
 ### D09 — Evidencias (confirmado el 2026-10-04, BIT-0020)
 
 Elegido por el usuario entre las alternativas presentadas:
