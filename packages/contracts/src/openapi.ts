@@ -50,7 +50,7 @@ export function buildOpenApi(info: OpenApiInfo, routes: RouteContract[]): Json {
       ...(route.auth === 'admin' ? { description: 'Requiere un usuario administrador.' } : {}),
       ...(parameters(route).length ? { parameters: parameters(route) } : {}),
       ...(route.body
-        ? { requestBody: { required: true, content: { 'application/json': { schema: jsonSchema(route.body, 'input') } } } }
+        ? { requestBody: { required: true, content: { [route.bodyType === 'multipart' ? 'multipart/form-data' : 'application/json']: { schema: jsonSchema(route.body, 'input') } } } }
         : {}),
       responses,
     };

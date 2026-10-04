@@ -77,6 +77,7 @@ Los umbrales son estrictos: 10 y 3 exactos no activan el tope.
 - Los cálculos se hacen con decimales exactos, sin punto flotante binario.
 - Los umbrales se comparan antes de redondear.
 - Se guardan desviaciones, promedio, tope y score con dos decimales, redondeo a la mitad hacia arriba.
+- Las restas de una dimensión usan la desviación ya guardada con dos decimales, para que el resultado pueda reproducirse a partir de lo guardado.
 - En pantalla el score se muestra como entero y las desviaciones con un decimal; el semáforo se decide con el valor guardado, no con el entero mostrado.
 
 ## 6. Confianza, tendencia y pronóstico — Prototipo v1
@@ -89,7 +90,7 @@ Los umbrales son estrictos: 10 y 3 exactos no activan el tope.
 
 ## 7. Ejemplos con resultado esperado
 
-Sirven como casos de prueba del motor. Desde BIT-0019 los ejemplos 1 a 8 y 13 están automatizados en `packages/health-engine`; el resto se automatiza al construir dimensiones y score.
+Sirven como casos de prueba del motor. Desde BIT-0022 todos están automatizados en `packages/health-engine`, salvo el 15 (tendencia), que llega con los cortes de ciclo.
 
 | # | Caso | Resultado |
 | --- | --- | --- |

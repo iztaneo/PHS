@@ -56,6 +56,7 @@ case "${1:-}" in
     : "${DEMO_USER_PASSWORD:?Falta DEMO_USER_PASSWORD en .env}" "${DEV_USER_EMAIL:?Falta DEV_USER_EMAIL en .env}"
     (cd apps/identity && node dist/cli/seed-demo.js)
     (cd apps/projects && node dist/cli/seed-demo.js)
+    (cd apps/platform && node dist/cli/seed-demo.js)
     ;;
   reset)
     pg_ctl -D "$DATA" -m fast stop >/dev/null 2>&1 || true

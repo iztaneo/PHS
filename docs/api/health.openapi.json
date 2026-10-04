@@ -1,0 +1,420 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PHS — Servicio Salud (interno)",
+    "version": "0.1.0",
+    "description": "API interna. Calcula y conserva las evaluaciones con el motor PHF; pregunta al servicio Proyectos quién puede ver cada proyecto."
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Estado del servicio y de su base de datos",
+        "tags": [
+          "Estado"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Estado actual.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "service": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ]
+                    },
+                    "database": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "down"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "service",
+                    "status"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assessments/{projectId}": {
+      "get": {
+        "summary": "Evaluación de salud vigente de un proyecto",
+        "tags": [
+          "Salud"
+        ],
+        "security": [
+          {
+            "gatewaySignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evaluación para la versión actual de los datos y la fecha de hoy en la zona del proyecto. Se calcula y guarda la primera vez que se pide.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "projectId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "stored": {
+                      "type": "boolean",
+                      "description": "false: el proyecto no tiene línea base; el resultado se calcula pero no se conserva como historia."
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "operational"
+                      ]
+                    },
+                    "publication": {
+                      "type": "string",
+                      "enum": [
+                        "provisional",
+                        "official"
+                      ]
+                    },
+                    "effectiveOn": {
+                      "type": "string",
+                      "format": "date",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                    },
+                    "calculatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "projectRevision": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "Versión de los datos del proyecto con la que se calculó."
+                    },
+                    "ruleSetVersion": {
+                      "type": "string"
+                    },
+                    "score": {
+                      "description": "null: \"Sin evaluación\", ninguna dimensión tiene dato.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "band": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "healthy",
+                            "attention",
+                            "risk"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Semáforo: 80 o más, 60 a menos de 80, menos de 60."
+                    },
+                    "weightedScore": {
+                      "description": "Promedio ponderado de las dimensiones con dato.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "gateCap": {
+                      "description": "Menor tope activo; 100.00 si no hay ninguno.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "confidence": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string"
+                        },
+                        "level": {
+                          "type": "string",
+                          "enum": [
+                            "high",
+                            "medium",
+                            "low"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "level"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Calidad y actualidad de la información, separada de la salud."
+                    },
+                    "dimensions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "enum": [
+                              "performance",
+                              "financial",
+                              "risks",
+                              "client",
+                              "governance",
+                              "team"
+                            ]
+                          },
+                          "weight": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "score": {
+                            "description": "null: sin dato; no entra al promedio y baja la confianza.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "deductions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "description": "Causa de la resta, por ejemplo `milestone_overdue`."
+                                },
+                                "count": {
+                                  "type": "number",
+                                  "description": "Cuántas veces ocurrió, o la magnitud medida."
+                                },
+                                "points": {
+                                  "type": "string",
+                                  "description": "Puntos restados a la dimensión."
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "count",
+                                "points"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "weight",
+                          "score",
+                          "deductions"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "gates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "enum": [
+                              "project_deviation",
+                              "financial_deviation",
+                              "critical_milestone_overdue",
+                              "critical_risk",
+                              "review_overdue",
+                              "client_critical"
+                            ]
+                          },
+                          "cap": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Tope del score cuando la regla está activa."
+                          },
+                          "active": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "cap",
+                          "active"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "metrics": {
+                      "type": "object",
+                      "properties": {
+                        "committedProgress": {
+                          "description": "Decimal con dos decimales; null cuando no hay dato.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "actualProgress": {
+                          "description": "Decimal con dos decimales; null cuando no hay dato.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "projectDeviation": {
+                          "description": "Decimal con dos decimales; null cuando no hay dato.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "financialDeviation": {
+                          "description": "Decimal con dos decimales; null cuando no hay dato.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "effortDeviation": {
+                          "description": "Decimal con dos decimales; null cuando no hay dato.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "committedProgress",
+                        "actualProgress",
+                        "projectDeviation",
+                        "financialDeviation",
+                        "effortDeviation"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "financialsHidden": {
+                      "type": "boolean",
+                      "description": "true: el usuario no puede ver datos económicos (D05)."
+                    }
+                  },
+                  "required": [
+                    "projectId",
+                    "stored",
+                    "kind",
+                    "publication",
+                    "effectiveOn",
+                    "calculatedAt",
+                    "projectRevision",
+                    "ruleSetVersion",
+                    "score",
+                    "band",
+                    "weightedScore",
+                    "gateCap",
+                    "confidence",
+                    "dimensions",
+                    "gates",
+                    "metrics",
+                    "financialsHidden"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o está fuera del alcance del usuario (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "phs_session",
+        "description": "Cookie de sesión emitida por POST /api/v1/session."
+      },
+      "gatewaySignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-phs-internal-auth",
+        "description": "Identidad firmada por el gateway (HMAC-SHA256, válida 60 s). No se acepta desde el navegador."
+      }
+    }
+  }
+}

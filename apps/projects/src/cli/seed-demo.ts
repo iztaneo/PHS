@@ -4,10 +4,12 @@
 import { randomUUID } from 'node:crypto';
 import { createPool, loadEnv, requireEnv } from '@phs/service-kit';
 import { BaselinesService } from '../baselines.service.js';
+import { ChangesService } from '../changes.service.js';
 import { FinanceService } from '../finance.service.js';
 import { MilestonesService } from '../milestones.service.js';
 import { ProjectsService } from '../projects.service.js';
 import { RisksService } from '../risks.service.js';
+import { StatusService } from '../status.service.js';
 import { TeamService } from '../team.service.js';
 
 loadEnv();
@@ -18,6 +20,8 @@ const milestones = new MilestonesService(pool, projects);
 const baselines = new BaselinesService(pool, projects);
 const finance = new FinanceService(pool, projects);
 const risks = new RisksService(pool, projects);
+const changes = new ChangesService(pool, projects);
+const status = new StatusService(pool, projects);
 
 // Dates are relative to today so overdue and upcoming items stay meaningful whenever the seed runs.
 const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
@@ -116,7 +120,69 @@ try {
     await milestones.create(as(pablo), project.id, { title: 'Datos históricos consolidados', deliverable: 'Conjunto de datos validado', ownerId: pablo, dueOn: day(15), critical: false }, key());
     console.log('Proyecto creado: DEMO-004 Modelo de predicción de demanda (otra práctica)');
   }
-  console.log('Proyectos de demostración listos: DEMO-001 a DEMO-004');
+  // Changes (PHS-018/019). Added per project only when it has none, so older local databases get them too.
+  const demo = async (code: string) => (await pool.query<{ id: string }>('SELECT id FROM phs.project WHERE code = $1', [code])).rows[0]!.id;
+  const hasChanges = async (id: string) => Boolean((await pool.query('SELECT 1 FROM phs.project_change WHERE project_id = $1 LIMIT 1', [id])).rowCount);
+  const milestoneId = async (id: string, title: string) =>
+    (await pool.query<{ id: string }>('SELECT id FROM phs.milestone WHERE project_id = $1 AND title = $2', [id, title])).rows[0]?.id;
+
+  const portal = await demo('DEMO-001');
+  if (!(await hasChanges(portal))) {
+    const integration = await milestoneId(portal, 'Integración con facturación');
+    if (integration) {
+      // Pending: waiting for the lead's decision.
+      await changes.propose(as(ana), portal, {
+        title: 'Replanificar la integración con facturación', changeType: 'technical', correctsId: null,
+        description: 'El proveedor no entregó su API; se necesita más tiempo y presupuesto para construir un simulador.',
+        impact: { budgetDelta: '150000', milestones: [{ id: integration, dueOn: day(20) }] },
+      }, key());
+      console.log('Cambio propuesto en DEMO-001 (pendiente de decisión)');
+    }
+  }
+  const cloud = await demo('DEMO-002');
+  if (!(await hasChanges(cloud))) {
+    const production = await milestoneId(cloud, 'Migración de producción');
+    if (production) {
+      // Approved: produces baseline v2 and moves only that milestone.
+      const proposed = await changes.propose(as(ana), cloud, {
+        title: 'Ampliar la ventana de migración', changeType: 'client', correctsId: null,
+        description: 'El banco pidió mover la migración después de su cierre trimestral.',
+        impact: { endsOn: day(75), milestones: [{ id: production, dueOn: day(55) }] },
+      }, key());
+      await changes.decide(as(luis), cloud, proposed.id, { decision: 'approved', comment: 'Aprobado en comité; sin impacto en presupuesto.' }, key());
+      console.log('Cambio aprobado en DEMO-002 (línea base v2)');
+    }
+  }
+  // Status and renewals (PHS-013/014, D08).
+  const hasLog = async (id: string) => Boolean((await pool.query('SELECT 1 FROM phs.project_status_log WHERE project_id = $1 LIMIT 1', [id])).rowCount);
+  const hasRenewals = async (id: string) => Boolean((await pool.query('SELECT 1 FROM phs.renewal WHERE project_id = $1 LIMIT 1', [id])).rowCount);
+  const ago = (days: number) => new Date(Date.now() - days * 86_400_000);
+  for (const [code, days] of [['DEMO-001', 118], ['DEMO-002', 88]] as const) {
+    const id = await demo(code);
+    if (!(await hasLog(id))) {
+      await status.change(as(ana), id, { expectedRevision: await revision(ana, id), to: 'active', reason: 'Kickoff realizado con el cliente.' }, ago(days));
+      console.log(`${code} puesto en ejecución`);
+    }
+  }
+  if (!(await hasRenewals(cloud))) {
+    const past = await status.createRenewal(as(ana), cloud, { dueOn: day(-200), ownerId: ana, notes: 'Contrato marco, periodo anterior' }, key());
+    await status.decideRenewal(as(ana), cloud, past.id, { expectedRevision: 1, outcome: 'renewed', comment: 'Renovado por doce meses con el mismo alcance.' });
+    await status.createRenewal(as(ana), cloud, { dueOn: day(30), ownerId: ana, notes: 'Contrato marco' }, key());
+    console.log('Renovaciones cargadas en DEMO-002');
+  }
+  // 5. Paused for more than a month: the PM has to describe the situation before editing (D08).
+  if (!(await exists('DEMO-005'))) {
+    const { project } = await projects.create(as(ana), {
+      ...base, practiceId: cons, code: 'DEMO-005', name: 'Tablero de indicadores', clientName: 'Banco del Centro',
+      serviceTypeCode: 'consulting', pmId: ana, leadId: luis, startsOn: day(-150), endsOn: day(30),
+      clientContact: 'Jorge Peña, arquitecto en jefe', escalationNotes: '',
+    }, key());
+    await milestones.create(as(ana), project.id, { title: 'Indicadores definidos', deliverable: 'Catálogo de indicadores', ownerId: ana, dueOn: day(20), critical: false }, key());
+    await status.change(as(ana), project.id, { expectedRevision: await revision(ana, project.id), to: 'active', reason: 'Inicio del servicio.' }, ago(140));
+    await status.change(as(ana), project.id, { expectedRevision: await revision(ana, project.id), to: 'paused', reason: 'El cliente suspendió el proyecto por un cambio de prioridades.' }, ago(45));
+    console.log('Proyecto creado: DEMO-005 Tablero de indicadores (pausado hace 45 días, requiere justificación)');
+  }
+  console.log('Proyectos de demostración listos: DEMO-001 a DEMO-005');
 } finally {
   await pool.end();
 }

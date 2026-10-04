@@ -32,18 +32,18 @@ cp .env.example .env                 # valores solo para desarrollo local
 npx pnpm@12.9.1 install
 npx pnpm@12.9.1 build
 npx pnpm@12.9.1 db:setup             # base local, migraciones, administrador y datos de demostración
-npx pnpm@12.9.1 dev                  # web, gateway, identity y projects
+npx pnpm@12.9.1 dev                  # web, gateway, identity, projects, health y platform
 ```
 
 Abrir [127.0.0.1:5173](http://127.0.0.1:5173) e iniciar sesión con el usuario de desarrollo de `.env`; la contraseña es temporal y la aplicación obliga a cambiarla. `test` y `typecheck` validan el código; `db:test` ejecuta las pruebas SQL; `db:test:setup` prepara la base `phs_test` que usan las pruebas de integración; `db:local:stop` detiene la base. Con Docker, `db:up` sustituye a `db:local:start`.
 
 ### Datos de demostración
 
-`db:setup` carga, y `seed:demo` vuelve a cargar sin duplicar, seis usuarios y cuatro proyectos para recorrer el flujo completo:
+`db:setup` carga, y `seed:demo` vuelve a cargar sin duplicar, seis usuarios y cinco proyectos para recorrer el flujo completo:
 
 | Usuario (`@phs.test`) | Perfil | Qué ve |
 | --- | --- | --- |
-| `ana.pm` | PM de Consultoría | Sus tres proyectos: DEMO-001 a DEMO-003 |
+| `ana.pm` | PM de Consultoría | Sus proyectos: DEMO-001, 002, 003 y 005 |
 | `luis.lider` | Líder de Consultoría | Los tres proyectos de la práctica; puede reasignar |
 | `carla.direccion` | Dirección de ambas prácticas | Los cuatro proyectos, solo consulta |
 | `pablo.pm` | PM y líder de Datos | Solo DEMO-004 |
@@ -54,12 +54,13 @@ Todos usan la contraseña `DEMO_USER_PASSWORD` de `.env`. El administrador de de
 
 | Proyecto | Situación |
 | --- | --- |
-| DEMO-001 Portal de clientes | Hito crítico vencido, gasto por delante del avance, un riesgo materializado y otro vencido |
-| DEMO-002 Migración a la nube | Hitos a tiempo, costo acorde al avance, un riesgo mitigado |
+| DEMO-001 Portal de clientes | En riesgo (score 49): hito crítico vencido, gasto por delante del avance, riesgo materializado, un cambio pendiente de decisión y evidencias |
+| DEMO-002 Migración a la nube | Saludable (score 97): hitos a tiempo, un cambio aprobado con línea base v2 y una renovación próxima |
 | DEMO-003 Soporte de aplicaciones | Recién iniciado, con equipo e hitos, sin línea base |
 | DEMO-004 Modelo de predicción de demanda | De otra práctica, para comprobar el alcance por rol |
+| DEMO-005 Tablero de indicadores | Pausado hace 45 días: exige describir el motivo antes de editar |
 
-Existen el gateway y los servicios Identidad y Proyectos, con inicio y cierre de sesión, cambio de contraseña, administración de usuarios, prácticas, roles y tipos de servicio, y alta, consulta y edición de proyectos según el alcance de cada usuario. El usuario de desarrollo es administrador: para crear un proyecto debe crear antes una práctica y asignarse los roles de PM y líder. También hay equipo, hitos y línea base inicial, con lo que se completa el recorrido de la primera entrega (R1). También hay riesgos con seguimiento y economía con desviación financiera calculada. Todavía no hay evidencias, cambios aprobados, revisiones ni score de salud.
+Existen el gateway y los cuatro servicios (Identidad, Proyectos, Salud y Plataforma). Funcionan acceso, administración, proyectos con equipo, hitos, riesgos, línea base, cambios aprobados, economía, evidencias, renovaciones, estado del proyecto y la evaluación de salud con score. Todavía no hay ciclo de revisión, acciones, alertas ni vistas de portafolio.
 
 ## Abrir el prototipo
 

@@ -186,6 +186,14 @@ Control de concurrencia: `project.revision` aumenta en uno con cada edición de 
 
 Los snapshots `milestone_snapshot` y `team_snapshot` de la línea base tienen su contrato en `packages/contracts` (`milestoneSnapshot` y `teamSnapshot`); el equipo incluye a PM, líder, responsable técnico y sponsor además de los integrantes.
 
+## Evidencias, estado del proyecto y renovaciones (migraciones 009 y 010)
+
+`009_evidence_addendum_and_withdrawal.sql` aplica la política D09: `evidence.addendum` marca, al subirla, la evidencia agregada a un elemento ya cerrado o decidido; `evidence_withdrawal` registra el retiro de una evidencia (quién, cuándo y por qué) sin modificar la fila original. El archivo se elimina del almacenamiento; el texto de una evidencia retirada permanece en la fila, que es de solo inserción, pero deja de entregarse.
+
+`010_project_status_log_and_renewal_outcome.sql` añade `project_status_log`, de solo inserción, con cada cambio de estado y su motivo y con las justificaciones de D08; y en `renewal` el resultado (`outcome_note`, `closed_at`) y `revision`. La regla de D08 se calcula al consultar: proyecto pausado o cerrado desde hace 30 días o más sin una justificación posterior a ese plazo.
+
+Con estas dos migraciones el esquema tiene 33 tablas. `evidence_withdrawal` la escribe Plataforma y `project_status_log` la escribe Proyectos.
+
 ## Instalación y validación
 
 Desde BIT-0010 las migraciones se aplican con [dbmate](https://github.com/amacneil/dbmate), que ejecuta cada archivo en una transacción y registra las aplicadas en `public.schema_migrations`. Los archivos ya no contienen `BEGIN/COMMIT` propios y no deben aplicarse con `psql -f`. No tienen reversión destructiva: el bloque `migrate:down` falla a propósito; se corrige con una migración nueva o restaurando un respaldo.
@@ -212,8 +220,10 @@ npx pnpm@12.9.1 db:local:stop
 | `006_global_admin.sql` | Administrador global y roles de práctica. |
 | `007_command_idempotency.sql` | Resultados de comandos idempotentes. |
 | `008_project_context_and_commitments.sql` | Contacto por proyecto y fecha comprometida del hito. |
+| `009_evidence_addendum_and_withdrawal.sql` | Adendas y retiro de evidencias. |
+| `010_project_status_log_and_renewal_outcome.sql` | Historial de estado con motivos y resultado de renovaciones. |
 
-Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso), `006_admin.sql` (3 rechazos), `007_idempotency.sql` (6 rechazos) y `008_context.sql`. Se ejecutan con el propietario del esquema.
+Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso), `006_admin.sql` (3 rechazos), `007_idempotency.sql` (6 rechazos), `008_context.sql`, `009_evidence.sql` (6 rechazos) y `010_status_and_renewals.sql` (8 rechazos). Se ejecutan con el propietario del esquema.
 
 ## Evolución pendiente
 

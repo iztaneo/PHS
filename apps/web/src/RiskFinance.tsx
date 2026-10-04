@@ -3,6 +3,7 @@ import {
   api, errorMessage, type FinanceSummary, type PracticePerson, type ProjectDetail, type Risk, type RiskHistoryEntry,
   type RiskInput, type RiskStatus,
 } from './api';
+import { EvidencePanel } from './EvidencePanel';
 import { Badge, Button, Card, Empty, Facts, Field, Input, Loading, Notice, Select, Textarea, type Tone } from './ui';
 
 interface SectionProps {
@@ -136,6 +137,7 @@ export function Risks({ project, people, onChanged }: SectionProps) {
                 ))}
               </ol>
             )}
+            <EvidencePanel projectId={project.id} kind="risk" targetId={risk.id} canAdd={risk.canUpdate} canWithdraw={canEdit} />
           </div>
         </Card>
       ))}

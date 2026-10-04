@@ -12,6 +12,7 @@ export interface ProjectSummary {
   code: string;
   name: string;
   status: string;
+  justificationRequired: boolean;
   practiceId: string;
   practiceName: string;
   clientId: string;
@@ -89,7 +90,9 @@ export type ProjectErrorCode =
   | 'service_type_inactive' | 'pm_not_eligible' | 'lead_not_eligible' | 'responsible_not_enabled'
   | 'revision_conflict' | 'baseline_change_required' | 'idempotency_key_reused'
   | 'member_has_responsibilities' | 'invalid_transition' | 'note_required' | 'reason_required'
-  | 'invalid_completion_date' | 'baseline_exists' | 'invalid_effective_date' | 'already_superseded';
+  | 'invalid_completion_date' | 'baseline_exists' | 'invalid_effective_date' | 'already_superseded'
+  | 'baseline_required' | 'invalid_impact' | 'already_decided' | 'baseline_changed'
+  | 'status_justification_required' | 'justification_not_required';
 
 export class ProjectError extends Error {
   constructor(
@@ -108,12 +111,15 @@ interface ProjectRow {
   pm_id: string; pm_name: string; lead_id: string; lead_name: string;
   technical_owner_id: string; technical_owner_name: string; sponsor_id: string | null; sponsor_name: string | null;
   starts_on: string; ends_on: string; currency: string; timezone: string; revision: string; has_baseline: boolean;
-  client_contact: string; escalation_notes: string;
+  client_contact: string; escalation_notes: string; justification_required: boolean;
   is_pm: boolean; is_team_member: boolean; is_named: boolean; owns_element: boolean;
 }
 
 // $1 = user, $2 = practices where the user is lead or director. The final WHERE is the "view" rule
 // of D05; capabilities are then computed by the same pure function used in tests.
+// D08: a month. A constant, not user input, so it is safe inside the SQL text.
+export const JUSTIFICATION_DAYS = 30;
+
 const SCOPED = `
   WITH scoped AS (
     SELECT p.id, p.code, p.name, p.status, p.description, p.practice_id, pr.name AS practice_name,
@@ -123,6 +129,16 @@ const SCOPED = `
            p.sponsor_id, sp.display_name AS sponsor_name, p.client_contact, p.escalation_notes,
            p.starts_on::text AS starts_on, p.ends_on::text AS ends_on, p.currency, p.timezone, p.revision,
            p.current_baseline_id IS NOT NULL AS has_baseline,
+           -- D08: paused or closed for the configured days since the last transition, with no
+           -- justification recorded after that point.
+           (p.status IN ('paused', 'closed') AND EXISTS (
+              SELECT 1 FROM phs.project_status_log t
+               WHERE t.project_id = p.id AND t.kind = 'transition'
+                 AND t.recorded_at = (SELECT max(x.recorded_at) FROM phs.project_status_log x WHERE x.project_id = p.id AND x.kind = 'transition')
+                 AND t.recorded_at <= now() - make_interval(days => ${JUSTIFICATION_DAYS})
+                 AND NOT EXISTS (SELECT 1 FROM phs.project_status_log j
+                                  WHERE j.project_id = p.id AND j.kind = 'justification'
+                                    AND j.recorded_at >= t.recorded_at + make_interval(days => ${JUSTIFICATION_DAYS})))) AS justification_required,
            p.pm_id = $1 AS is_pm,
            EXISTS (SELECT 1 FROM phs.project_member m WHERE m.project_id = p.id AND m.user_id = $1) AS is_team_member,
            (p.lead_id = $1 OR p.technical_owner_id = $1 OR coalesce(p.sponsor_id = $1, false)) AS is_named,
@@ -145,7 +161,7 @@ const SCOPED = `
 
 function toDetail(row: ProjectRow, memberships: Membership[]): ProjectDetail {
   return {
-    id: row.id, code: row.code, name: row.name, status: row.status,
+    id: row.id, code: row.code, name: row.name, status: row.status, justificationRequired: row.justification_required,
     practiceId: row.practice_id, practiceName: row.practice_name,
     clientId: row.client_id, clientName: row.client_name,
     serviceTypeCode: row.service_type_code, serviceTypeName: row.service_type_name,
@@ -336,6 +352,7 @@ export class ProjectsService {
       const before = locked.rows[0] ? await this.get(actor.userId, projectId, client) : null;
       if (!before) throw new ProjectError('not_found');
       if (!before.capabilities.editOperation) throw new ProjectError('forbidden');
+      if (before.justificationRequired) throw new ProjectError('status_justification_required');
       if (before.revision !== input.expectedRevision) throw new ProjectError('revision_conflict', before.revision);
 
       const { expectedRevision: _expected, ...changes } = input;
@@ -394,11 +411,17 @@ export async function lockProject(
   actor: Actor,
   projectId: string,
   capability: Capability,
+  // Only the justification itself may proceed while one is owed.
+  allowUnjustified = false,
 ): Promise<ProjectDetail> {
   const locked = await client.query('SELECT 1 FROM phs.project WHERE id = $1 FOR UPDATE', [projectId]);
   const project = locked.rowCount ? await projects.get(actor.userId, projectId, client) : null;
   if (!project) throw new ProjectError('not_found');
   if (!project.capabilities[capability]) throw new ProjectError('forbidden');
+  // D08: nobody edits a project that has been paused or closed for a month until its situation is explained.
+  if (capability === 'editOperation' && project.justificationRequired && !allowUnjustified) {
+    throw new ProjectError('status_justification_required');
+  }
   return project;
 }
 

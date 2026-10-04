@@ -6,6 +6,8 @@ Generados desde `packages/contracts`; no se editan a mano. Hay un contrato por s
 | --- | --- | --- |
 | [gateway.openapi.json](gateway.openapi.json) | Pública: la aplicación web | Sesión, estado y todo lo que el gateway reenvía a los servicios bajo `/api/v1`. Autenticación por cookie `phs_session`. |
 | [identity.openapi.json](identity.openapi.json) | Interna | Sesiones, contraseña y administración de usuarios, prácticas y roles. Solo el gateway puede llamarla, con su firma. |
+| [health.openapi.json](health.openapi.json) | Interna | Evaluación de salud vigente de un proyecto. |
+| [platform.openapi.json](platform.openapi.json) | Interna | Evidencias: consulta, carga con archivo, descarga y retiro. |
 | [projects.openapi.json](projects.openapi.json) | Interna | Proyectos por alcance y catálogo de tipos de servicio. Recibe la identidad firmada del usuario. |
 
 ## Cómo se mantiene
@@ -26,7 +28,7 @@ Con `API_DOCS=true` en `.env` y los servicios levantados:
 
 - Swagger UI del contrato público: <http://127.0.0.1:5173/api/docs/>
 - JSON público: <http://127.0.0.1:3000/api/openapi.json>
-- JSON internos: <http://127.0.0.1:3001/openapi.json> (Identidad) y <http://127.0.0.1:3002/openapi.json> (Proyectos)
+- JSON internos: puertos 3001 (Identidad), 3002 (Proyectos), 3003 (Salud) y 3004 (Plataforma), en `/openapi.json`
 
 Fuera de desarrollo local, `API_DOCS` no debe activarse.
 

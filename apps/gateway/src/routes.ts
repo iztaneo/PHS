@@ -15,6 +15,8 @@ export function monitoredServices(): ServiceRoute[] {
   return [
     { name: 'identity', prefix: '', target: identityUrl() },
     { name: 'projects', prefix: '', target: requireEnv('PROJECTS_URL') },
+    { name: 'health', prefix: '', target: requireEnv('HEALTH_URL') },
+    { name: 'platform', prefix: '', target: requireEnv('PLATFORM_URL') },
   ];
 }
 
@@ -30,5 +32,7 @@ export function proxiedRoutes(): ServiceRoute[] {
     { name: 'projects-catalog', prefix: '/api/v1/catalog', target: new URL('/catalog', projects).toString() },
     { name: 'projects-clients', prefix: '/api/v1/clients', target: new URL('/clients', projects).toString() },
     { name: 'projects-people', prefix: '/api/v1/people', target: new URL('/people', projects).toString() },
+    { name: 'platform-evidence', prefix: '/api/v1/evidence', target: new URL('/evidence', requireEnv('PLATFORM_URL')).toString() },
+    { name: 'health-assessments', prefix: '/api/v1/assessments', target: new URL('/assessments', requireEnv('HEALTH_URL')).toString() },
   ];
 }

@@ -6,23 +6,22 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–008 (la 008 añade contacto por proyecto y fecha comprometida del hito; 31 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
-- **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects`, `packages/service-kit`, `packages/contracts` y `packages/health-engine`; ver README para arrancarlo.
+- **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, los cuatro servicios (`identity`, `projects`, `health`, `platform`) y los paquetes `service-kit`, `contracts` y `health-engine`; ver README para arrancarlo.
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
-- **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011). PHS-006 y PHS-007 — reglas de acceso de D05, consulta de proyectos por alcance y pantalla de administración (BIT-0013). PHS-008 y PHS-009 — auditoría, control de versiones, idempotencia y alta, lista y edición de proyectos (BIT-0015). PHS-010, PHS-015 y PHS-011 — equipo y contacto por proyecto, hitos y línea base inicial (BIT-0016). Con esto existe todo el recorrido de R1, pendiente de aceptación. De R2: PHS-012 y PHS-016 — economía y riesgos, y el inicio del motor (BIT-0019).
-- **Todavía no implementado:** renovaciones, evidencias, cambios aprobados, revisiones, evaluación de salud, servicios Salud y Plataforma, motor de producción y procesos programados.
-- **Arquitectura decidida:** microservicios — gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma) sobre un PostgreSQL compartido con el esquema actual; REST y eventos por outbox. Ver [ADR-002](adr/002-microservicios.md) y [mapa de trazabilidad](MAPA-TRAZABILIDAD.md).
+- **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
+- **Todavía no implementado:** R3 a R5: ciclo de revisión y Health Review, validaciones, eventos, acciones automáticas, procesos programados, alertas, Health Center, portafolio, timeline e historial, y operación del piloto.
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
 - **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 175 criterios de aceptación desde BIT-0008. Ninguna historia se considera implementada por la existencia de estos documentos.
-- **Decisiones abiertas:** D02–D04, D07, D08 y D10 completas; D09 confirmada salvo expiración y restricción adicional de acceso; D06 parcialmente confirmada; de D05 solo quedan la separación de funciones tras el piloto y los responsables externos. D01 confirmada como reglas versión 1 ([REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md)); faltan el peso del hito y la calibración. Ver [DECISIONES.md](producto/DECISIONES.md).
+- **Decisiones abiertas:** D07 y D10 completas. D02, D03, D04 y D08 indicadas por el usuario el 2026-10-04, con una interpretación de implementación pendiente de que la confirme. D09 confirmada, incluidas sus consecuencias de diseño, salvo expiración y restricción adicional de acceso; D06 parcialmente confirmada; de D05 solo quedan la separación de funciones tras el piloto y los responsables externos. D01 confirmada como reglas versión 1 ([REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md)); faltan el peso del hito y la calibración. Ver [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
-- **Datos de demostración:** `seed:demo` carga seis usuarios y cuatro proyectos (DEMO-001 a DEMO-004); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021).
+- **Datos de demostración:** `seed:demo` carga seis usuarios y cinco proyectos (DEMO-001 a DEMO-005); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** aceptación de R1 por el usuario; de R2 faltan PHS-013 (renovaciones), PHS-014 (pausa y cierre, requiere D08), PHS-017 (evidencias, requiere D09 y el servicio Plataforma), PHS-018/019 (cambios) y el motor completo (PHS-025/026), que implica crear el servicio Salud. D01 y D02 pueden resolverse antes de R2/R3.
+- **Siguiente paso funcional:** aceptación de R1 y R2 por el usuario y confirmación de las interpretaciones de D02, D03, D04 y D08; después R3, empezando por ciclo de revisión (PHS-020) y Health Review (PHS-021 a PHS-024).
 
 ## Cómo se mantiene
 
@@ -781,6 +780,61 @@ Tomados al implementar, no confirmados por el usuario: nombres y cifras de los d
 ### Pendientes y siguiente paso
 
 Ampliar el seed con cada funcionalidad nueva. Siguiente entrada: BIT-0022.
+
+## BIT-0022 — Segunda entrega: salud con score, cambios, evidencias, renovaciones y estado
+
+**Fecha:** 2026-10-04, America/Mexico_City.
+
+**Objetivo:** ejecutar, a petición del usuario, los cuatro bloques pendientes de R2 y registrar las decisiones D02, D03, D04 y D08 que indicó.
+
+**Relación:** PHS-013, PHS-014, PHS-017, PHS-018, PHS-019, PHS-025, PHS-026; D01, D02, D03, D04, D08, D09; ADR-002. Las historias quedan en revisión, no aceptadas.
+
+**Identificación:** commit con prefijo `BIT-0022`.
+
+### Decisiones indicadas por el usuario
+
+- D08: tras un mes pausado o cerrado, el sistema solicita el motivo, lo guarda y obliga al PM a describir la situación.
+- D02: la revisión adquiere vigencia desde su alta; si el líder la devuelve hay una observación que atender.
+- D03: ciclos semanales, parametrizables.
+- D04: generan alerta atrasos, desviaciones, sobrecostos y todo lo que indique que un proyecto va mal.
+- D09: después de revisar la explicación con lo ya implementado, confirmó las consecuencias propuestas (Office actual sin macros, tipo validado por contenido, descarga salvo imágenes, tabla de retiros y marca de adenda) y los supuestos de almacenamiento, visibilidad y carga.
+
+La interpretación para implementar D02, D03, D04 y D08 está en [DECISIONES.md](producto/DECISIONES.md) y no ha sido confirmada. En este commit solo se implementó D08; D02, D03 y D04 quedan registradas para R3.
+
+### Trabajo realizado y archivos
+
+**Salud (PHS-025, PHS-026).** `packages/health-engine`: `assess` con las seis dimensiones, los seis topes, score, semáforo, confianza y la explicación de cada resta. `apps/health` (nuevo servicio): `AssessmentsService` lee las entradas en un solo corte, calcula, guarda en `health_assessment` con su `rule_set` y devuelve la evaluación; `ProjectsClient` pregunta al servicio Proyectos por el alcance. Pestaña Salud en la web.
+
+**Cambios (PHS-018, PHS-019).** `apps/projects`: `ChangesService` con propuesta inmutable que guarda valores anteriores y propuestos, y decisión que al aprobar crea la línea base N+1 y mueve solo los hitos listados. Pestaña Cambios e historial de versiones en Línea base.
+
+**Evidencias (PHS-017).** `apps/platform` (nuevo servicio): detección del tipo real por contenido, límite de 10 MB, almacenamiento local privado mediante adaptador, adendas, descarga con permiso verificado y retiro con motivo. Panel de evidencias en hitos y riesgos.
+
+**Estado y renovaciones (PHS-013, PHS-014).** `apps/projects`: `StatusService` con transiciones con motivo, historial, elementos abiertos, regla D08 y renovaciones con resultado. Tarjetas de estado y renovaciones en la ficha, y aviso de justificación en todo el proyecto.
+
+**Comunes.** Migraciones [009](../db/migrations/009_evidence_addendum_and_withdrawal.sql) y [010](../db/migrations/010_project_status_log_and_renewal_outcome.sql) con sus pruebas; contratos y [docs/api](api/README.md) con dos servicios más y 14 rutas nuevas; rutas del gateway; variables en `.env.example`; seed ampliado con cambios, evidencias, renovaciones, estados y el proyecto DEMO-005; [DATABASE-PHS.md](DATABASE-PHS.md), [ADR-002](adr/002-microservicios.md), [REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md), [BACKLOG.md](producto/BACKLOG.md), [MAPA-TRAZABILIDAD.md](MAPA-TRAZABILIDAD.md), [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md), [README](../README.md) y esta bitácora.
+
+### Decisiones y supuestos
+
+Tomados al implementar, no confirmados por el usuario:
+
+- D08: plazo de 30 días; la justificación se pide una vez por periodo de pausa o cierre; mientras falta, nadie edita el proyecto ni cambia su estado, y leer nunca se bloquea; puede justificar el PM o el líder.
+- Estado: pausar, reanudar e iniciar los hace PM o líder; cerrar y reabrir, solo el líder; toda transición exige motivo.
+- Salud: se calcula al consultar; un proyecto sin línea base se evalúa sin guardarse; toda evaluación es provisional; las restas usan la desviación guardada con dos decimales; quien no ve importes ve el score pero no el detalle financiero.
+- Cambios: propone el PM, decide el líder; una propuesta escrita sobre otra línea base no se puede aprobar; un hito reprogramado que entra en un cambio aprobado deja de contar como reprogramado.
+- Evidencias: se admiten en hitos, riesgos y cambios; sube quien puede actualizar el elemento; retira PM o líder; el texto de una evidencia retirada deja de mostrarse pero permanece en la base.
+
+### Validación y límites
+
+- 126 pruebas de código pasan: 22 del motor, 11 de contratos, 11 de `service-kit`, 5 del gateway, 15 de Identidad, 48 de Proyectos, 5 de Salud y 9 de Plataforma. `typecheck` sin errores. Diez pruebas SQL pasan.
+- Probado contra la base de pruebas: los ejemplos de las reglas; evaluación guardada una sola vez aun con peticiones simultáneas y reproducible desde sus entradas guardadas; línea base N+1 que mueve solo el hito listado y conserva la anterior; dos aprobadores simultáneos, una sola decisión; archivo falso, vacío o de más de 10 MB sin dejar fila ni archivo; retiro que elimina el archivo y conserva el registro; regla de 30 días a los 29 y a los 40 días.
+- Por el gateway, con los cuatro servicios y los usuarios de demostración: DEMO-001 da 49.70 en riesgo y DEMO-002 da 97.52 saludable; el líder puede decidir el cambio pendiente; DEMO-002 tiene líneas base v1 y v2; editar DEMO-005 responde 409 hasta justificar; carga de un PDF por formulario, rechazo de un archivo falso, descarga permitida a la lectora del proyecto y negada con 404 a un PM de otra práctica.
+- En navegador: lista con la marca "Requiere justificación" y pestaña Salud de DEMO-001 con score, reglas críticas y dimensiones explicadas.
+- Límites: no se revisaron en navegador las pestañas Cambios, las tarjetas de estado y renovaciones ni el panel de evidencias, solo sus rutas por el gateway; no hay pruebas automáticas de pantallas; el proceso programado no existe, así que un vencimiento no cambia el score hasta que alguien consulta; Cliente y Gobernanza quedan sin dato; no hay tendencia ni pronóstico; sin limpieza de archivos huérfanos ni antivirus; `docker-compose.yml` sigue sin probarse.
+- Al archivo `.env` del usuario se le añadieron las variables de Salud y Plataforma. Las evidencias de demostración se guardan en `.local/evidence`, fuera de Git.
+
+### Pendientes y siguiente paso
+
+Confirmar las interpretaciones de D02, D03, D04 y D08. Aceptación de R1 y R2. Después R3. Siguiente entrada: BIT-0023.
 
 ## Plantilla para próximas entradas
 

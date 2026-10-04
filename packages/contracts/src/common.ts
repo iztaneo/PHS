@@ -20,6 +20,8 @@ export interface RouteContract {
   query?: Record<string, z.ZodType>;
   headers?: Record<string, z.ZodType>;
   body?: z.ZodType;
+  // 'multipart': the body is a form with an optional file field named `file`.
+  bodyType?: 'json' | 'multipart';
   responses: Record<number, { description: string; schema?: z.ZodType }>;
 }
 

@@ -3,16 +3,18 @@ import {
   Inject, NotFoundException, Param, Patch, Post, Put, Query, Req, UseGuards,
 } from '@nestjs/common';
 import {
-  IDEMPOTENCY_HEADER, createMilestoneBody, createObservationBody, createRiskBody, financeQuery, followUpRiskBody,
+  IDEMPOTENCY_HEADER, changeStatusBody, createChangeBody, createRenewalBody, justifyStatusBody, renewalOutcomeBody, createMilestoneBody, decideChangeBody, createObservationBody, createRiskBody, financeQuery, followUpRiskBody,
   idempotencyKey, publishBaselineBody, putMemberBody, removeMemberQuery, transitionMilestoneBody, updateMilestoneBody,
 } from '@phs/contracts';
 import { z } from 'zod';
 import { BaselinesService } from './baselines.service.js';
+import { ChangesService } from './changes.service.js';
 import { FinanceService } from './finance.service.js';
 import { InternalAuthGuard, type AuthenticatedRequest } from './internal-auth.guard.js';
 import { MilestonesService } from './milestones.service.js';
 import { ProjectError, type Actor } from './projects.service.js';
 import { RisksService } from './risks.service.js';
+import { StatusService } from './status.service.js';
 import { TeamService } from './team.service.js';
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -49,6 +51,8 @@ export async function runProjectCommand<T>(work: Promise<T>): Promise<T> {
       case 'forbidden': case 'practice_not_authorized': throw new ForbiddenException(body);
       case 'code_taken': case 'revision_conflict': case 'baseline_change_required': case 'idempotency_key_reused':
       case 'member_has_responsibilities': case 'invalid_transition': case 'baseline_exists': case 'already_superseded':
+      case 'baseline_required': case 'already_decided': case 'baseline_changed':
+      case 'status_justification_required': case 'justification_not_required':
         throw new ConflictException(body);
       default: throw new BadRequestException(body);
     }
@@ -64,6 +68,8 @@ export class ProjectChildrenController {
     @Inject(BaselinesService) private readonly baselines: BaselinesService,
     @Inject(FinanceService) private readonly finance: FinanceService,
     @Inject(RisksService) private readonly risks: RisksService,
+    @Inject(ChangesService) private readonly changes: ChangesService,
+    @Inject(StatusService) private readonly status: StatusService,
   ) {}
 
   @Get('members')
@@ -157,5 +163,65 @@ export class ProjectChildrenController {
   @Get('risks/:riskId/history')
   riskHistory(@Param('id') id: string, @Param('riskId') riskId: string, @Req() request: AuthenticatedRequest) {
     return runProjectCommand(this.risks.history(request.internal.userId, uuid(id), uuid(riskId)));
+  }
+
+  @Get('changes')
+  listChanges(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.changes.list(request.internal.userId, uuid(id)));
+  }
+
+  @Post('changes')
+  @HttpCode(201)
+  proposeChange(
+    @Param('id') id: string, @Body() body: unknown, @Headers(IDEMPOTENCY_HEADER) idempotency: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return runProjectCommand(this.changes.propose(actor(request), uuid(id), parse(createChangeBody, body), key(idempotency)));
+  }
+
+  @Post('changes/:changeId/decision')
+  @HttpCode(201)
+  decideChange(
+    @Param('id') id: string, @Param('changeId') changeId: string, @Body() body: unknown,
+    @Headers(IDEMPOTENCY_HEADER) idempotency: string | undefined, @Req() request: AuthenticatedRequest,
+  ) {
+    return runProjectCommand(this.changes.decide(actor(request), uuid(id), uuid(changeId), parse(decideChangeBody, body), key(idempotency)));
+  }
+
+  @Get('status')
+  getStatus(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.status.get(request.internal.userId, uuid(id)));
+  }
+
+  @Post('status')
+  @HttpCode(200)
+  changeStatus(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.status.change(actor(request), uuid(id), parse(changeStatusBody, body)));
+  }
+
+  @Post('status/justification')
+  @HttpCode(200)
+  justifyStatus(@Param('id') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.status.justify(actor(request), uuid(id), parse(justifyStatusBody, body).reason));
+  }
+
+  @Get('renewals')
+  listRenewals(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.status.listRenewals(request.internal.userId, uuid(id)));
+  }
+
+  @Post('renewals')
+  @HttpCode(201)
+  createRenewal(
+    @Param('id') id: string, @Body() body: unknown, @Headers(IDEMPOTENCY_HEADER) idempotency: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return runProjectCommand(this.status.createRenewal(actor(request), uuid(id), parse(createRenewalBody, body), key(idempotency)));
+  }
+
+  @Post('renewals/:renewalId/outcome')
+  @HttpCode(200)
+  decideRenewal(@Param('id') id: string, @Param('renewalId') renewalId: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.status.decideRenewal(actor(request), uuid(id), uuid(renewalId), parse(renewalOutcomeBody, body)));
   }
 }

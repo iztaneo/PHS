@@ -81,6 +81,7 @@ Versiones fijadas en `package.json` y `pnpm-lock.yaml`: pnpm 12.9.1, TypeScript 
 - Desde BIT-0014: paquete `packages/contracts` con los esquemas Zod y la tabla de rutas de cada servicio; de ahí se generan los OpenAPI 3.1 de `docs/api`. Diferencia respecto de esta selección: no se usa `@nestjs/swagger`; el documento se construye con la conversión a JSON Schema de Zod, porque así validación y contrato comparten fuente. Swagger UI con `swagger-ui-express` 5.0.1, solo con `API_DOCS=true`.
 - Desde BIT-0017: Tailwind CSS 4.3.3 con `@tailwindcss/vite` y `lucide-react` 1.51.0. Diferencia respecto de esta selección: no se instaló shadcn/ui; los componentes base son propios y están en `apps/web/src/ui.tsx`, siguiendo la dirección visual de [DISENO-UI.md](producto/DISENO-UI.md). Tampoco React Router ni TanStack Query todavía.
 - Desde BIT-0019: paquete `packages/health-engine` (puro, sin base ni red) con `decimal.js` 10.6.0, conforme a esta selección.
+- Desde BIT-0022: `apps/health` (puerto 3003) y `apps/platform` (puerto 3004). Plataforma usa el `multer` que incluye `@nestjs/platform-express` para la carga de archivos y guarda las evidencias en `EVIDENCE_DIR` mediante un adaptador de almacenamiento local.
 - `docker-compose.yml` no se ejecutó: el servicio de Docker no estaba activo. La prueba usó un PostgreSQL 17.9 temporal local.
 
 ## 4. Persistencia y migraciones

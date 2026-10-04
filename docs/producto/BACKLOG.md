@@ -335,6 +335,8 @@ Como **PM**, quiero registrar fechas y resultado de renovación, para anticipar 
 
 **Datos / artefactos:** renewal
 
+**Estado (BIT-0022): en revisión, no aceptada.** Criterios 1–3 implementados y probados. La renovación aparece en la ficha; las "consultas de próximos compromisos" del criterio 1 dependen de las vistas de gobierno (R4).
+
 Criterios de aceptación:
 
 1. Registrar renovación exige fecha y responsable con acceso; aparece en ficha y consultas de próximos compromisos.
@@ -352,6 +354,8 @@ Como **líder**, quiero controlar el ciclo de vida del proyecto, para mantener u
 **Trazabilidad:** F1: projectStatus; F3: PROJECT_STATUS · RN-01, RN-17, RN-19
 
 **Datos / artefactos:** project, audit_entry
+
+**Estado (BIT-0022): en revisión, no aceptada.** Criterios 1 y 2 implementados y probados, con la regla D08: tras 30 días pausado o cerrado se exige describir el motivo antes de editar. Del criterio 3, el efecto sobre ciclos y alertas espera a que existan (R3); las evaluaciones históricas no se recalculan.
 
 Criterios de aceptación:
 
@@ -416,6 +420,8 @@ Como **usuario autorizado**, quiero respaldar actualizaciones con texto o imáge
 
 **Datos / artefactos:** evidence, almacenamiento privado
 
+**Estado (BIT-0022): en revisión, no aceptada.** Criterios 1–4 implementados y probados para hitos, riesgos y cambios, con la política D09. Evidencia de revisiones y de acciones llegará con esas pantallas. No hay limpieza de archivos huérfanos ni análisis antivirus.
+
 Criterios de aceptación:
 
 1. Adjuntar exige proyecto y una entidad compatible del mismo proyecto; texto o imagen válida queda asociado a autor y fecha.
@@ -435,6 +441,8 @@ Como **PM**, quiero registrar cambios de tiempo, costo, esfuerzo o alcance, para
 
 **Datos / artefactos:** project_change, contrato requested_impact
 
+**Estado (BIT-0022): en revisión, no aceptada.** Criterios 1–4 implementados y probados. Desde la pantalla se propone un hito por cambio; la API admite varios.
+
 Criterios de aceptación:
 
 1. La propuesta identifica baseline de referencia, áreas, motivo y elementos afectados con valores antes/propuestos.
@@ -453,6 +461,8 @@ Como **líder**, quiero decidir un cambio y publicar su baseline, para mantener 
 **Trazabilidad:** F3: applyChangeDecision; F2: Change Approval → Baseline · RN-02, RN-14, NF-05
 
 **Datos / artefactos:** change_decision, baseline, project, outbox_message
+
+**Estado (BIT-0022): en revisión, no aceptada.** Criterios 1–3 implementados y probados; del 4, la pantalla muestra la versión anterior y la nueva, sin una comparación lado a lado ni la explicación del cambio de desviación.
 
 Criterios de aceptación:
 
@@ -575,7 +585,7 @@ Como **líder**, quiero obtener indicadores explicables, para identificar por qu
 
 **Datos / artefactos:** Motor PHF y rule_set
 
-**Avance (BIT-0019):** existe el paquete `packages/health-engine` con el avance por peso de hito y la desviación financiera, probados con los ejemplos 1 a 8 y 13 de las reglas. Faltan las seis dimensiones, los topes restantes y el score.
+**Estado (BIT-0022): en revisión, no aceptada.** `packages/health-engine` calcula avance, desviaciones, las seis dimensiones, los seis topes, score, semáforo y confianza, con explicación por resta, y se prueba sin navegador ni base. Cliente y Gobernanza dan "sin dato" hasta que existan revisiones y ciclos.
 
 Criterios de aceptación:
 
@@ -595,6 +605,8 @@ Como **PM**, quiero consultar la salud con su explicación, para entender y veri
 **Trazabilidad:** F3: assess, views.health, snapshotScores; A2 · RN-03–07, RN-13, RN-19
 
 **Datos / artefactos:** health_assessment, rule_set
+
+**Estado (BIT-0022): en revisión, no aceptada.** Criterios 1–3 implementados y probados en el servicio Salud. Del 4, no hay worker todavía: la evaluación se calcula al consultarla y la clave de idempotencia evita duplicados. Un proyecto sin línea base se evalúa pero no se guarda, porque el esquema exige una línea base por evaluación. Toda evaluación es provisional; las oficiales llegan con los cortes de ciclo.
 
 Criterios de aceptación:
 

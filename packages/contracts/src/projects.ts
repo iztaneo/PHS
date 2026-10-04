@@ -20,6 +20,7 @@ export const projectSummary = z.object({
   code: z.string(),
   name: z.string(),
   status: projectStatus,
+  justificationRequired: z.boolean().describe('true: lleva un mes o más pausado o cerrado sin justificar; el PM debe describir la situación antes de editar (D08).'),
   practiceId: z.uuid(),
   practiceName: z.string(),
   clientId: z.uuid(),
@@ -190,6 +191,107 @@ export const publishBaselineBody = z.object({
   budget: amount.nullable().default(null).describe('null si aún no se conoce; no se confunde con cero.'),
   effortHours: amount.nullable().default(null),
   reason: text(1000).default('Línea base inicial'),
+});
+
+// ---- Changes (PHS-018, PHS-019). `changeImpact` is the contract of the request; `storedImpact` is the
+// contract of the JSONB kept with the proposal, with the values before and proposed.
+const signedAmount = z.string().regex(/^-?\d{1,16}(\.\d{1,2})?$/).describe('Decimal con signo como texto; negativo reduce.');
+export const changeType = z.enum(['client', 'internal', 'regulatory', 'technical']);
+export const changeImpact = z.object({
+  endsOn: date.optional().describe('Nueva fecha de fin del proyecto.'),
+  budgetDelta: signedAmount.optional().describe('Aumento o reducción del presupuesto.'),
+  effortHoursDelta: signedAmount.optional(),
+  scope: text(4000).optional().describe('Nuevo texto de alcance.'),
+  milestones: z.array(z.object({ id: z.uuid(), dueOn: date })).max(100).default([])
+    .describe('Hitos comprometidos cuya fecha cambia. Solo se mueven los que se listan aquí.'),
+});
+const beforeAfter = z.object({ before: z.string().nullable(), proposed: z.string().nullable() });
+export const storedImpact = z.object({
+  baselineVersion: z.number().int().describe('Línea base de referencia de la propuesta.'),
+  endsOn: beforeAfter.optional(),
+  budget: beforeAfter.extend({ delta: z.string() }).optional(),
+  effortHours: beforeAfter.extend({ delta: z.string() }).optional(),
+  scope: beforeAfter.optional(),
+  milestones: z.array(z.object({ id: z.uuid(), title: z.string(), before: date, proposed: date })),
+  correctsId: z.uuid().nullable(),
+});
+export const changeDecision = z.object({
+  decision: z.enum(['approved', 'rejected']),
+  decidedBy: person,
+  decidedAt: z.iso.datetime({ offset: true }),
+  comment: z.string(),
+  baselineVersion: z.number().int().nullable().describe('Versión de línea base que originó la aprobación.'),
+});
+export const change = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  description: z.string(),
+  changeType,
+  proposedBy: person,
+  proposedAt: z.iso.datetime({ offset: true }),
+  impact: storedImpact,
+  financialsHidden: z.boolean().describe('true: los importes del impacto no son visibles para este usuario.'),
+  decision: changeDecision.nullable().describe('null: pendiente de decisión.'),
+  canDecide: z.boolean(),
+});
+export const createChangeBody = z.object({
+  title: text(200),
+  description: text(4000).describe('Motivo del cambio.'),
+  changeType,
+  impact: changeImpact,
+  correctsId: z.uuid().nullable().default(null).describe('Propuesta anterior que esta corrige; una propuesta enviada no se edita.'),
+});
+export const decideChangeBody = z.object({
+  decision: z.enum(['approved', 'rejected']),
+  comment: text(2000),
+});
+
+// ---- Status with reasons (PHS-014, D08)
+export const statusLogEntry = z.object({
+  kind: z.enum(['transition', 'justification']),
+  fromStatus: projectStatus.nullable(),
+  toStatus: projectStatus,
+  reason: z.string(),
+  recordedBy: person,
+  recordedAt: z.iso.datetime({ offset: true }),
+});
+export const projectStatusView = z.object({
+  status: projectStatus,
+  since: z.iso.datetime({ offset: true }).nullable().describe('Cuándo entró al estado actual; null si nunca cambió.'),
+  daysInStatus: z.number().int().nullable(),
+  allowed: z.array(projectStatus).describe('Estados a los que este usuario puede pasar el proyecto.'),
+  justificationRequired: z.boolean(),
+  justificationAfterDays: z.number().int(),
+  open: z.object({ milestones: z.number().int(), risks: z.number().int(), renewals: z.number().int(), tasks: z.number().int() })
+    .describe('Elementos abiertos. Pausar o cerrar no los elimina.'),
+  history: z.array(statusLogEntry),
+});
+export const changeStatusBody = z.object({
+  expectedRevision: z.number().int().min(1),
+  to: projectStatus,
+  reason: text(2000),
+});
+export const justifyStatusBody = z.object({ reason: text(2000) });
+
+// ---- Renewals (PHS-013)
+export const renewal = z.object({
+  id: z.uuid(),
+  dueOn: date,
+  owner: person,
+  status: z.enum(['pending', 'renewed', 'cancelled']),
+  notes: z.string(),
+  outcomeNote: z.string().nullable(),
+  closedAt: z.iso.datetime({ offset: true }).nullable(),
+  daysToDue: z.number().int().describe('Días hasta la fecha, en la zona del proyecto; negativo si ya pasó.'),
+  overdue: z.boolean(),
+  revision: z.number().int(),
+  canUpdate: z.boolean(),
+});
+export const createRenewalBody = z.object({ dueOn: date, ownerId: z.uuid(), notes: z.string().trim().max(2000).default('') });
+export const renewalOutcomeBody = z.object({
+  expectedRevision: z.number().int().min(1),
+  outcome: z.enum(['renewed', 'cancelled']),
+  comment: text(2000),
 });
 
 // ---- Economy (PHS-012)
@@ -380,6 +482,62 @@ export const projectsRoutes: RouteContract[] = [
       400: { description: 'Datos inválidos o `idempotency_key_required`.', schema: errorResponse },
       401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
       409: { description: 'Ya existe una línea base (`baseline_exists`), otro usuario modificó el proyecto (`revision_conflict`) o clave reutilizada (`idempotency_key_reused`).', schema: conflictResponse },
+    } },
+  { method: 'get', path: '/projects/:id/status', summary: 'Estado del proyecto, historial y elementos abiertos', tag: 'Estado del proyecto', auth: 'session',
+    params: { id: z.uuid() },
+    responses: { 200: { description: 'Estado con sus motivos.', schema: projectStatusView }, 401: errors.unauthenticated, 404: errors.notFound } },
+  { method: 'post', path: '/projects/:id/status', summary: 'Iniciar, pausar, reanudar, cerrar o reabrir un proyecto', tag: 'Estado del proyecto', auth: 'session',
+    params: { id: z.uuid() }, body: changeStatusBody,
+    responses: {
+      200: { description: 'Proyecto con su nuevo estado. Los elementos abiertos se conservan.', schema: projectDetail },
+      400: errors.invalidRequest, 401: errors.unauthenticated,
+      403: { description: 'Sin permiso; cerrar y reabrir corresponden al líder (`forbidden`).', schema: errorResponse },
+      404: errors.notFound,
+      409: { description: 'Transición no permitida (`invalid_transition`), otro usuario modificó el proyecto (`revision_conflict`) o falta la justificación (`status_justification_required`).', schema: conflictResponse },
+    } },
+  { method: 'post', path: '/projects/:id/status/justification', summary: 'Justificar que el proyecto siga pausado o cerrado', tag: 'Estado del proyecto', auth: 'session',
+    params: { id: z.uuid() }, body: justifyStatusBody,
+    responses: {
+      200: { description: 'Justificación guardada; el proyecto vuelve a poder editarse.', schema: projectStatusView },
+      400: errors.invalidRequest, 401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: 'No hay justificación pendiente (`justification_not_required`).', schema: errorResponse },
+    } },
+  { method: 'get', path: '/projects/:id/renewals', summary: 'Renovaciones del proyecto', tag: 'Renovaciones', auth: 'session',
+    params: { id: z.uuid() },
+    responses: { 200: { description: 'Renovaciones, primero las pendientes.', schema: z.array(renewal) }, 401: errors.unauthenticated, 404: errors.notFound } },
+  { method: 'post', path: '/projects/:id/renewals', summary: 'Registrar una renovación', tag: 'Renovaciones', auth: 'session',
+    params: { id: z.uuid() }, headers: { 'Idempotency-Key': idempotencyKey }, body: createRenewalBody,
+    responses: {
+      201: { description: 'Renovación pendiente. Registrar otro periodo no modifica las anteriores.', schema: renewal },
+      400: { description: 'Datos inválidos, `idempotency_key_required` o `responsible_not_enabled`.', schema: errorResponse },
+      401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: '`idempotency_key_reused` o `status_justification_required`.', schema: errorResponse },
+    } },
+  { method: 'post', path: '/projects/:id/renewals/:renewalId/outcome', summary: 'Renovar o cancelar una renovación', tag: 'Renovaciones', auth: 'session',
+    params: { id: z.uuid(), renewalId: z.uuid() }, body: renewalOutcomeBody,
+    responses: {
+      200: { description: 'Resultado registrado con su comentario; la fecha original se conserva.', schema: renewal },
+      400: errors.invalidRequest, 401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: 'Ya tenía resultado (`invalid_transition`) u otro usuario la modificó (`revision_conflict`).', schema: conflictResponse },
+    } },
+  { method: 'get', path: '/projects/:id/changes', summary: 'Cambios propuestos y sus decisiones', tag: 'Cambios', auth: 'session',
+    params: { id: z.uuid() },
+    responses: { 200: { description: 'Cambios, del más reciente al más antiguo.', schema: z.array(change) }, 401: errors.unauthenticated, 404: errors.notFound } },
+  { method: 'post', path: '/projects/:id/changes', summary: 'Proponer un cambio con impactos concretos', tag: 'Cambios', auth: 'session',
+    params: { id: z.uuid() }, headers: { 'Idempotency-Key': idempotencyKey }, body: createChangeBody,
+    responses: {
+      201: { description: 'Propuesta registrada con los valores anteriores y propuestos. No altera la línea base.', schema: change },
+      400: { description: 'Datos inválidos, `idempotency_key_required` o impacto no aplicable (`invalid_impact`): sin impactos, hito fuera de la línea base o ya cerrado, fecha anterior al inicio o importe resultante negativo.', schema: errorResponse },
+      401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: 'El proyecto no tiene línea base (`baseline_required`) o clave reutilizada (`idempotency_key_reused`).', schema: errorResponse },
+    } },
+  { method: 'post', path: '/projects/:id/changes/:changeId/decision', summary: 'Aprobar o rechazar un cambio', tag: 'Cambios', auth: 'session',
+    params: { id: z.uuid(), changeId: z.uuid() }, headers: { 'Idempotency-Key': idempotencyKey }, body: decideChangeBody,
+    responses: {
+      201: { description: 'Decisión registrada. Aprobar crea la línea base siguiente y mueve solo los compromisos listados; rechazar no cambia nada.', schema: change },
+      400: { description: 'Datos inválidos, `idempotency_key_required` o impacto que ya no es aplicable (`invalid_impact`).', schema: errorResponse },
+      401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: 'El cambio ya tiene decisión (`already_decided`), la línea base cambió desde la propuesta (`baseline_changed`) o clave reutilizada (`idempotency_key_reused`).', schema: errorResponse },
     } },
   { method: 'get', path: '/projects/:id/finance', summary: 'Economía del proyecto a una fecha', tag: 'Economía', auth: 'session',
     params: { id: z.uuid() }, query: financeQuery.shape,

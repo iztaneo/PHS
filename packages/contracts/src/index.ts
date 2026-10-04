@@ -1,6 +1,8 @@
 export * from './common.js';
 export * from './identity.js';
 export * from './projects.js';
+export * from './health.js';
+export * from './platform.js';
 export * from './gateway.js';
 export { buildOpenApi, openApiPath } from './openapi.js';
 export type { OpenApiInfo } from './openapi.js';

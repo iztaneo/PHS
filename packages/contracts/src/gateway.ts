@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { errorResponse, errors, healthReport, type RouteContract } from './common.js';
+import { healthRoutes } from './health.js';
 import { identityRoutes, sessionUser } from './identity.js';
+import { platformRoutes } from './platform.js';
 import { projectsRoutes } from './projects.js';
 
 export const publicSession = z.object({ user: sessionUser, expiresAt: z.iso.datetime() });
@@ -67,5 +69,7 @@ function proxied(routes: RouteContract[], select: (path: string) => boolean): Ro
 export const publicRoutes: RouteContract[] = [
   ...gatewayOwnRoutes.filter((route) => route.path !== '/health'),
   ...proxied(identityRoutes, (path) => path.startsWith('/admin/')),
+  ...proxied(platformRoutes, (path) => path.startsWith('/evidence')),
+  ...proxied(healthRoutes, (path) => path.startsWith('/assessments/')),
   ...proxied(projectsRoutes, (path) => ['/projects', '/catalog/', '/clients', '/people'].some((prefix) => path.startsWith(prefix))),
 ];

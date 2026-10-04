@@ -53,6 +53,12 @@ Toda pantalla entra por el gateway. "Servicio" indica quién atiende la operaci�
 | Plataforma (2) | `evidence`, `notification_delivery` |
 | Compartidas de solo inserción (4) | `audit_entry`, `activity`, `outbox_message`, `command_idempotency` (desde BIT-0015; total 31 tablas) |
 
+## Estado de construcción (BIT-0022)
+
+Los cuatro servicios y el gateway existen. Construidas, pendientes de aceptación: acceso, administración, proyectos, ficha, equipo, hitos, riesgos, línea base, cambios, economía, evidencias en hitos y riesgos, renovaciones, estado del proyecto y salud del proyecto. Sin construir: ciclo de revisión, Health Review, validaciones, Health Events, acciones, alertas, Health Center, portafolio, timeline e historial, y modelo PHF.
+
+Tablas añadidas desde este mapa: `command_idempotency`, `evidence_withdrawal` (Plataforma) y `project_status_log` (Proyectos); 33 en total.
+
 ## Brechas detectadas en el cruce
 
 | # | Brecha | Estado |

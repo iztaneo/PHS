@@ -3,6 +3,7 @@ import {
   ApiError, api, errorMessage, type Baseline, type Member, type Milestone, type MilestoneStatus, type PracticePerson,
   type ProjectDetail,
 } from './api';
+import { EvidencePanel } from './EvidencePanel';
 import { Badge, Button, Card, Empty, Facts, Field, Input, Loading, Notice, Select, Textarea, type Tone } from './ui';
 
 interface SectionProps {
@@ -217,6 +218,9 @@ export function Milestones({ project, people, onChanged }: SectionProps) {
               </div>
             </div>
           )}
+          <div className="mt-4">
+            <EvidencePanel projectId={project.id} kind="milestone" targetId={m.id} canAdd={m.canUpdate} canWithdraw={canEdit} />
+          </div>
         </Card>
       ))}
       {canEdit && (
@@ -336,7 +340,7 @@ export function BaselineSection({ project, onChanged }: SectionProps) {
       )}
       {current && (
         <>
-          <Card title={`Línea base v${current.version}`} actions={<Badge tone="green">Vigente</Badge>}>
+          <Card title={`Línea base v${current.version}${current.version > 1 ? ` · ${current.reason}` : ''}`} actions={<Badge tone="green">Vigente</Badge>}>
             <Facts items={[
               ['Publicada', `${new Date(current.createdAt).toLocaleDateString('es-MX')} por ${current.createdBy.displayName}`],
               ['Vigencia', `${current.startsOn} a ${current.endsOn}`],
@@ -363,6 +367,21 @@ export function BaselineSection({ project, onChanged }: SectionProps) {
               </ul>
             )}
           </Card>
+          {baselines && baselines.length > 1 && (
+            <Card title="Versiones anteriores">
+              <ul className="divide-y divide-line text-sm">
+                {baselines.filter((b) => !b.current).map((b) => (
+                  <li key={b.id} className="py-3 first:pt-0 last:pb-0">
+                    <p className="font-medium text-ink">Versión {b.version} · {b.startsOn} a {b.endsOn}</p>
+                    <p className="text-muted">
+                      {b.reason} · presupuesto {amount(b.budget, b.financialsHidden, b.currency)} ·{' '}
+                      {b.milestones.map((m) => `${m.title} ${m.due_on}`).join(', ') || 'sin hitos'}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
         </>
       )}
     </div>

@@ -21,7 +21,8 @@
     "pg": "8.23.1",
     "zod": "4.6.5",
     "@phs/contracts": "workspace:*",
-    "@phs/health-engine": "workspace:*"
+    "@phs/health-engine": "workspace:*",
+    "decimal.js": "10.6.0"
   },
   "devDependencies": {
     "@nestjs/testing": "12.1.2",

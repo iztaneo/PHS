@@ -27,6 +27,19 @@ Confirmadas por el usuario (dueño del proyecto, único desarrollador y aprobado
 | D01 | Reglas del motor versión 1, en [REGLAS-PHF-v1.md](REGLAS-PHF-v1.md). Confirmado el 2026-10-03, BIT-0018: avance por peso de cada hito; desviación financiera contra el avance real; sin datos no hay score ("Sin evaluación") y Gobernanza sin ciclo queda sin dato; pesos, topes, semáforo y demás coeficientes del prototipo adoptados como versión 1. | El conteo simple iguala hitos de distinto tamaño; el gasto contra calendario no detecta al proyecto que gasta sin avanzar; un número inventado oculta la falta de información. | Los detalles propuestos (avance comprometido, redondeo, casos sin dato) también fueron confirmados por el usuario. Quedan la captura del peso del hito y la calibración con proyectos reales. |
 | D05 (parcial) | Durante el piloto, un mismo usuario puede proponer y aprobar sus cambios y validar sus propias revisiones. Cada decisión conserva autor y queda auditada. Se mantiene el modelo de roles PM/líder/Dirección/administrador para separar funciones cuando haya más usuarios. | En el piloto habrá una sola persona operando. | Regla de separación de funciones posterior al piloto, alcance por rol, acceso a datos económicos y responsables externos. |
 
+### D02, D03, D04 y D08 (indicadas por el usuario el 2026-10-04, BIT-0022)
+
+Texto del usuario, sin alternativas presentadas previamente. La columna de interpretación es de quien implementa y está pendiente de confirmar.
+
+| ID | Lo que indicó el usuario | Interpretación para implementar |
+| --- | --- | --- |
+| D08 | Cuando un proyecto esté pausado o cerrado, después de un mes deberá solicitar el motivo, guardarlo y obligar al PM a describir el motivo de la situación. | Toda pausa, cierre o reapertura exige un motivo. Si el proyecto lleva 30 días o más pausado o cerrado sin una justificación registrada desde entonces, queda marcado como "justificación requerida": el PM debe describir la situación y, mientras no lo haga, no puede editar ese proyecto. Se pide una vez por cada periodo de pausa o cierre. |
+| D02 | Una revisión adquiere vigencia desde que se da de alta. Si el líder la devuelve, significa que hay una observación y se tiene que atender. | La revisión enviada cuenta de inmediato para la salud; no espera la validación. Devolverla no la anula: genera una observación que el PM debe atender, como acción con responsable y plazo. |
+| D03 | Los ciclos deberían ser semanales, pero se debe poder parametrizar. | Cadencia semanal por defecto, configurable por proyecto. Faltan por definir el día de corte, festivos y el caso mensual. |
+| D04 | Generan alerta los atrasos, las desviaciones, los sobrecostos y todo lo que indique que un proyecto va mal. | Son accionables: hito vencido, mitigación de riesgo vencida, desviación de proyecto, desviación financiera, sobreesfuerzo, revisión vencida y riesgo materializado. Faltan por definir plazos, responsables y si una acción se cierra sola cuando desaparece la causa. |
+
+Se aplican en este orden: D08 con PHS-014; D02, D03 y D04 con el ciclo de revisión y las acciones (R3).
+
 ### D09 — Evidencias (confirmado el 2026-10-04, BIT-0020)
 
 Elegido por el usuario entre las alternativas presentadas:
@@ -38,9 +51,9 @@ Elegido por el usuario entre las alternativas presentadas:
 | Evidencia posterior al cierre o la validación | Se acepta, marcada como adenda con fecha y autor. La evidencia original queda fijada. |
 | Retiro por error o contenido sensible | PM o líder retiran la evidencia con motivo: el archivo se elimina del almacenamiento y deja de verse; se conserva el registro de quién la subió, quién la retiró, cuándo y por qué. |
 
-Propuesto y no objetado por el usuario: los archivos se guardan en una carpeta privada del servidor, fuera de la base, mediante un adaptador (la infraestructura definitiva sigue en D06); ve una evidencia quien puede consultar el proyecto, y cada descarga verifica el permiso en el servidor; la sube quien puede actualizar el elemento; se valida el tipo real del archivo y se sanea su nombre; se conservan mientras exista el proyecto, hasta que D07 defina la retención.
+Confirmado por el usuario el 2026-10-04 junto con lo anterior: los archivos se guardan en una carpeta privada del servidor, fuera de la base, mediante un adaptador (la infraestructura definitiva sigue en D06); ve una evidencia quien puede consultar el proyecto, y cada descarga verifica el permiso en el servidor; la sube quien puede actualizar el elemento; se valida el tipo real del archivo y se sanea su nombre; se conservan mientras exista el proyecto, hasta que D07 defina la retención.
 
-Consecuencias de diseño, propuestas para PHS-017 y aún no confirmadas:
+Consecuencias de diseño para PHS-017, **confirmadas por el usuario el 2026-10-04** después de revisarlas ya implementadas:
 
 - Office significa los formatos actuales (`.docx`, `.xlsx`, `.pptx`). Se rechazan los que admiten macros (`.docm`, `.xlsm`, `.pptm`) y los formatos antiguos (`.doc`, `.xls`, `.ppt`), que no se pueden validar con la misma seguridad.
 - Todo archivo se entrega como descarga, nunca se muestra incrustado en la página, salvo las imágenes.

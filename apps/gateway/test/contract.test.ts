@@ -7,6 +7,8 @@ import { AppModule } from '../src/app.module.js';
 process.env.INTERNAL_AUTH_SECRET ??= 'test-secret-with-at-least-32-characters';
 process.env.IDENTITY_URL ??= 'http://identity.test';
 process.env.PROJECTS_URL ??= 'http://projects.test';
+process.env.HEALTH_URL ??= 'http://health.test';
+process.env.PLATFORM_URL ??= 'http://platform.test';
 
 interface Layer { route?: { path: string; methods: Record<string, boolean> } }
 

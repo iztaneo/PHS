@@ -52,6 +52,14 @@ Validado en ejecución con gateway, Identidad y Proyectos:
 - Cada servicio rechaza peticiones sin esa firma. Identidad la exige también para iniciar sesión, de modo que solo el gateway puede llamarla.
 - Límites: un único secreto compartido por todos los servicios, sin rotación definida; una consulta a Identidad por petición, sin caché; los servicios escuchan en 127.0.0.1 y el aislamiento de red del despliegue está por definir (PHS-042).
 
+## Los cuatro servicios en ejecución (BIT-0022)
+
+Salud y Plataforma se construyeron el 2026-10-04, con lo que existen los cuatro servicios y el gateway.
+
+- **Llamadas entre servicios.** Salud y Plataforma no repiten las reglas de alcance: reenvían al servicio Proyectos la identidad que firmó el gateway y le preguntan si el usuario puede ver el proyecto o actualizar el elemento. Validado en ejecución. Costo: una o dos llamadas HTTP adicionales por petición y dependencia de que Proyectos esté disponible.
+- **Evaluación al consultar.** Mientras no exista el proceso programado (PHS-033), Salud calcula y guarda la evaluación la primera vez que se pide para una versión de los datos y un día. Un `GET` puede escribir; la clave de idempotencia evita duplicados.
+- **Roles de base.** Salud y Plataforma se conectan con sus propios usuarios; cada uno escribe solo sus tablas.
+
 ## Revisión de la decisión
 
 Revisar si el acoplamiento por la base bloquea despliegues, si el protocolo de envío de revisión no logra la coherencia requerida por D02 o si el costo operativo supera la capacidad del equipo. Registrar una nueva ADR en lugar de sustituir esta.

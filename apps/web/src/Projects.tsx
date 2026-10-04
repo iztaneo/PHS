@@ -4,8 +4,11 @@ import {
   ApiError, api, errorMessage, type PracticePerson, type ProjectDetail, type ProjectFilters, type ProjectInput,
   type ProjectPage, type ServiceType, type SessionUser,
 } from './api';
+import { Changes } from './Changes';
+import { HealthView } from './HealthView';
 import { BaselineSection, Milestones, Team } from './ProjectSections';
 import { Finance, Risks } from './RiskFinance';
+import { JustificationBanner, RenewalsSection, StatusSection } from './StatusRenewals';
 import { Badge, Button, Card, Empty, Facts, Field, Input, Loading, Notice, PageHeader, Select, Tabs, Textarea, type Tone } from './ui';
 
 const STATUS: Record<string, { label: string; tone: Tone }> = {
@@ -117,6 +120,7 @@ function ProjectList({ canCreate, onNew, onOpen }: { canCreate: boolean; onNew: 
                     </span>
                     <StatusBadge status={project.status} />
                   </span>
+                  {project.justificationRequired && <span className="mt-2 block"><Badge tone="red">Requiere justificación</Badge></span>}
                   <span className="mt-2 block text-sm text-muted">{project.clientName} · {project.serviceTypeName}</span>
                   <span className="block text-sm text-muted">PM {project.pmName} · {project.practiceName}</span>
                 </button>
@@ -139,7 +143,7 @@ function ProjectList({ canCreate, onNew, onOpen }: { canCreate: boolean; onNew: 
                     </td>
                     <td className="px-4 py-3">{project.clientName}</td>
                     <td className="px-4 py-3">{project.serviceTypeName}</td>
-                    <td className="px-4 py-3"><StatusBadge status={project.status} /></td>
+                    <td className="px-4 py-3"><StatusBadge status={project.status} />{project.justificationRequired && <span className="mt-1 block"><Badge tone="red">Requiere justificación</Badge></span>}</td>
                     <td className="px-4 py-3">{project.pmName}</td>
                     <td className="px-4 py-3">{project.practiceName}</td>
                   </tr>
@@ -305,9 +309,9 @@ function toValues(project: ProjectDetail): FormValues {
   };
 }
 
-type Tab = 'card' | 'team' | 'milestones' | 'risks' | 'baseline' | 'finance';
+type Tab = 'health' | 'card' | 'team' | 'milestones' | 'risks' | 'baseline' | 'changes' | 'finance';
 const TABS: readonly (readonly [Tab, string])[] = [
-  ['card', 'Ficha'], ['team', 'Equipo'], ['milestones', 'Hitos'], ['risks', 'Riesgos'], ['baseline', 'Línea base'], ['finance', 'Economía'],
+  ['health', 'Salud'], ['card', 'Ficha'], ['team', 'Equipo'], ['milestones', 'Hitos'], ['risks', 'Riesgos'], ['baseline', 'Línea base'], ['changes', 'Cambios'], ['finance', 'Economía'],
 ];
 
 function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; onBack: () => void }) {
@@ -321,7 +325,7 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
   const [conflict, setConflict] = useState(false);
   const [notice, setNotice] = useState(created ? 'Proyecto creado.' : undefined);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<Tab>('card');
+  const [tab, setTab] = useState<Tab>(created ? 'card' : 'health');
 
   async function load(keepForm = false) {
     try {
@@ -379,6 +383,7 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
         subtitle={<>{project.code} · {project.clientName} · {project.practiceName}</>}
         actions={<><StatusBadge status={project.status} /><Badge>{project.hasBaseline ? 'Con línea base' : 'Sin línea base'}</Badge></>} />
       <div className="mb-4 space-y-3">
+        <JustificationBanner project={project} onDone={() => void load(true)} />
         {notice && <Notice tone="green">{notice}</Notice>}
         {!project.hasBaseline && tab !== 'baseline' && (
           <Notice tone="amber" role="status">
@@ -400,10 +405,13 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
       <Tabs items={TABS.filter(([key]) => key !== 'finance' || project.capabilities.seeFinancials)} value={tab} onChange={setTab} />
       {tab === 'team' && <Team project={project} people={known} onChanged={() => void load(true)} />}
       {tab === 'milestones' && <Milestones project={project} people={known} onChanged={() => void load(true)} />}
+      {tab === 'health' && <HealthView project={project} />}
+      {tab === 'changes' && <Changes project={project} onChanged={() => void load(true)} />}
       {tab === 'risks' && <Risks project={project} people={known} onChanged={() => void load(true)} />}
       {tab === 'finance' && project.capabilities.seeFinancials && <Finance project={project} people={known} onChanged={() => void load(true)} />}
       {tab === 'baseline' && <BaselineSection project={project} people={known} onChanged={() => void load(true)} />}
       {tab === 'card' && (
+        <div className="space-y-4">
         <Card title="Ficha del proyecto" actions={<span className="text-xs text-muted">Moneda {project.currency} · zona {project.timezone} · versión {project.revision}</span>}>
           {canEdit ? (
             <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -427,6 +435,9 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
             ]} />
           )}
         </Card>
+        <StatusSection project={project} onChanged={() => void load(true)} />
+        <RenewalsSection project={project} people={known} onChanged={() => void load(true)} />
+        </div>
       )}
     </>
   );

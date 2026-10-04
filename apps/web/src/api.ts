@@ -56,6 +56,7 @@ export interface ProjectSummary {
   code: string;
   name: string;
   status: string;
+  justificationRequired: boolean;
   practiceId: string;
   practiceName: string;
   clientId: string;
@@ -146,6 +147,48 @@ export interface RiskInput {
 }
 export interface RiskHistoryEntry { occurredAt: string; actor: Person | null; note: string; before: Record<string, unknown>; after: Record<string, unknown> }
 
+export interface StatusView {
+  status: string; since: string | null; daysInStatus: number | null; allowed: string[]; justificationRequired: boolean;
+  justificationAfterDays: number; open: Responsibilities4;
+  history: { kind: 'transition' | 'justification'; fromStatus: string | null; toStatus: string; reason: string; recordedBy: Person; recordedAt: string }[];
+}
+export interface Renewal {
+  id: string; dueOn: string; owner: Person; status: 'pending' | 'renewed' | 'cancelled'; notes: string; outcomeNote: string | null;
+  closedAt: string | null; daysToDue: number; overdue: boolean; revision: number; canUpdate: boolean;
+}
+
+export interface Evidence {
+  id: string; text: string | null; file: { name: string; mime: string; sizeBytes: number } | null; uploadedBy: Person;
+  uploadedAt: string; addendum: boolean; withdrawn: { by: Person; at: string; reason: string } | null;
+}
+export type EvidenceKind = 'milestone' | 'risk' | 'change';
+
+interface BeforeAfter { before: string | null; proposed: string | null }
+export interface Change {
+  id: string; title: string; description: string; changeType: string; proposedBy: Person; proposedAt: string;
+  impact: {
+    baselineVersion: number; endsOn?: BeforeAfter; budget?: BeforeAfter & { delta: string }; effortHours?: BeforeAfter & { delta: string };
+    scope?: BeforeAfter; milestones: { id: string; title: string; before: string; proposed: string }[]; correctsId: string | null;
+  };
+  financialsHidden: boolean;
+  decision: null | { decision: 'approved' | 'rejected'; decidedBy: Person; decidedAt: string; comment: string; baselineVersion: number | null };
+  canDecide: boolean;
+}
+export interface ChangeInput {
+  title: string; description: string; changeType: string;
+  impact: { endsOn?: string; budgetDelta?: string; scope?: string; milestones: { id: string; dueOn: string }[] };
+}
+
+export interface Assessment {
+  stored: boolean; publication: 'provisional' | 'official'; effectiveOn: string; calculatedAt: string; projectRevision: number;
+  ruleSetVersion: string; score: string | null; band: 'healthy' | 'attention' | 'risk' | null; weightedScore: string | null;
+  gateCap: string | null; confidence: { value: string; level: 'high' | 'medium' | 'low' };
+  dimensions: { key: string; weight: number; score: string | null; deductions: { code: string; count: number; points: string }[] }[];
+  gates: { key: string; cap: number; active: boolean }[];
+  metrics: { committedProgress: string | null; actualProgress: string | null; projectDeviation: string | null; financialDeviation: string | null; effortDeviation: string | null };
+  financialsHidden: boolean;
+}
+
 export interface Responsibilities4 { milestones: number; risks: number; renewals: number; tasks: number }
 
 export type ProjectChanges = Partial<Omit<ProjectInput, 'practiceId' | 'code' | 'clientName'>>;
@@ -165,6 +208,19 @@ export class ApiError extends Error {
   ) {
     super(code);
   }
+}
+
+// Sends a form with an optional file. The browser sets the multipart boundary itself.
+async function upload<T>(path: string, form: FormData): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(path, { method: 'POST', credentials: 'same-origin', body: form });
+  } catch {
+    throw new ApiError(0, 'network_error');
+  }
+  const data = await response.json().catch(() => undefined) as { code?: string } | undefined;
+  if (!response.ok) throw new ApiError(response.status, data?.code ?? (response.status === 413 ? 'file_too_large' : 'unexpected_error'));
+  return data as T;
 }
 
 async function call<T>(method: string, path: string, body?: unknown, idempotencyKey?: string): Promise<T> {
@@ -232,6 +288,31 @@ export const api = {
   baselines: (id: string) => call<Baseline[]>('GET', `/api/v1/projects/${id}/baselines`),
   publishBaseline: (id: string, input: { expectedRevision: number; scope: string; budget: string | null; effortHours: string | null }, key: string) =>
     call<Baseline>('POST', `/api/v1/projects/${id}/baselines`, input, key),
+  projectStatus: (id: string) => call<StatusView>('GET', `/api/v1/projects/${id}/status`),
+  changeStatus: (id: string, expectedRevision: number, to: string, reason: string) =>
+    call<ProjectDetail>('POST', `/api/v1/projects/${id}/status`, { expectedRevision, to, reason }),
+  justifyStatus: (id: string, reason: string) => call<StatusView>('POST', `/api/v1/projects/${id}/status/justification`, { reason }),
+  renewals: (id: string) => call<Renewal[]>('GET', `/api/v1/projects/${id}/renewals`),
+  createRenewal: (id: string, input: { dueOn: string; ownerId: string; notes: string }, key: string) =>
+    call<Renewal>('POST', `/api/v1/projects/${id}/renewals`, input, key),
+  decideRenewal: (id: string, renewalId: string, expectedRevision: number, outcome: 'renewed' | 'cancelled', comment: string) =>
+    call<Renewal>('POST', `/api/v1/projects/${id}/renewals/${renewalId}/outcome`, { expectedRevision, outcome, comment }),
+  evidence: (projectId: string, kind: EvidenceKind, targetId: string) =>
+    call<Evidence[]>('GET', `/api/v1/evidence?projectId=${projectId}&kind=${kind}&targetId=${targetId}`),
+  addEvidence: (projectId: string, kind: EvidenceKind, targetId: string, text: string, file: File | null) => {
+    const form = new FormData();
+    form.set('projectId', projectId); form.set('kind', kind); form.set('targetId', targetId);
+    if (text.trim()) form.set('text', text.trim());
+    if (file) form.set('file', file);
+    return upload<Evidence>('/api/v1/evidence', form);
+  },
+  withdrawEvidence: (id: string, reason: string) => call<Evidence>('POST', `/api/v1/evidence/${id}/withdraw`, { reason }),
+  evidenceFileUrl: (id: string) => `/api/v1/evidence/${id}/file`,
+  changes: (id: string) => call<Change[]>('GET', `/api/v1/projects/${id}/changes`),
+  proposeChange: (id: string, input: ChangeInput, key: string) => call<Change>('POST', `/api/v1/projects/${id}/changes`, input, key),
+  decideChange: (id: string, changeId: string, decision: 'approved' | 'rejected', comment: string, key: string) =>
+    call<Change>('POST', `/api/v1/projects/${id}/changes/${changeId}/decision`, { decision, comment }, key),
+  assessment: (id: string) => call<Assessment>('GET', `/api/v1/assessments/${id}`),
   finance: (id: string) => call<FinanceSummary>('GET', `/api/v1/projects/${id}/finance`),
   recordObservation: (id: string, input: { effectiveOn: string; totalCost: string; totalEffortHours: string | null; source: string; supersedesId: string | null }, key: string) =>
     call<Observation>('POST', `/api/v1/projects/${id}/finance`, input, key),
@@ -286,6 +367,16 @@ const MESSAGES: Record<string, string> = {
   invalid_completion_date: 'La fecha de cumplimiento no puede ser futura.',
   invalid_effective_date: 'La fecha efectiva no puede ser futura.',
   already_superseded: 'Esa observación ya fue corregida. Corrige la más reciente.',
+  status_justification_required: 'El proyecto lleva un mes o más pausado o cerrado. Describe el motivo de la situación antes de continuar.',
+  justification_not_required: 'No hay una justificación pendiente.',
+  empty_evidence: 'Escribe un texto o elige un archivo.',
+  file_type_not_allowed: 'Tipo de archivo no aceptado. Se admiten PNG, JPEG, WebP, PDF, Word, Excel y PowerPoint actuales, sin macros.',
+  file_too_large: 'El archivo supera el límite de 10 MB.',
+  already_withdrawn: 'Esta evidencia ya había sido retirada.',
+  baseline_required: 'El proyecto necesita una línea base antes de proponer cambios.',
+  invalid_impact: 'El impacto no es aplicable: indica al menos un cambio, solo hitos abiertos de la línea base, fechas posteriores al inicio e importes que no queden negativos.',
+  already_decided: 'Este cambio ya tiene una decisión.',
+  baseline_changed: 'La línea base cambió desde que se propuso este cambio. Recházalo y pide una propuesta nueva sobre la versión vigente.',
   baseline_exists: 'El proyecto ya tiene línea base. Los compromisos se cambian mediante un cambio aprobado.',
   email_taken: 'Ya existe un usuario con ese correo.',
   code_taken: 'Ya existe un registro con ese código o nombre.',

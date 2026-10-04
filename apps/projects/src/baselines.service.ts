@@ -36,6 +36,22 @@ interface Row {
   team_snapshot: unknown[]; reason: string; created_by: string; created_by_name: string; created_at: Date;
 }
 
+// The team as it is now: named responsibles first, then the members.
+export async function teamSnapshot(client: pg.PoolClient, projectId: string): Promise<unknown[]> {
+  const team = await client.query<{ snapshot: unknown[] }>(
+    `SELECT coalesce(jsonb_agg(jsonb_build_object(
+              'user_id', t.user_id, 'display_name', u.display_name, 'role', t.role, 'allocation_pct', t.allocation_pct)
+              ORDER BY t.position, u.display_name), '[]'::jsonb) AS snapshot
+       FROM (
+         SELECT pm_id AS user_id, 'pm' AS role, NULL::numeric AS allocation_pct, 1 AS position FROM phs.project WHERE id = $1
+         UNION ALL SELECT lead_id, 'lead', NULL, 2 FROM phs.project WHERE id = $1
+         UNION ALL SELECT technical_owner_id, 'technical_owner', NULL, 3 FROM phs.project WHERE id = $1
+         UNION ALL SELECT sponsor_id, 'sponsor', NULL, 4 FROM phs.project WHERE id = $1 AND sponsor_id IS NOT NULL
+         UNION ALL SELECT user_id, role, allocation_pct, 5 FROM phs.project_member WHERE project_id = $1
+       ) t JOIN phs.app_user u ON u.id = t.user_id`, [projectId]);
+  return team.rows[0]!.snapshot;
+}
+
 export class BaselinesService {
   constructor(private readonly pool: pg.Pool, private readonly projects: ProjectsService) {}
 
@@ -95,24 +111,14 @@ export class BaselinesService {
               coalesce(array_agg(m.id), '{}') AS ids
          FROM phs.milestone m JOIN phs.app_user u ON u.id = m.owner_id
         WHERE m.project_id = $1 AND m.status <> 'cancelled'`, [projectId]);
-    const team = await client.query(
-      `SELECT coalesce(jsonb_agg(jsonb_build_object(
-                'user_id', t.user_id, 'display_name', u.display_name, 'role', t.role, 'allocation_pct', t.allocation_pct)
-                ORDER BY t.position, u.display_name), '[]'::jsonb) AS snapshot
-         FROM (
-           SELECT pm_id AS user_id, 'pm' AS role, NULL::numeric AS allocation_pct, 1 AS position FROM phs.project WHERE id = $1
-           UNION ALL SELECT lead_id, 'lead', NULL, 2 FROM phs.project WHERE id = $1
-           UNION ALL SELECT technical_owner_id, 'technical_owner', NULL, 3 FROM phs.project WHERE id = $1
-           UNION ALL SELECT sponsor_id, 'sponsor', NULL, 4 FROM phs.project WHERE id = $1 AND sponsor_id IS NOT NULL
-           UNION ALL SELECT user_id, role, allocation_pct, 5 FROM phs.project_member WHERE project_id = $1
-         ) t JOIN phs.app_user u ON u.id = t.user_id`, [projectId]);
+    const team = await teamSnapshot(client, projectId);
 
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO phs.baseline(project_id, version, starts_on, ends_on, scope, budget, effort_hours, currency,
                                 milestone_snapshot, team_snapshot, reason, created_by)
        VALUES($1, 1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
       [projectId, project.startsOn, project.endsOn, input.scope, input.budget, input.effortHours, project.currency,
-        JSON.stringify(milestones.rows[0].snapshot), JSON.stringify(team.rows[0].snapshot), input.reason, actor.userId]);
+        JSON.stringify(milestones.rows[0].snapshot), JSON.stringify(team), input.reason, actor.userId]);
     const id = inserted.rows[0]!.id;
     const revision = project.revision + 1;
     await client.query('UPDATE phs.project SET current_baseline_id = $2, revision = $3 WHERE id = $1', [projectId, id, revision]);
