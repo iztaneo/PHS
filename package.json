@@ -20,10 +20,11 @@
     "db:status": "dbmate --migrations-dir db/migrations --no-dump-schema status",
     "db:logins": "sh scripts/local-db.sh logins",
     "db:test": "sh scripts/local-db.sh test",
-    "db:setup": "pnpm db:local:start && pnpm db:migrate && pnpm db:logins",
+    "db:setup": "pnpm db:local:start && pnpm db:migrate && pnpm db:logins && pnpm seed:dev && pnpm seed:demo",
     "db:test:setup": "sh scripts/local-db.sh test-db",
     "seed:dev": "sh scripts/local-db.sh seed",
-    "api:docs": "pnpm --filter @phs/contracts build && pnpm --filter @phs/contracts generate"
+    "api:docs": "pnpm --filter @phs/contracts build && pnpm --filter @phs/contracts generate",
+    "seed:demo": "sh scripts/local-db.sh seed-demo"
   },
   "devDependencies": {
     "dbmate": "2.36.0"

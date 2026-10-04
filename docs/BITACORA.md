@@ -20,6 +20,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
+- **Datos de demostración:** `seed:demo` carga seis usuarios y cuatro proyectos (DEMO-001 a DEMO-004); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
 - **Siguiente paso funcional:** aceptación de R1 por el usuario; de R2 faltan PHS-013 (renovaciones), PHS-014 (pausa y cierre, requiere D08), PHS-017 (evidencias, requiere D09 y el servicio Plataforma), PHS-018/019 (cambios) y el motor completo (PHS-025/026), que implica crear el servicio Salud. D01 y D02 pueden resolverse antes de R2/R3.
 
@@ -743,6 +744,43 @@ Se contrastó con la tabla `evidence` de la migración inicial: es de solo inser
 ### Pendientes y siguiente paso
 
 Construir PHS-017 con el servicio Plataforma. Siguen abiertas la expiración (D07) y la restricción adicional de acceso. Siguiente entrada: BIT-0021.
+
+## BIT-0021 — Datos de demostración para probar cada cambio
+
+**Fecha:** 2026-10-04, America/Mexico_City.
+
+**Objetivo:** cumplir la regla pedida por el usuario: cada cambio debe poder probarse con datos ya cargados.
+
+**Relación:** PHS-040 (fixtures), AGENTS.md. No cambia API, esquema ni reglas de negocio.
+
+**Identificación:** commit con prefijo `BIT-0021`.
+
+### Decisión confirmada por el usuario
+
+Antes de continuar, y en cada cambio, debe haber datos de prueba cargados para recorrer el flujo.
+
+### Trabajo realizado y archivos
+
+- [AGENTS.md](../AGENTS.md): sección "Datos de prueba" con la regla y cómo cumplirla.
+- `apps/identity/src/cli/seed-demo.ts`: dos prácticas, seis usuarios con sus roles y roles de negocio para el administrador de desarrollo.
+- `apps/projects/src/cli/seed-demo.ts`: cuatro proyectos creados mediante los servicios, con equipo, hitos, línea base, cambios de estado, observaciones económicas y riesgos; fechas relativas al día en que se ejecuta.
+- `scripts/local-db.sh` (`seed-demo`), `package.json` (`seed:demo`, y `db:setup` ahora incluye administrador y demostración), `.env.example` (`DEMO_USER_PASSWORD`), [README](../README.md) y esta bitácora.
+
+### Decisiones y supuestos
+
+Tomados al implementar, no confirmados por el usuario: nombres y cifras de los datos; contraseña común sin cambio obligatorio para los usuarios de demostración; el administrador de desarrollo recibe roles de PM y líder en Consultoría y de Dirección en Datos; el seed no modifica un proyecto que ya existe, así que los datos nuevos de una funcionalidad se añaden como proyectos o pasos nuevos.
+
+### Validación y límites
+
+- Ejecutado sobre la base local del usuario sin recrearla; una segunda ejecución no creó nada.
+- Por el gateway, con cada usuario: Ana y Luis ven DEMO-001 a 003; Carla ve los cuatro; Pablo solo DEMO-004; Diego ve los tres donde participa; Elena solo DEMO-001 y recibe 403 en economía.
+- DEMO-001 da avance 25%, desviación financiera 32.5% con tope activo y un hito crítico vencido; DEMO-002 da avance 66.67% y desviación −1.67%; DEMO-003 no tiene datos para la desviación.
+- `build` y `typecheck` pasan; las pruebas automáticas no cambian y siguen usando la base `phs_test`.
+- Límites: las fechas son relativas al día de carga, de modo que con el paso de los días los datos "próximos" terminan vencidos; para refrescarlos hay que recrear la base. Al archivo `.env` del usuario solo se le añadió `DEMO_USER_PASSWORD`.
+
+### Pendientes y siguiente paso
+
+Ampliar el seed con cada funcionalidad nueva. Siguiente entrada: BIT-0022.
 
 ## Plantilla para próximas entradas
 

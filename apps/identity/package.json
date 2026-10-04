@@ -9,7 +9,8 @@
     "start": "node dist/main.js",
     "dev": "tsc -p tsconfig.json && (tsc -p tsconfig.json --watch --preserveWatchOutput & node --watch dist/main.js)",
     "test": "vitest run",
-    "create-user": "node dist/cli/create-user.js"
+    "create-user": "node dist/cli/create-user.js",
+    "seed-demo": "node dist/cli/seed-demo.js"
   },
   "dependencies": {
     "@nestjs/common": "12.1.2",

@@ -8,7 +8,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "start": "node dist/main.js",
     "dev": "tsc -p tsconfig.json && (tsc -p tsconfig.json --watch --preserveWatchOutput & node --watch dist/main.js)",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed-demo": "node dist/cli/seed-demo.js"
   },
   "dependencies": {
     "@nestjs/common": "12.1.2",

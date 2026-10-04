@@ -30,13 +30,34 @@ Requiere Node.js 24 y PostgreSQL 17 instalado (por ejemplo con Homebrew). No nec
 ```sh
 cp .env.example .env                 # valores solo para desarrollo local
 npx pnpm@12.9.1 install
-npx pnpm@12.9.1 db:setup             # base local, migraciones y usuarios de desarrollo
 npx pnpm@12.9.1 build
-npx pnpm@12.9.1 seed:dev             # usuario inicial definido en .env (DEV_USER_*)
+npx pnpm@12.9.1 db:setup             # base local, migraciones, administrador y datos de demostración
 npx pnpm@12.9.1 dev                  # web, gateway, identity y projects
 ```
 
 Abrir [127.0.0.1:5173](http://127.0.0.1:5173) e iniciar sesión con el usuario de desarrollo de `.env`; la contraseña es temporal y la aplicación obliga a cambiarla. `test` y `typecheck` validan el código; `db:test` ejecuta las pruebas SQL; `db:test:setup` prepara la base `phs_test` que usan las pruebas de integración; `db:local:stop` detiene la base. Con Docker, `db:up` sustituye a `db:local:start`.
+
+### Datos de demostración
+
+`db:setup` carga, y `seed:demo` vuelve a cargar sin duplicar, seis usuarios y cuatro proyectos para recorrer el flujo completo:
+
+| Usuario (`@phs.test`) | Perfil | Qué ve |
+| --- | --- | --- |
+| `ana.pm` | PM de Consultoría | Sus tres proyectos: DEMO-001 a DEMO-003 |
+| `luis.lider` | Líder de Consultoría | Los tres proyectos de la práctica; puede reasignar |
+| `carla.direccion` | Dirección de ambas prácticas | Los cuatro proyectos, solo consulta |
+| `pablo.pm` | PM y líder de Datos | Solo DEMO-004 |
+| `diego.dev` | Sin rol; integrante y responsable de hitos y riesgos | Los proyectos donde participa, sin importes |
+| `elena.lectora` | Sin rol; lectora en DEMO-001 | Solo DEMO-001, sin economía |
+
+Todos usan la contraseña `DEMO_USER_PASSWORD` de `.env`. El administrador de desarrollo recibe además roles de PM y líder en Consultoría y de Dirección en Datos.
+
+| Proyecto | Situación |
+| --- | --- |
+| DEMO-001 Portal de clientes | Hito crítico vencido, gasto por delante del avance, un riesgo materializado y otro vencido |
+| DEMO-002 Migración a la nube | Hitos a tiempo, costo acorde al avance, un riesgo mitigado |
+| DEMO-003 Soporte de aplicaciones | Recién iniciado, con equipo e hitos, sin línea base |
+| DEMO-004 Modelo de predicción de demanda | De otra práctica, para comprobar el alcance por rol |
 
 Existen el gateway y los servicios Identidad y Proyectos, con inicio y cierre de sesión, cambio de contraseña, administración de usuarios, prácticas, roles y tipos de servicio, y alta, consulta y edición de proyectos según el alcance de cada usuario. El usuario de desarrollo es administrador: para crear un proyecto debe crear antes una práctica y asignarse los roles de PM y líder. También hay equipo, hitos y línea base inicial, con lo que se completa el recorrido de la primera entrega (R1). También hay riesgos con seguimiento y economía con desviación financiera calculada. Todavía no hay evidencias, cambios aprobados, revisiones ni score de salud.
 

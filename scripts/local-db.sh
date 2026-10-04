@@ -51,13 +51,19 @@ case "${1:-}" in
     (cd apps/identity && PHS_NEW_USER_EMAIL="$DEV_USER_EMAIL" PHS_NEW_USER_NAME="$DEV_USER_NAME" \
       PHS_NEW_USER_PASSWORD="$DEV_USER_PASSWORD" PHS_NEW_USER_ADMIN=true node dist/cli/create-user.js)
     ;;
+  seed-demo)
+    # Demo users, practices and projects for trying the whole flow. Safe to repeat. Needs a build.
+    : "${DEMO_USER_PASSWORD:?Falta DEMO_USER_PASSWORD en .env}" "${DEV_USER_EMAIL:?Falta DEV_USER_EMAIL en .env}"
+    (cd apps/identity && node dist/cli/seed-demo.js)
+    (cd apps/projects && node dist/cli/seed-demo.js)
+    ;;
   reset)
     pg_ctl -D "$DATA" -m fast stop >/dev/null 2>&1 || true
     rm -rf "$DATA" .local/pg.log
     echo "Datos locales eliminados"
     ;;
   *)
-    echo "Uso: $0 start|stop|logins|test|test-db|seed|reset" >&2
+    echo "Uso: $0 start|stop|logins|test|test-db|seed|seed-demo|reset" >&2
     exit 2
     ;;
 esac
