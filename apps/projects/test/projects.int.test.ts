@@ -27,7 +27,8 @@ describe.skipIf(!ready)('project commands (PHS-008, PHS-009)', () => {
   const input = (overrides: Partial<CreateProject> = {}): CreateProject => ({
     practiceId: practice, code: `C-${randomUUID().slice(0, 8)}`, name: 'Proyecto de prueba', description: 'Descripción',
     clientName: `Cliente ${randomUUID().slice(0, 8)}`, serviceTypeCode: 'development', pmId: pm, leadId: lead,
-    technicalOwnerId: plain, sponsorId: null, startsOn: '2026-01-01', endsOn: '2026-12-31', currency: 'MXN', ...overrides,
+    technicalOwnerId: plain, sponsorId: null, clientContact: '', escalationNotes: '', startsOn: '2026-01-01',
+    endsOn: '2026-12-31', currency: 'MXN', ...overrides,
   });
   const create = async (by: string, overrides: Partial<CreateProject> = {}) =>
     (await service.create(actor(by), input(overrides), randomUUID())).project;

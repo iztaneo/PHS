@@ -1,0 +1,119 @@
+import {
+  BadRequestException, Body, ConflictException, Controller, Delete, ForbiddenException, Get, Headers, HttpCode,
+  Inject, NotFoundException, Param, Patch, Post, Put, Query, Req, UseGuards,
+} from '@nestjs/common';
+import {
+  IDEMPOTENCY_HEADER, createMilestoneBody, idempotencyKey, publishBaselineBody, putMemberBody, removeMemberQuery,
+  transitionMilestoneBody, updateMilestoneBody,
+} from '@phs/contracts';
+import { z } from 'zod';
+import { BaselinesService } from './baselines.service.js';
+import { InternalAuthGuard, type AuthenticatedRequest } from './internal-auth.guard.js';
+import { MilestonesService } from './milestones.service.js';
+import { ProjectError, type Actor } from './projects.service.js';
+import { TeamService } from './team.service.js';
+
+function parse<T>(schema: z.ZodType<T>, value: unknown): T {
+  const result = schema.safeParse(value);
+  if (!result.success) throw new BadRequestException({ code: 'invalid_request' });
+  return result.data;
+}
+
+// An id that is not a UUID cannot exist: same 404 as a project out of scope.
+function uuid(value: string): string {
+  const parsed = z.uuid().safeParse(value);
+  if (!parsed.success) throw new NotFoundException({ code: 'not_found' });
+  return parsed.data;
+}
+
+function key(value: string | undefined): string {
+  const parsed = idempotencyKey.safeParse(value);
+  if (!parsed.success) throw new BadRequestException({ code: 'idempotency_key_required' });
+  return parsed.data;
+}
+
+function actor(request: AuthenticatedRequest): Actor {
+  return { userId: request.internal.userId, requestId: request.internal.requestId };
+}
+
+export async function runProjectCommand<T>(work: Promise<T>): Promise<T> {
+  try {
+    return await work;
+  } catch (error) {
+    if (!(error instanceof ProjectError)) throw error;
+    const body = { code: error.code, ...(error.currentRevision ? { currentRevision: error.currentRevision } : {}), ...error.details };
+    switch (error.code) {
+      case 'not_found': throw new NotFoundException(body);
+      case 'forbidden': case 'practice_not_authorized': throw new ForbiddenException(body);
+      case 'code_taken': case 'revision_conflict': case 'baseline_change_required': case 'idempotency_key_reused':
+      case 'member_has_responsibilities': case 'invalid_transition': case 'baseline_exists':
+        throw new ConflictException(body);
+      default: throw new BadRequestException(body);
+    }
+  }
+}
+
+@Controller('projects/:id')
+@UseGuards(InternalAuthGuard)
+export class ProjectChildrenController {
+  constructor(
+    @Inject(TeamService) private readonly team: TeamService,
+    @Inject(MilestonesService) private readonly milestones: MilestonesService,
+    @Inject(BaselinesService) private readonly baselines: BaselinesService,
+  ) {}
+
+  @Get('members')
+  members(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.team.list(request.internal.userId, uuid(id)));
+  }
+
+  @Put('members/:userId')
+  putMember(@Param('id') id: string, @Param('userId') userId: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.team.put(actor(request), uuid(id), uuid(userId), parse(putMemberBody, body)));
+  }
+
+  @Delete('members/:userId')
+  removeMember(@Param('id') id: string, @Param('userId') userId: string, @Query() query: unknown, @Req() request: AuthenticatedRequest) {
+    const keep = parse(removeMemberQuery, query).keepResponsibilities === 'true';
+    return runProjectCommand(this.team.remove(actor(request), uuid(id), uuid(userId), keep));
+  }
+
+  @Get('milestones')
+  listMilestones(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.milestones.list(request.internal.userId, uuid(id)));
+  }
+
+  @Post('milestones')
+  @HttpCode(201)
+  createMilestone(
+    @Param('id') id: string, @Body() body: unknown, @Headers(IDEMPOTENCY_HEADER) idempotency: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return runProjectCommand(this.milestones.create(actor(request), uuid(id), parse(createMilestoneBody, body), key(idempotency)));
+  }
+
+  @Patch('milestones/:milestoneId')
+  updateMilestone(@Param('id') id: string, @Param('milestoneId') milestoneId: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.milestones.update(actor(request), uuid(id), uuid(milestoneId), parse(updateMilestoneBody, body)));
+  }
+
+  @Post('milestones/:milestoneId/transition')
+  @HttpCode(200)
+  transitionMilestone(@Param('id') id: string, @Param('milestoneId') milestoneId: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.milestones.transition(actor(request), uuid(id), uuid(milestoneId), parse(transitionMilestoneBody, body)));
+  }
+
+  @Get('baselines')
+  listBaselines(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
+    return runProjectCommand(this.baselines.list(request.internal.userId, uuid(id)));
+  }
+
+  @Post('baselines')
+  @HttpCode(201)
+  publishBaseline(
+    @Param('id') id: string, @Body() body: unknown, @Headers(IDEMPOTENCY_HEADER) idempotency: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return runProjectCommand(this.baselines.publishInitial(actor(request), uuid(id), parse(publishBaselineBody, body), key(idempotency)));
+  }
+}

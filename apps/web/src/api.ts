@@ -76,6 +76,8 @@ export interface ProjectDetail extends ProjectSummary {
   lead: Person;
   technicalOwner: Person;
   sponsor: Person | null;
+  clientContact: string;
+  escalationNotes: string;
   currency: string;
   timezone: string;
   revision: number;
@@ -97,9 +99,32 @@ export interface ProjectInput {
   leadId: string;
   technicalOwnerId: string;
   sponsorId: string | null;
+  clientContact: string;
+  escalationNotes: string;
   startsOn: string;
   endsOn: string;
 }
+
+export interface Member {
+  userId: string; displayName: string; email: string; active: boolean; role: 'contributor' | 'viewer'; allocationPct: number | null;
+}
+
+export type MilestoneStatus = 'pending' | 'in_progress' | 'completed' | 'rescheduled' | 'cancelled';
+export interface Milestone {
+  id: string; title: string; deliverable: string; owner: Person; dueOn: string; committedDueOn: string | null;
+  critical: boolean; status: MilestoneStatus; progressPct: number | null; completedOn: string | null;
+  completionNote: string | null; overdue: boolean; revision: number; canUpdate: boolean;
+}
+
+export interface Baseline {
+  id: string; version: number; current: boolean; startsOn: string; endsOn: string; scope: string;
+  budget: string | null; effortHours: string | null; financialsHidden: boolean; currency: string;
+  milestones: { id: string; title: string; deliverable: string; due_on: string; owner_name: string; critical: boolean }[];
+  team: { user_id: string; display_name: string; role: string; allocation_pct: number | null }[];
+  reason: string; createdBy: Person; createdAt: string;
+}
+
+export interface Responsibilities4 { milestones: number; risks: number; renewals: number; tasks: number }
 
 export type ProjectChanges = Partial<Omit<ProjectInput, 'practiceId' | 'code' | 'clientName'>>;
 
@@ -114,6 +139,7 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     readonly currentRevision?: number,
+    readonly responsibilities?: Responsibilities4,
   ) {
     super(code);
   }
@@ -142,8 +168,8 @@ async function call<T>(method: string, path: string, body?: unknown, idempotency
     data = undefined;
   }
   if (!response.ok) {
-    const failure = data as { code?: string; currentRevision?: number } | undefined;
-    throw new ApiError(response.status, failure?.code ?? 'unexpected_error', failure?.currentRevision);
+    const failure = data as { code?: string; currentRevision?: number; responsibilities?: Responsibilities4 } | undefined;
+    throw new ApiError(response.status, failure?.code ?? 'unexpected_error', failure?.currentRevision, failure?.responsibilities);
   }
   return data as T;
 }
@@ -169,6 +195,21 @@ export const api = {
     call<ProjectDetail>('POST', '/api/v1/projects', input, idempotencyKey),
   updateProject: (id: string, expectedRevision: number, changes: ProjectChanges) =>
     call<ProjectDetail>('PATCH', `/api/v1/projects/${id}`, { expectedRevision, ...changes }),
+  members: (id: string) => call<Member[]>('GET', `/api/v1/projects/${id}/members`),
+  putMember: (id: string, userId: string, role: Member['role'], allocationPct: number | null) =>
+    call<Member[]>('PUT', `/api/v1/projects/${id}/members/${userId}`, { role, allocationPct }),
+  removeMember: (id: string, userId: string, keepResponsibilities: boolean) =>
+    call<Member[]>('DELETE', `/api/v1/projects/${id}/members/${userId}?keepResponsibilities=${keepResponsibilities}`),
+  milestones: (id: string) => call<Milestone[]>('GET', `/api/v1/projects/${id}/milestones`),
+  createMilestone: (id: string, input: { title: string; deliverable: string; ownerId: string; dueOn: string; critical: boolean }, key: string) =>
+    call<Milestone>('POST', `/api/v1/projects/${id}/milestones`, input, key),
+  updateMilestone: (id: string, milestoneId: string, expectedRevision: number, changes: { dueOn?: string; reason?: string }) =>
+    call<Milestone>('PATCH', `/api/v1/projects/${id}/milestones/${milestoneId}`, { expectedRevision, ...changes }),
+  transitionMilestone: (id: string, milestoneId: string, expectedRevision: number, to: string, note?: string) =>
+    call<Milestone>('POST', `/api/v1/projects/${id}/milestones/${milestoneId}/transition`, { expectedRevision, to, ...(note ? { note } : {}) }),
+  baselines: (id: string) => call<Baseline[]>('GET', `/api/v1/projects/${id}/baselines`),
+  publishBaseline: (id: string, input: { expectedRevision: number; scope: string; budget: string | null; effortHours: string | null }, key: string) =>
+    call<Baseline>('POST', `/api/v1/projects/${id}/baselines`, input, key),
   clients: () => call<{ id: string; name: string }[]>('GET', '/api/v1/clients'),
   people: (practiceId: string) => call<PracticePerson[]>('GET', `/api/v1/people?practiceId=${practiceId}`),
   serviceTypes: () => call<ServiceType[]>('GET', '/api/v1/catalog/service-types'),
@@ -207,7 +248,13 @@ const MESSAGES: Record<string, string> = {
   baseline_change_required: 'Las fechas forman parte de la línea base vigente; se modifican mediante un cambio aprobado.',
   revision_conflict: 'Otra persona modificó este proyecto mientras lo editabas. Tus cambios siguen en el formulario.',
   idempotency_key_reused: 'Esta solicitud ya se había enviado con otros datos. Vuelve a abrir el formulario.',
-  not_found: 'El proyecto no existe o no está a tu alcance.',
+  not_found: 'El proyecto o el elemento no existe o no está a tu alcance.',
+  member_has_responsibilities: 'El integrante tiene responsabilidades abiertas en el proyecto.',
+  invalid_transition: 'Ese cambio de estado no está permitido para el hito.',
+  note_required: 'Escribe un comentario para completar, cancelar o reabrir el hito.',
+  reason_required: 'Escribe el motivo de la reprogramación: la fecha está comprometida en la línea base.',
+  invalid_completion_date: 'La fecha de cumplimiento no puede ser futura.',
+  baseline_exists: 'El proyecto ya tiene línea base. Los compromisos se cambian mediante un cambio aprobado.',
   email_taken: 'Ya existe un usuario con ese correo.',
   code_taken: 'Ya existe un registro con ese código o nombre.',
   last_admin: 'No se puede dejar el sistema sin un administrador activo.',

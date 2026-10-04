@@ -177,6 +177,15 @@ El despliegue crea los usuarios con contraseña y los hace miembros del rol de s
 
 Control de concurrencia: `project.revision` aumenta en uno con cada edición de la ficha. El servicio Proyectos bloquea la fila, compara la revisión que envía el cliente y rechaza con conflicto si no coincide. Cada cambio escribe, en la misma transacción, su `audit_entry` (con valores anteriores y nuevos) y un `outbox_message` con clave de deduplicación estable.
 
+## Contexto del proyecto y fechas comprometidas (migración 008)
+
+`008_project_context_and_commitments.sql` resuelve dos brechas del esquema inicial:
+
+- `project.client_contact` y `project.escalation_notes` guardan el contacto y la escalación propios de un proyecto. `client.primary_contact` y `client.escalation_notes` quedan como datos generales del cliente, compartidos entre proyectos.
+- `milestone.committed_due_on` es la fecha comprometida en la línea base vigente; `milestone.due_on` es la fecha operativa. Publicar la línea base copia la fecha operativa a la comprometida. Reprogramar cambia solo la operativa, deja el hito en estado `rescheduled` y registra el motivo en `activity`. Un hito creado después de la línea base no tiene fecha comprometida.
+
+Los snapshots `milestone_snapshot` y `team_snapshot` de la línea base tienen su contrato en `packages/contracts` (`milestoneSnapshot` y `teamSnapshot`); el equipo incluye a PM, líder, responsable técnico y sponsor además de los integrantes.
+
 ## Instalación y validación
 
 Desde BIT-0010 las migraciones se aplican con [dbmate](https://github.com/amacneil/dbmate), que ejecuta cada archivo en una transacción y registra las aplicadas en `public.schema_migrations`. Los archivos ya no contienen `BEGIN/COMMIT` propios y no deben aplicarse con `psql -f`. No tienen reversión destructiva: el bloque `migrate:down` falla a propósito; se corrige con una migración nueva o restaurando un respaldo.
@@ -202,8 +211,9 @@ npx pnpm@12.9.1 db:local:stop
 | `005_service_roles.sql` | Roles y permisos por servicio. |
 | `006_global_admin.sql` | Administrador global y roles de práctica. |
 | `007_command_idempotency.sql` | Resultados de comandos idempotentes. |
+| `008_project_context_and_commitments.sql` | Contacto por proyecto y fecha comprometida del hito. |
 
-Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso), `006_admin.sql` (3 rechazos) y `007_idempotency.sql` (6 rechazos). Se ejecutan con el propietario del esquema.
+Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso), `006_admin.sql` (3 rechazos), `007_idempotency.sql` (6 rechazos) y `008_context.sql`. Se ejecutan con el propietario del esquema.
 
 ## Evolución pendiente
 

@@ -5,11 +5,11 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 ## Estado actual para retomar
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
-- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate (inicial, credencial local, sesiones, endurecimiento, roles por servicio, administrador global e idempotencia; 31 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
+- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–008 (la 008 añade contacto por proyecto y fecha comprometida del hito; 31 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects`, `packages/service-kit` y `packages/contracts`; ver README para arrancarlo.
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
-- **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011). PHS-006 y PHS-007 — reglas de acceso de D05, consulta de proyectos por alcance y pantalla de administración (BIT-0013). PHS-008 y PHS-009 — auditoría, control de versiones, idempotencia y alta, lista y edición de proyectos (BIT-0015).
-- **Todavía no implementado:** equipo y contexto del cliente, líneas base, hitos, riesgos y demás funcionalidad de negocio, servicios Salud y Plataforma, motor de producción y procesos programados.
+- **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011). PHS-006 y PHS-007 — reglas de acceso de D05, consulta de proyectos por alcance y pantalla de administración (BIT-0013). PHS-008 y PHS-009 — auditoría, control de versiones, idempotencia y alta, lista y edición de proyectos (BIT-0015). PHS-010, PHS-015 y PHS-011 — equipo y contacto por proyecto, hitos y línea base inicial (BIT-0016). Con esto existe todo el recorrido de R1, pendiente de aceptación.
+- **Todavía no implementado:** riesgos, economía, renovaciones, evidencias, cambios aprobados, revisiones, evaluación de salud, servicios Salud y Plataforma, motor de producción y procesos programados.
 - **Arquitectura decidida:** microservicios — gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma) sobre un PostgreSQL compartido con el esquema actual; REST y eventos por outbox. Ver [ADR-002](adr/002-microservicios.md) y [mapa de trazabilidad](MAPA-TRAZABILIDAD.md).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
@@ -20,7 +20,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** PHS-010 (contexto del cliente y equipo), PHS-015 (hitos) y PHS-011 (línea base inicial), con lo que se completa la demostración de R1. D01 y D02 pueden resolverse antes de R2/R3.
+- **Siguiente paso funcional:** aceptación de R1 por el usuario; después R2: PHS-012 (economía), PHS-016 (riesgos), PHS-017 (evidencias), PHS-018/019 (cambios) y el motor (PHS-025/026), que requiere cerrar D01. D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -565,6 +565,47 @@ Tomados al implementar, no confirmados por el usuario: el PM debe tener rol de P
 ### Pendientes y siguiente paso
 
 Aceptación de PHS-005 a PHS-009 por el usuario. Siguiente: PHS-010, PHS-015 y PHS-011. Siguiente entrada: BIT-0016.
+
+## BIT-0016 — Equipo, hitos y línea base inicial
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** implementar PHS-010, PHS-015 y PHS-011 para completar el recorrido de la primera entrega (R1).
+
+**Relación:** PHS-010, PHS-015, PHS-011, PHS-008 (criterio 3), D08, RN-02, RN-14, RN-17, RN-19. Las tres historias quedan en revisión, no aceptadas.
+
+**Identificación:** commit con prefijo `BIT-0016`.
+
+### Trabajo realizado y archivos
+
+- [008_project_context_and_commitments.sql](../db/migrations/008_project_context_and_commitments.sql) y [008_context.sql](../db/tests/008_context.sql).
+- `packages/contracts` y [docs/api](api/README.md): nueve rutas nuevas de equipo, hitos y línea base; contrato de los snapshots de la línea base.
+- `apps/projects`: `TeamService`, `MilestonesService`, `BaselinesService` y `ProjectChildrenController`; contacto y escalación en la ficha; `lockProject` y `bumpProjectRevision` compartidos.
+- `apps/web`: pestañas Ficha, Equipo, Hitos y Línea base en el proyecto.
+- [DATABASE-PHS.md](DATABASE-PHS.md), [DECISIONES.md](producto/DECISIONES.md) (brechas), [BACKLOG.md](producto/BACKLOG.md), [README](../README.md) y esta bitácora.
+
+### Decisiones y supuestos
+
+Tomados al implementar, no confirmados por el usuario:
+
+- Contacto y escalación son campos del proyecto; los del cliente quedan como datos generales.
+- El hito tiene fecha operativa y fecha comprometida. Antes de la línea base la fecha se edita libremente; después, moverla es una reprogramación con motivo obligatorio que no cambia el compromiso.
+- Transiciones del hito: pendiente → en curso o cumplido; en curso → cumplido; reprogramado → en curso o cumplido; cualquiera abierto → cancelado. Completar, cancelar y reabrir exigen comentario. Reabrir es provisional hasta D08.
+- El responsable de un hito puede cambiar su estado aunque no sea PM ni integrante (decisión confirmada en BIT-0012); editar el hito o reprogramarlo corresponde a PM o líder.
+- La línea base inicial toma fechas y moneda del proyecto, los hitos no cancelados y el equipo con sus responsables. La publica PM o líder. Los importes solo los ve quien puede ver datos económicos.
+- Un hito agregado después de la línea base queda fuera de ella.
+
+### Validación y límites
+
+- 65 pruebas de código pasan (7 de contratos, 11 de `service-kit`, 5 del gateway, 27 de Proyectos y 15 de Identidad); `typecheck` sin errores; ocho pruebas SQL pasan.
+- Probado contra la base de pruebas: integrante único y actualizable; aviso al quitar a quien tiene un hito abierto y conservación de su acceso de consulta; hito con línea de tiempo, auditoría, outbox y revisiones; vencido según la fecha en la zona del proyecto; transiciones permitidas y rechazadas; responsable que actualiza su hito; línea base única, completa e inmutable frente a cambios posteriores; presupuesto desconocido conservado como nulo; importes ocultos para un lector.
+- Por el gateway y en navegador con usuarios de prueba: las tres pestañas, el aviso de responsabilidades, la línea base publicada y la reprogramación.
+- Límites: sin imagen de evidencia al completar (PHS-017); no se editan desde la pantalla el título, el responsable ni el avance de un hito, aunque la API lo permite; no hay comparación entre versiones de línea base; el vencimiento se calcula al consultar, sin evento ni tarea (PHS-030/033); no se probó el cruce de medianoche entre zonas horarias; no hay pruebas automáticas de las pantallas.
+- La base local se recreó al terminar: contiene solo el usuario de desarrollo administrador con su contraseña temporal.
+
+### Pendientes y siguiente paso
+
+Aceptación de R1 (PHS-004 a PHS-011 y PHS-015) por el usuario. Para R2 hace falta cerrar D01 (fórmulas del motor). Siguiente entrada: BIT-0017.
 
 ## Plantilla para próximas entradas
 

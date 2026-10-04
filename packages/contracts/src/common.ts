@@ -46,6 +46,9 @@ export const idempotencyKey = z.string().min(8).max(200)
 export const conflictResponse = z.object({
   code: z.string(),
   currentRevision: z.number().int().optional().describe('Revisión vigente cuando el conflicto es de versión.'),
+  responsibilities: z.object({
+    milestones: z.number().int(), risks: z.number().int(), renewals: z.number().int(), tasks: z.number().int(),
+  }).optional().describe('Responsabilidades abiertas del integrante cuando el código es `member_has_responsibilities`.'),
 });
 
 export const errors = {

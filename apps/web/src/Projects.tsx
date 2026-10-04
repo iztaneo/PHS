@@ -3,6 +3,7 @@ import {
   ApiError, api, errorMessage, type PracticePerson, type ProjectDetail, type ProjectFilters, type ProjectInput,
   type ProjectPage, type ServiceType, type SessionUser,
 } from './api';
+import { BaselineSection, Milestones, Team } from './ProjectSections';
 
 const STATUS: Record<string, string> = {
   planned: 'Por iniciar', active: 'En ejecución', paused: 'Pausado', renewing: 'En renovación', closed: 'Cerrado',
@@ -122,6 +123,7 @@ function ProjectList({ canCreate, onNew, onOpen }: { canCreate: boolean; onNew: 
 interface FormValues {
   practiceId: string; code: string; name: string; description: string; clientName: string; serviceTypeCode: string;
   pmId: string; leadId: string; technicalOwnerId: string; sponsorId: string; startsOn: string; endsOn: string;
+  clientContact: string; escalationNotes: string;
 }
 
 function ProjectFields({ values, set, people, types, editing, canReassign, datesLocked }: {
@@ -161,6 +163,10 @@ function ProjectFields({ values, set, people, types, editing, canReassign, dates
       <label htmlFor="p-end">Fin</label>
       <input id="p-end" type="date" required disabled={datesLocked} style={wide} value={values.endsOn} onChange={(e) => set({ endsOn: e.target.value })} />
       {datesLocked && <p>Las fechas forman parte de la línea base vigente; se modifican mediante un cambio aprobado.</p>}
+      <label htmlFor="p-contact">Contacto del cliente para este proyecto</label>
+      <input id="p-contact" maxLength={500} style={wide} value={values.clientContact} onChange={(e) => set({ clientContact: e.target.value })} />
+      <label htmlFor="p-escalation">Escalación de este proyecto</label>
+      <textarea id="p-escalation" rows={2} maxLength={2000} style={wide} value={values.escalationNotes} onChange={(e) => set({ escalationNotes: e.target.value })} />
       <label htmlFor="p-desc">Descripción</label>
       <textarea id="p-desc" rows={3} maxLength={4000} style={wide} value={values.description} onChange={(e) => set({ description: e.target.value })} />
     </>
@@ -174,7 +180,7 @@ function ProjectForm({ user, practices, onCancel, onSaved }: {
   const [key] = useState(() => crypto.randomUUID());
   const [values, setValues] = useState<FormValues>({
     practiceId: practices[0]?.[0] ?? '', code: '', name: '', description: '', clientName: '', serviceTypeCode: '',
-    pmId: '', leadId: '', technicalOwnerId: '', sponsorId: '', startsOn: '', endsOn: '',
+    pmId: '', leadId: '', technicalOwnerId: '', sponsorId: '', startsOn: '', endsOn: '', clientContact: '', escalationNotes: '',
   });
   const [people, setPeople] = useState<PracticePerson[]>([]);
   const [types, setTypes] = useState<ServiceType[]>([]);
@@ -231,6 +237,7 @@ function toValues(project: ProjectDetail): FormValues {
     practiceId: project.practiceId, code: project.code, name: project.name, description: project.description,
     clientName: project.clientName, serviceTypeCode: project.serviceTypeCode, pmId: project.pm.id, leadId: project.lead.id,
     technicalOwnerId: project.technicalOwner.id, sponsorId: project.sponsor?.id ?? '', startsOn: project.startsOn, endsOn: project.endsOn,
+    clientContact: project.clientContact, escalationNotes: project.escalationNotes,
   };
 }
 
@@ -245,6 +252,7 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
   const [conflict, setConflict] = useState(false);
   const [notice, setNotice] = useState(created ? 'Proyecto creado.' : undefined);
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState<'card' | 'team' | 'milestones' | 'baseline'>('card');
 
   async function load(keepForm = false) {
     try {
@@ -270,6 +278,7 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
         name: values.name, description: values.description, serviceTypeCode: values.serviceTypeCode,
         pmId: values.pmId, leadId: values.leadId, technicalOwnerId: values.technicalOwnerId,
         sponsorId: values.sponsorId || null, startsOn: values.startsOn, endsOn: values.endsOn,
+        clientContact: values.clientContact, escalationNotes: values.escalationNotes,
       };
       // After a conflict the untouched fields may be stale; sending only the edited ones keeps the
       // other person's changes.
@@ -303,11 +312,20 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
         zona {project.timezone} · versión {project.revision}
       </p>
       {notice && <p role="status" style={{ background: '#eef6ee', padding: 8 }}>{notice}</p>}
-      {!project.hasBaseline && (
+      {!project.hasBaseline && tab !== 'baseline' && (
         <p style={{ background: '#fff6dd', padding: 8 }}>
-          Siguiente paso: definir la línea base del proyecto. Estará disponible en la próxima entrega.
+          Siguiente paso: registra el equipo y los hitos, y después publica la línea base.{' '}
+          <button type="button" onClick={() => setTab('baseline')}>Ir a línea base</button>
         </p>
       )}
+      <nav style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
+        {([['card', 'Ficha'], ['team', 'Equipo'], ['milestones', 'Hitos'], ['baseline', 'Línea base']] as const).map(([key, label]) => (
+          <button key={key} type="button" aria-current={tab === key} onClick={() => setTab(key)}>{label}</button>
+        ))}
+      </nav>
+      {tab === 'team' && <Team project={project} people={known} onChanged={() => void load(true)} />}
+      {tab === 'milestones' && <Milestones project={project} people={known} onChanged={() => void load(true)} />}
+      {tab === 'baseline' && <BaselineSection project={project} people={known} onChanged={() => void load(true)} />}
       {error && <p role="alert" style={{ color: '#a00' }}>{error}</p>}
       {conflict && (
         <p>
@@ -317,7 +335,7 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
           <button type="button" onClick={() => { setConflict(false); setError(undefined); void load(); }}>Descartar mis cambios</button>
         </p>
       )}
-      {canEdit ? (
+      {tab === 'card' && (canEdit ? (
         <form onSubmit={submit}>
           <ProjectFields values={values} set={(patch) => setValues((v) => ({ ...v!, ...patch }))} people={known} types={types}
             editing canReassign={project.capabilities.decide} datesLocked={project.hasBaseline} />
@@ -331,9 +349,11 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
           <dt>Responsable técnico</dt><dd>{project.technicalOwner.displayName}</dd>
           <dt>Sponsor</dt><dd>{project.sponsor?.displayName ?? 'Sin sponsor'}</dd>
           <dt>Vigencia</dt><dd>{project.startsOn} a {project.endsOn}</dd>
+          <dt>Contacto del cliente para este proyecto</dt><dd>{project.clientContact || 'Sin definir'}</dd>
+          <dt>Escalación</dt><dd>{project.escalationNotes || 'Sin definir'}</dd>
           <dt>Descripción</dt><dd>{project.description || 'Sin descripción'}</dd>
         </dl>
-      )}
+      ))}
     </section>
   );
 }

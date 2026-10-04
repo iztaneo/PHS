@@ -78,14 +78,14 @@ Registrar ID, alternativa elegida, motivo, ejemplos con resultados, aprobador y 
 
 | Brecha o hallazgo | Clasificación |
 | --- | --- |
-| Contacto y escalación por proyecto | Pendiente: decisión de producto en PHS-010. |
-| Fecha comprometida frente a fecha operativa del hito | Pendiente: contrato en PHS-015; depende de D08. |
+| Contacto y escalación por proyecto | Cubierto por la migración 008 (BIT-0016): campos propios del proyecto; los del cliente quedan como datos generales. Decisión de diseño no confirmada por el usuario. |
+| Fecha comprometida frente a fecha operativa del hito | Cubierto por la migración 008 (BIT-0016): `committed_due_on` y `due_on`. Cancelar y reabrir hitos se implementó de forma provisional; su política sigue en D08. |
 | Vínculo de evento con tarea vencida y estado "atendido" | Pendiente: D04, PHS-030. |
 | Día preferido, festivos y anclaje del ciclo; ciclos solapados | Pendiente: D03, PHS-020. No se añadió restricción de solapamiento para no inventar la regla de calendario. |
 | Secuencia de reenvíos y publicación oficial | Pendiente: D02, PHS-024. |
 | Reapertura, cancelación y vínculos de corrección | Pendiente: D04/D08. |
 | Los triggers no generan auditoría ni autorización | Resuelto por contrato: la inserta cada servicio (PHS-008); permisos de escritura por servicio en la migración 005. |
-| Contrato validable de los JSONB | Pendiente: PHS-003/PHS-004, junto con los contratos por servicio. |
+| Contrato validable de los JSONB | Parcial: los snapshots de la línea base tienen contrato en `packages/contracts` (BIT-0016). Pendientes: propuesta de cambio, revisión, reglas y evaluación. |
 | Textos obligatorios vacíos (BIT-0005) | Cubierto por la migración 004. |
 | Borrado físico de filas operativas (BIT-0005) | Cubierto por la migración 004. |
 | Fechas imposibles (BIT-0005) | `outbox_message` cubierto por la 004. La fecha de cumplimiento futura de un hito queda al servicio Proyectos (PHS-015): depende de la zona horaria del proyecto. |

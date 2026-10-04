@@ -225,7 +225,7 @@ Como **equipo técnico**, quiero ejecutar cambios de forma transaccional, para e
 
 **Datos / artefactos:** audit_entry, outbox_message, revision
 
-**Estado (BIT-0015): en revisión, no aceptada.** Criterios 1, 2 y 4 implementados y probados sobre los comandos de proyecto, con la tabla `command_idempotency`. Criterio 3: la revisión del proyecto aumenta al editar la ficha; falta comprobarlo al cambiar un hijo (hitos, riesgos, economía), que todavía no existen.
+**Estado (BIT-0015): en revisión, no aceptada.** Criterios 1, 2 y 4 implementados y probados sobre los comandos de proyecto, con la tabla `command_idempotency`. Criterio 3: la revisión del proyecto aumenta al editar la ficha y, desde BIT-0016, al cambiar equipo, hitos y línea base; falta para riesgos y economía, que todavía no existen.
 
 Criterios de aceptación:
 
@@ -270,6 +270,8 @@ Como **PM**, quiero mantener contactos, escalación y responsables, para coordin
 
 **Datos / artefactos:** client, project_member, project
 
+**Estado (BIT-0016): en revisión, no aceptada.** Criterios 1–4 implementados y probados. El contacto y la escalación del proyecto son campos propios; los datos generales del cliente aún no se editan desde la aplicación. Al quitar a un integrante con responsabilidades abiertas se exige confirmación explícita de que las conserva; la reasignación de esos elementos se hace desde cada hito.
+
 Criterios de aceptación:
 
 1. La ficha distingue datos generales del cliente y contacto/escalación específicos del proyecto según contrato definido.
@@ -288,6 +290,8 @@ Como **PM**, quiero fijar los compromisos del proyecto, para tener una referenci
 **Trazabilidad:** F2: Baseline; F3: saveBaseline · RN-02, RN-14, RN-19
 
 **Datos / artefactos:** baseline, project.current_baseline_id
+
+**Estado (BIT-0016): en revisión, no aceptada.** Criterios 1–4 implementados y probados para la versión inicial. La comparación entre versiones y las versiones posteriores llegan con PHS-019.
 
 Criterios de aceptación:
 
@@ -365,6 +369,8 @@ Como **PM**, quiero gestionar entregables con fechas y responsables, para medir 
 **Trazabilidad:** F3: createMilestone, saveMilestoneUpdate · RN-02, RN-12, RN-17, RN-19
 
 **Datos / artefactos:** milestone, activity, baseline
+
+**Estado (BIT-0016): en revisión, no aceptada.** Criterios 1, 3 y 4 implementados y probados; del 2, completar registra fecha real y comentario, y la imagen de evidencia depende de PHS-017. Cancelar y reabrir funcionan con comentario obligatorio, de forma provisional hasta D08.
 
 Criterios de aceptación:
 

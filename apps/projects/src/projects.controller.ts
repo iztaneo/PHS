@@ -1,13 +1,12 @@
 import {
-  BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, Headers, HttpCode, Inject,
-  NotFoundException, Param, Patch, Post, Query, Req, UseGuards,
+  BadRequestException, Body, Controller, Get, Headers, HttpCode, Inject, NotFoundException, Param, Patch, Post,
+  Query, Req, UseGuards,
 } from '@nestjs/common';
 import { IDEMPOTENCY_HEADER, createProjectBody, idempotencyKey, listProjectsQuery, updateProjectBody } from '@phs/contracts';
 import { z } from 'zod';
 import { InternalAuthGuard, type AuthenticatedRequest } from './internal-auth.guard.js';
-import {
-  ProjectError, ProjectsService, type Actor, type ProjectDetail, type ProjectPage,
-} from './projects.service.js';
+import { runProjectCommand } from './project-children.controller.js';
+import { ProjectsService, type Actor, type ProjectDetail, type ProjectPage } from './projects.service.js';
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
@@ -19,22 +18,7 @@ function actor(request: AuthenticatedRequest): Actor {
   return { userId: request.internal.userId, requestId: request.internal.requestId };
 }
 
-// One specific code per failure, so the client can explain what to correct.
-async function run<T>(work: Promise<T>): Promise<T> {
-  try {
-    return await work;
-  } catch (error) {
-    if (!(error instanceof ProjectError)) throw error;
-    const body = { code: error.code, ...(error.currentRevision ? { currentRevision: error.currentRevision } : {}) };
-    switch (error.code) {
-      case 'not_found': throw new NotFoundException(body);
-      case 'forbidden': case 'practice_not_authorized': throw new ForbiddenException(body);
-      case 'code_taken': case 'revision_conflict': case 'baseline_change_required': case 'idempotency_key_reused':
-        throw new ConflictException(body);
-      default: throw new BadRequestException(body);
-    }
-  }
-}
+const run = runProjectCommand;
 
 @Controller()
 @UseGuards(InternalAuthGuard)

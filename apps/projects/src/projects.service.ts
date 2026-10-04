@@ -30,6 +30,8 @@ export interface ProjectDetail extends ProjectSummary {
   lead: Person;
   technicalOwner: Person;
   sponsor: Person | null;
+  clientContact: string;
+  escalationNotes: string;
   currency: string;
   timezone: string;
   revision: number;
@@ -58,6 +60,8 @@ export interface CreateProject {
   leadId: string;
   technicalOwnerId: string;
   sponsorId: string | null;
+  clientContact: string;
+  escalationNotes: string;
   startsOn: string;
   endsOn: string;
   currency: string;
@@ -72,6 +76,8 @@ export interface UpdateProject {
   leadId?: string;
   technicalOwnerId?: string;
   sponsorId?: string | null;
+  clientContact?: string;
+  escalationNotes?: string;
   startsOn?: string;
   endsOn?: string;
 }
@@ -81,10 +87,16 @@ export interface Actor { userId: string; requestId: string }
 export type ProjectErrorCode =
   | 'not_found' | 'forbidden' | 'practice_not_authorized' | 'code_taken' | 'invalid_dates'
   | 'service_type_inactive' | 'pm_not_eligible' | 'lead_not_eligible' | 'responsible_not_enabled'
-  | 'revision_conflict' | 'baseline_change_required' | 'idempotency_key_reused';
+  | 'revision_conflict' | 'baseline_change_required' | 'idempotency_key_reused'
+  | 'member_has_responsibilities' | 'invalid_transition' | 'note_required' | 'reason_required'
+  | 'invalid_completion_date' | 'baseline_exists';
 
 export class ProjectError extends Error {
-  constructor(readonly code: ProjectErrorCode, readonly currentRevision?: number) {
+  constructor(
+    readonly code: ProjectErrorCode,
+    readonly currentRevision?: number,
+    readonly details?: Record<string, unknown>,
+  ) {
     super(code);
   }
 }
@@ -96,6 +108,7 @@ interface ProjectRow {
   pm_id: string; pm_name: string; lead_id: string; lead_name: string;
   technical_owner_id: string; technical_owner_name: string; sponsor_id: string | null; sponsor_name: string | null;
   starts_on: string; ends_on: string; currency: string; timezone: string; revision: string; has_baseline: boolean;
+  client_contact: string; escalation_notes: string;
   is_pm: boolean; is_team_member: boolean; is_named: boolean; owns_element: boolean;
 }
 
@@ -107,7 +120,7 @@ const SCOPED = `
            p.client_id, c.name AS client_name, p.service_type_code, st.name AS service_type_name,
            p.pm_id, pm.display_name AS pm_name, p.lead_id, ld.display_name AS lead_name,
            p.technical_owner_id, tech.display_name AS technical_owner_name,
-           p.sponsor_id, sp.display_name AS sponsor_name,
+           p.sponsor_id, sp.display_name AS sponsor_name, p.client_contact, p.escalation_notes,
            p.starts_on::text AS starts_on, p.ends_on::text AS ends_on, p.currency, p.timezone, p.revision,
            p.current_baseline_id IS NOT NULL AS has_baseline,
            p.pm_id = $1 AS is_pm,
@@ -146,13 +159,14 @@ function toDetail(row: ProjectRow, memberships: Membership[]): ProjectDetail {
     lead: { id: row.lead_id, displayName: row.lead_name },
     technicalOwner: { id: row.technical_owner_id, displayName: row.technical_owner_name },
     sponsor: row.sponsor_id ? { id: row.sponsor_id, displayName: row.sponsor_name! } : null,
+    clientContact: row.client_contact, escalationNotes: row.escalation_notes,
     currency: row.currency, timezone: row.timezone, revision: Number(row.revision), hasBaseline: row.has_baseline,
   };
 }
 
 function toSummary(detail: ProjectDetail): ProjectSummary {
   const { description: _d, pm: _p, lead: _l, technicalOwner: _t, sponsor: _s, currency: _c, timezone: _z,
-    revision: _r, hasBaseline: _b, ...summary } = detail;
+    revision: _r, hasBaseline: _b, clientContact: _cc, escalationNotes: _e, ...summary } = detail;
   return summary;
 }
 
@@ -292,11 +306,13 @@ export class ProjectsService {
 
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO phs.project(practice_id, client_id, code, name, description, service_type_code, pm_id, lead_id,
-                               technical_owner_id, sponsor_id, starts_on, ends_on, currency, timezone)
-       SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, pr.timezone FROM phs.practice pr WHERE pr.id = $1
+                               technical_owner_id, sponsor_id, starts_on, ends_on, currency, client_contact,
+                               escalation_notes, timezone)
+       SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, pr.timezone FROM phs.practice pr WHERE pr.id = $1
        RETURNING id`,
       [input.practiceId, clientId, input.code, input.name, input.description, input.serviceTypeCode, input.pmId,
-        input.leadId, input.technicalOwnerId, input.sponsorId, input.startsOn, input.endsOn, input.currency],
+        input.leadId, input.technicalOwnerId, input.sponsorId, input.startsOn, input.endsOn, input.currency,
+        input.clientContact, input.escalationNotes],
     );
     const id = inserted.rows[0]!.id;
     await insertAudit(client, {
@@ -327,6 +343,7 @@ export class ProjectsService {
         name: before.name, description: before.description, serviceTypeCode: before.serviceTypeCode,
         pmId: before.pm.id, leadId: before.lead.id, technicalOwnerId: before.technicalOwner.id,
         sponsorId: before.sponsor?.id ?? null, startsOn: before.startsOn, endsOn: before.endsOn,
+        clientContact: before.clientContact, escalationNotes: before.escalationNotes,
       };
       const changed = Object.fromEntries(
         Object.entries(changes).filter(([key, value]) => value !== undefined && value !== current[key]));
@@ -344,10 +361,11 @@ export class ProjectsService {
       await client.query(
         `UPDATE phs.project
             SET name = $2, description = $3, service_type_code = $4, pm_id = $5, lead_id = $6,
-                technical_owner_id = $7, sponsor_id = $8, starts_on = $9, ends_on = $10, revision = revision + 1
+                technical_owner_id = $7, sponsor_id = $8, starts_on = $9, ends_on = $10, client_contact = $11,
+                escalation_notes = $12, revision = revision + 1
           WHERE id = $1`,
         [projectId, next.name, next.description, next.serviceTypeCode, next.pmId, next.leadId,
-          next.technicalOwnerId, next.sponsorId, next.startsOn, next.endsOn],
+          next.technicalOwnerId, next.sponsorId, next.startsOn, next.endsOn, next.clientContact, next.escalationNotes],
       );
       const revision = before.revision + 1;
       await insertAudit(client, {
@@ -364,4 +382,34 @@ export class ProjectsService {
       return (await this.get(actor.userId, projectId, client)) ?? { ...before, ...{ revision } };
     });
   }
+}
+
+export type Capability = 'view' | 'editOperation';
+
+// Locks the project row and returns it as the actor sees it. Every command on a project or its
+// children starts here, so concurrent commands on one project are decided one after the other.
+export async function lockProject(
+  client: pg.PoolClient,
+  projects: ProjectsService,
+  actor: Actor,
+  projectId: string,
+  capability: Capability,
+): Promise<ProjectDetail> {
+  const locked = await client.query('SELECT 1 FROM phs.project WHERE id = $1 FOR UPDATE', [projectId]);
+  const project = locked.rowCount ? await projects.get(actor.userId, projectId, client) : null;
+  if (!project) throw new ProjectError('not_found');
+  if (!project.capabilities[capability]) throw new ProjectError('forbidden');
+  return project;
+}
+
+// A change to a child is a change to the project's inputs: the project revision moves too.
+export async function bumpProjectRevision(client: pg.PoolClient, projectId: string): Promise<number> {
+  const updated = await client.query<{ revision: string }>(
+    'UPDATE phs.project SET revision = revision + 1 WHERE id = $1 RETURNING revision', [projectId]);
+  return Number(updated.rows[0]!.revision);
+}
+
+export async function assertActiveUser(client: pg.PoolClient, userId: string): Promise<void> {
+  const found = await client.query('SELECT 1 FROM phs.app_user WHERE id = $1 AND active', [userId]);
+  if (!found.rowCount) throw new ProjectError('responsible_not_enabled');
 }
