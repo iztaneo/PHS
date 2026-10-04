@@ -67,5 +67,5 @@ function proxied(routes: RouteContract[], select: (path: string) => boolean): Ro
 export const publicRoutes: RouteContract[] = [
   ...gatewayOwnRoutes.filter((route) => route.path !== '/health'),
   ...proxied(identityRoutes, (path) => path.startsWith('/admin/')),
-  ...proxied(projectsRoutes, (path) => path.startsWith('/projects') || path.startsWith('/catalog/')),
+  ...proxied(projectsRoutes, (path) => ['/projects', '/catalog/', '/clients', '/people'].some((prefix) => path.startsWith(prefix))),
 ];

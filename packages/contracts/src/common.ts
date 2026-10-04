@@ -17,6 +17,8 @@ export interface RouteContract {
   tag: string;
   auth: RouteAuth;
   params?: Record<string, z.ZodType>;
+  query?: Record<string, z.ZodType>;
+  headers?: Record<string, z.ZodType>;
   body?: z.ZodType;
   responses: Record<number, { description: string; schema?: z.ZodType }>;
 }
@@ -35,6 +37,15 @@ export const healthReport = z.object({
   service: z.string(),
   status: z.enum(['ok', 'degraded']),
   database: z.enum(['ok', 'down']).optional(),
+});
+
+export const IDEMPOTENCY_HEADER = 'idempotency-key';
+export const idempotencyKey = z.string().min(8).max(200)
+  .describe('Clave única generada por el cliente para este comando. Repetir la petición con la misma clave devuelve el resultado original.');
+
+export const conflictResponse = z.object({
+  code: z.string(),
+  currentRevision: z.number().int().optional().describe('Revisión vigente cuando el conflicto es de versión.'),
 });
 
 export const errors = {

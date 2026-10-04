@@ -28,5 +28,7 @@ export function proxiedRoutes(): ServiceRoute[] {
     { name: 'identity-admin', prefix: '/api/v1/admin', target: new URL('/admin', identityUrl()).toString() },
     { name: 'projects', prefix: '/api/v1/projects', target: new URL('/projects', projects).toString() },
     { name: 'projects-catalog', prefix: '/api/v1/catalog', target: new URL('/catalog', projects).toString() },
+    { name: 'projects-clients', prefix: '/api/v1/clients', target: new URL('/clients', projects).toString() },
+    { name: 'projects-people', prefix: '/api/v1/people', target: new URL('/people', projects).toString() },
   ];
 }

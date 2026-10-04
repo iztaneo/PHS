@@ -51,7 +51,7 @@ Toda pantalla entra por el gateway. "Servicio" indica quién atiende la operaci�
 | Proyectos (11) | `client`, `service_type`, `project`, `project_member`, `milestone`, `risk`, `renewal`, `financial_observation`, `project_change`, `change_decision`, `baseline` |
 | Salud (9) | `review_policy`, `review_cycle`, `review_draft`, `health_review`, `review_validation`, `rule_set`, `health_assessment`, `health_event`, `health_task` |
 | Plataforma (2) | `evidence`, `notification_delivery` |
-| Compartidas de solo inserción (3) | `audit_entry`, `activity`, `outbox_message` |
+| Compartidas de solo inserción (4) | `audit_entry`, `activity`, `outbox_message`, `command_idempotency` (desde BIT-0015; total 31 tablas) |
 
 ## Brechas detectadas en el cruce
 

@@ -25,6 +25,14 @@ function security(route: RouteContract, audience: OpenApiInfo['audience']): Json
   return [{ sessionCookie: [] }];
 }
 
+function parameters(route: RouteContract): Json[] {
+  const of = (place: 'path' | 'query' | 'header', group?: Record<string, z.ZodType>) =>
+    Object.entries(group ?? {}).map(([name, schema]) => ({
+      name, in: place, required: place === 'path' || !schema.safeParse(undefined).success, schema: jsonSchema(schema, 'input'),
+    }));
+  return [...of('path', route.params), ...of('query', route.query), ...of('header', route.headers)];
+}
+
 export function buildOpenApi(info: OpenApiInfo, routes: RouteContract[]): Json {
   const paths: Record<string, Json> = {};
   for (const route of routes) {
@@ -40,9 +48,7 @@ export function buildOpenApi(info: OpenApiInfo, routes: RouteContract[]): Json {
       tags: [route.tag],
       security: security(route, info.audience),
       ...(route.auth === 'admin' ? { description: 'Requiere un usuario administrador.' } : {}),
-      ...(route.params
-        ? { parameters: Object.entries(route.params).map(([name, schema]) => ({ name, in: 'path', required: true, schema: jsonSchema(schema, 'input') })) }
-        : {}),
+      ...(parameters(route).length ? { parameters: parameters(route) } : {}),
       ...(route.body
         ? { requestBody: { required: true, content: { 'application/json': { schema: jsonSchema(route.body, 'input') } } } }
         : {}),

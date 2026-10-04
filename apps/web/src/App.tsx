@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { Admin } from './Admin';
-import { ApiError, api, errorMessage, type ProjectSummary, type SessionUser } from './api';
+import { ApiError, api, errorMessage, type SessionUser } from './api';
+import { Projects } from './Projects';
 
 type View = { name: 'loading' } | { name: 'login'; notice?: string } | { name: 'signed-in'; user: SessionUser };
 
@@ -120,18 +121,8 @@ function PasswordForm({ onChanged, onSessionLost }: { onChanged: () => void; onS
 const ROLE_TEXT = { pm: 'PM', lead: 'Líder', director: 'Dirección' } as const;
 
 function Home({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?: string) => void }) {
-  const [tab, setTab] = useState<'home' | 'admin'>('home');
-  const [projects, setProjects] = useState<ProjectSummary[]>();
+  const [tab, setTab] = useState<'projects' | 'roles' | 'admin'>('projects');
   const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    api.projects()
-      .then(setProjects)
-      .catch((failure) => {
-        if (failure instanceof ApiError && failure.status === 401) onSignedOut(errorMessage(failure));
-        else setError(errorMessage(failure));
-      });
-  }, [user.id]);
 
   async function signOut() {
     try {
@@ -145,7 +136,8 @@ function Home({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?:
   return (
     <section>
       <nav style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
-        <button type="button" onClick={() => setTab('home')} aria-current={tab === 'home'}>Inicio</button>
+        <button type="button" onClick={() => setTab('projects')} aria-current={tab === 'projects'}>Proyectos</button>
+        <button type="button" onClick={() => setTab('roles')} aria-current={tab === 'roles'}>Mis roles</button>
         {user.isAdmin && (
           <button type="button" onClick={() => setTab('admin')} aria-current={tab === 'admin'}>Administración</button>
         )}
@@ -154,27 +146,16 @@ function Home({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?:
       </nav>
       {error && <p role="alert">{error}</p>}
       {tab === 'admin' && user.isAdmin && <Admin currentUserId={user.id} />}
-      {tab === 'home' && (
+      {tab === 'projects' && <Projects user={user} />}
+      {tab === 'roles' && (
         <>
-          <h2>Hola, {user.displayName}</h2>
-          <h3>Tus roles</h3>
+          <h2>Mis roles</h2>
           {user.memberships.length === 0 && !user.isAdmin && <p>Aún no tienes roles asignados. Pide acceso a un administrador.</p>}
           <ul>
             {user.isAdmin && <li>Administrador (usuarios, prácticas y catálogos; sin acceso a proyectos por este rol)</li>}
             {user.memberships.map((m) => <li key={`${m.practiceId}-${m.role}`}>{ROLE_TEXT[m.role]} en {m.practiceName}</li>)}
           </ul>
-          <h3>Proyectos a tu alcance</h3>
-          {!projects && !error && <p>Consultando…</p>}
-          {projects?.length === 0 && <p>No hay proyectos a tu alcance. El alta de proyectos llega en la siguiente entrega.</p>}
-          {projects && projects.length > 0 && (
-            <ul>
-              {projects.map((project) => (
-                <li key={project.id}>
-                  <strong>{project.code}</strong> · {project.name} · {project.clientName} · {project.practiceName}
-                </li>
-              ))}
-            </ul>
-          )}
+          <p>Los roles se actualizan al volver a iniciar sesión o recargar la página.</p>
         </>
       )}
     </section>

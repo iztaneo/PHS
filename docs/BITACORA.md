@@ -5,11 +5,11 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 ## Estado actual para retomar
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
-- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–006 aplicadas con dbmate (inicial, credencial local, sesiones, endurecimiento, roles por servicio y administrador global), pruebas de integridad, especificación funcional, backlog y plan de entregas.
+- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate (inicial, credencial local, sesiones, endurecimiento, roles por servicio, administrador global e idempotencia; 31 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects`, `packages/service-kit` y `packages/contracts`; ver README para arrancarlo.
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
-- **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011). PHS-006 y PHS-007 — reglas de acceso de D05, consulta de proyectos por alcance y pantalla de administración (BIT-0013).
-- **Todavía no implementado:** alta y edición de proyectos y demás funcionalidad de negocio, servicios Salud y Plataforma, motor de producción y procesos programados.
+- **Implementado (en revisión, sin aceptar):** PHS-005 — inicio y cierre de sesión, cambio de contraseña obligatorio, bloqueo por intentos e identidad firmada del gateway hacia los servicios (BIT-0011). PHS-006 y PHS-007 — reglas de acceso de D05, consulta de proyectos por alcance y pantalla de administración (BIT-0013). PHS-008 y PHS-009 — auditoría, control de versiones, idempotencia y alta, lista y edición de proyectos (BIT-0015).
+- **Todavía no implementado:** equipo y contexto del cliente, líneas base, hitos, riesgos y demás funcionalidad de negocio, servicios Salud y Plataforma, motor de producción y procesos programados.
 - **Arquitectura decidida:** microservicios — gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma) sobre un PostgreSQL compartido con el esquema actual; REST y eventos por outbox. Ver [ADR-002](adr/002-microservicios.md) y [mapa de trazabilidad](MAPA-TRAZABILIDAD.md).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
@@ -20,7 +20,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** PHS-008 (auditoría y control de concurrencia) y PHS-009 (crear, consultar y editar proyectos), aplicando las reglas de acceso ya implementadas a los comandos. D01 y D02 pueden resolverse antes de R2/R3.
+- **Siguiente paso funcional:** PHS-010 (contexto del cliente y equipo), PHS-015 (hitos) y PHS-011 (línea base inicial), con lo que se completa la demostración de R1. D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -527,6 +527,44 @@ Tomados al implementar, no confirmados por el usuario: generar OpenAPI desde Zod
 ### Pendientes y siguiente paso
 
 PHS-008 y PHS-009, añadiendo al contrato versión esperada, idempotencia, paginación y filtros. Siguiente entrada: BIT-0015.
+
+## BIT-0015 — Auditoría, concurrencia, idempotencia y ficha de proyectos
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** implementar PHS-008 y PHS-009.
+
+**Relación:** PHS-008, PHS-009, PHS-003 (contrato), NF-05, RN-16, RN-19. Ambas historias quedan en revisión, no aceptadas.
+
+**Identificación:** commit con prefijo `BIT-0015`.
+
+### Trabajo realizado y archivos
+
+- [007_command_idempotency.sql](../db/migrations/007_command_idempotency.sql) y [007_idempotency.sql](../db/tests/007_idempotency.sql).
+- `packages/service-kit`: `runIdempotent`, `insertOutbox` y auditoría con proyecto asociado.
+- `packages/contracts` y [docs/api](api/README.md): alta, ficha, edición, lista paginada con filtros, clientes y personas de una práctica; parámetros de consulta y cabeceras en el contrato; convenciones de paginación, concurrencia e idempotencia.
+- `apps/projects`: `ProjectsService` y `ProjectsController` con `POST /projects`, `PATCH /projects/:id`, `GET /projects` (búsqueda, filtros, paginación), `GET /projects/:id`, `GET /clients` y `GET /people`.
+- `apps/gateway`: rutas `/api/v1/clients` y `/api/v1/people`.
+- `apps/web`: lista de proyectos con búsqueda, filtros y paginación; formulario de alta; ficha con edición, aviso de conflicto y aviso de línea base pendiente.
+- [DATABASE-PHS.md](DATABASE-PHS.md), [MAPA-TRAZABILIDAD.md](MAPA-TRAZABILIDAD.md), [BACKLOG.md](producto/BACKLOG.md), [README](../README.md) y esta bitácora.
+
+### Decisiones y supuestos
+
+Tomados al implementar, no confirmados por el usuario: el PM debe tener rol de PM en la práctica y el líder rol de líder; un PM solo puede registrarse a sí mismo como PM y reasignar PM o líder exige el rol de líder; responsable técnico y sponsor solo deben ser usuarios activos; el cliente se captura por nombre y se reutiliza sin distinguir mayúsculas; el código lo captura el usuario; la zona horaria se hereda de la práctica y la moneda es MXN por defecto, ambas sin edición; las fechas dejan de ser editables cuando existe línea base; la clave de idempotencia es obligatoria al crear.
+
+### Validación y límites
+
+- 57 pruebas de código pasan (7 de contratos, 11 de `service-kit`, 5 del gateway, 19 de Proyectos y 15 de Identidad); `typecheck` sin errores; siete pruebas SQL pasan.
+- Probado contra la base de pruebas con el rol restringido de Proyectos: alta con auditoría y outbox; doce rechazos con su código y sin restos; fallo provocado en la base que revierte proyecto, cliente y auditoría; reintento con la misma clave que devuelve el resultado original, incluso con dos peticiones simultáneas; dos editores con la misma revisión, un éxito y un conflicto; permisos de edición; fechas bloqueadas con línea base; búsqueda, filtros y paginación dentro del alcance.
+- Por el gateway: alta, reintento, clave reutilizada, código duplicado, fechas inválidas, edición, conflicto de revisión, búsqueda y petición sin sesión.
+- En navegador: lista, ficha, alta con error de fechas que conserva lo capturado y edición con otro editor simultáneo.
+- Defectos encontrados y corregidos en la prueba de navegador: responsables duplicados en los selectores de la ficha; y tras un conflicto, reintentar enviaba todos los campos y habría pisado el cambio de la otra persona, ahora solo se envían los campos editados.
+- Límites: PHS-008 criterio 3 sin comprobar para hijos del proyecto; ningún consumidor procesa todavía el outbox; `command_idempotency` no tiene limpieza; no hay prueba automática de las pantallas; la lista de personas de una práctica muestra a todos los usuarios activos.
+- La base local se recreó al terminar: contiene solo el usuario de desarrollo administrador con su contraseña temporal.
+
+### Pendientes y siguiente paso
+
+Aceptación de PHS-005 a PHS-009 por el usuario. Siguiente: PHS-010, PHS-015 y PHS-011. Siguiente entrada: BIT-0016.
 
 ## Plantilla para próximas entradas
 

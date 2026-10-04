@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { projectSummary, serviceType } from '@phs/contracts';
+import { projectPage, projectSummary, serviceType } from '@phs/contracts';
 import { createPool, loadEnv } from '@phs/service-kit';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CatalogService } from '../src/catalog.service.js';
@@ -55,11 +55,13 @@ describe.skipIf(!ready)('project scope by role (D05)', () => {
        VALUES($1, 'Riesgo', 'project', 'scope', 2, 2, $2, '2026-06-01')`, [projectB, u.riskOwner]);
   });
 
-  const ids = async (name: string) => (await service.list(u[name]!)).map((p) => p.id).filter((id) => [projectA, projectA2, projectB].includes(id));
+  const all = { page: 1, pageSize: 100 };
+  const ids = async (name: string) => (await service.list(u[name]!, all)).items.map((p) => p.id).filter((id) => [projectA, projectA2, projectB].includes(id));
 
   it('a PM sees only the projects assigned to them, not those of another PM in the same practice', async () => {
-    const listed = await service.list(u.pmA!);
-    expect(() => projectSummary.strict().array().min(1).parse(listed)).not.toThrow();
+    const listed = await service.list(u.pmA!, all);
+    expect(() => projectPage.strict().parse(listed)).not.toThrow();
+    expect(() => projectSummary.strict().array().min(1).parse(listed.items)).not.toThrow();
     expect(await ids('pmA')).toEqual([projectA]);
     expect(await ids('pmB')).toEqual([projectB]);
     expect(await service.get(u.pmA!, projectA2)).toBeNull();
@@ -87,10 +89,10 @@ describe.skipIf(!ready)('project scope by role (D05)', () => {
   });
 
   it('administrators and disabled users see no business data', async () => {
-    expect(await service.list(u.admin!)).toEqual([]);
+    expect((await service.list(u.admin!, all)).items).toEqual([]);
     expect(await service.get(u.admin!, projectA)).toBeNull();
-    expect(await service.list(u.disabled!)).toEqual([]);
-    expect(await service.list(randomUUID())).toEqual([]);
+    expect((await service.list(u.disabled!, all)).total).toBe(0);
+    expect((await service.list(randomUUID(), all)).items).toEqual([]);
   });
 
   it('only an administrator maintains the service type catalog', async () => {

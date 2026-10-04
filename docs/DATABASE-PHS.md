@@ -58,7 +58,7 @@ Decisión del 2026-10-03 ([ADR-002](adr/002-microservicios.md)): los microservic
 | Proyectos | `client`, `service_type`, `project`, `project_member`, `milestone`, `risk`, `renewal`, `financial_observation`, `project_change`, `change_decision`, `baseline` |
 | Salud | `review_policy`, `review_cycle`, `review_draft`, `health_review`, `review_validation`, `rule_set`, `health_assessment`, `health_event`, `health_task` |
 | Plataforma | `evidence`, `notification_delivery`; procesa `outbox_message` |
-| Todos, solo inserción | `audit_entry`, `activity`, `outbox_message`, dentro de la transacción del cambio que registran |
+| Todos, solo inserción | `audit_entry`, `activity`, `outbox_message` y `command_idempotency`, dentro de la transacción del cambio que registran |
 
 Desde la migración 005 la base impone esta propiedad mediante un rol de PostgreSQL por servicio, separado del propietario de migraciones; ver más abajo. Excepción de lectura: `user_credential` y `user_session` solo las lee Identidad. Las migraciones siguen en un solo historial; un cambio de esquema puede afectar a varios servicios. Donde este documento dice "el backend debe", se refiere al servicio dueño de la tabla.
 
@@ -171,6 +171,12 @@ El despliegue crea los usuarios con contraseña y los hace miembros del rol de s
 
 `006_global_admin.sql` añade `app_user.is_admin` y retira `admin` de los roles de `practice_membership`, que quedan en `pm`, `lead` y `director`. El administrador es una capacidad global para gestionar usuarios, prácticas y catálogos, y por sí misma no da acceso a datos de negocio (D05). Un usuario puede tener varios roles en una o varias prácticas: la clave primaria es práctica, usuario y rol. La regla de que siempre quede al menos un administrador activo la aplica el servicio Identidad, no la base.
 
+## Idempotencia de comandos (migración 007)
+
+`007_command_idempotency.sql` crea `command_idempotency`: por servicio, usuario y clave guarda el hash de la petición y la respuesta de un comando ya ejecutado. Reintentar con la misma clave y el mismo contenido devuelve esa respuesta sin ejecutar de nuevo; la misma clave con otro contenido se rechaza. Los servicios solo pueden insertar y leer; no pueden modificar ni borrar. La fila se inserta en la transacción del comando, de modo que solo existe si el comando se confirmó. Su retención está por definir (D07).
+
+Control de concurrencia: `project.revision` aumenta en uno con cada edición de la ficha. El servicio Proyectos bloquea la fila, compara la revisión que envía el cliente y rechaza con conflicto si no coincide. Cada cambio escribe, en la misma transacción, su `audit_entry` (con valores anteriores y nuevos) y un `outbox_message` con clave de deduplicación estable.
+
 ## Instalación y validación
 
 Desde BIT-0010 las migraciones se aplican con [dbmate](https://github.com/amacneil/dbmate), que ejecuta cada archivo en una transacción y registra las aplicadas en `public.schema_migrations`. Los archivos ya no contienen `BEGIN/COMMIT` propios y no deben aplicarse con `psql -f`. No tienen reversión destructiva: el bloque `migrate:down` falla a propósito; se corrige con una migración nueva o restaurando un respaldo.
@@ -195,8 +201,9 @@ npx pnpm@12.9.1 db:local:stop
 | `004_integrity_hardening.sql` | Textos obligatorios, sin borrado físico, fechas de outbox. |
 | `005_service_roles.sql` | Roles y permisos por servicio. |
 | `006_global_admin.sql` | Administrador global y roles de práctica. |
+| `007_command_idempotency.sql` | Resultados de comandos idempotentes. |
 
-Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso) y `006_admin.sql` (3 rechazos). Se ejecutan con el propietario del esquema.
+Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso), `006_admin.sql` (3 rechazos) y `007_idempotency.sql` (6 rechazos). Se ejecutan con el propietario del esquema.
 
 ## Evolución pendiente
 

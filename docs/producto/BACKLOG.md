@@ -225,6 +225,8 @@ Como **equipo técnico**, quiero ejecutar cambios de forma transaccional, para e
 
 **Datos / artefactos:** audit_entry, outbox_message, revision
 
+**Estado (BIT-0015): en revisión, no aceptada.** Criterios 1, 2 y 4 implementados y probados sobre los comandos de proyecto, con la tabla `command_idempotency`. Criterio 3: la revisión del proyecto aumenta al editar la ficha; falta comprobarlo al cambiar un hijo (hitos, riesgos, economía), que todavía no existen.
+
 Criterios de aceptación:
 
 1. Un comando guarda cambio y auditoría con usuario/request ID en una transacción; fallo provocado revierte ambos.
@@ -246,6 +248,8 @@ Como **PM**, quiero registrar la ficha de un proyecto, para establecer qué se g
 **Trazabilidad:** F3: openProjectModal, validProject, views.projects/core · RN-01, RN-19
 
 **Datos / artefactos:** project, client
+
+**Estado (BIT-0015): en revisión, no aceptada.** Criterios 1–4 implementados y probados: alta con errores específicos, lista con búsqueda, filtros y paginación por alcance, y edición de la ficha. El aviso de definir la línea base es informativo hasta PHS-011. El código lo captura el usuario; el servidor no lo genera. No se edita el estado (PHS-014) ni el cliente o la práctica de un proyecto existente.
 
 Criterios de aceptación:
 

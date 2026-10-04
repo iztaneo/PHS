@@ -34,4 +34,6 @@ Fuera de desarrollo local, `API_DOCS` no debe activarse.
 
 - Errores: cuerpo `{ "code": "..." }` con un código estable; el mensaje al usuario lo decide el cliente.
 - Un recurso fuera del alcance del usuario responde 404, igual que uno inexistente.
-- Aún no definidos, porque ninguna ruta actual los necesita: paginación, filtros, versión esperada para concurrencia y clave de idempotencia. Se añadirán al contrato con PHS-008 y PHS-009.
+- Paginación: `page` y `pageSize` (máximo 100) en la consulta; la respuesta incluye `items`, `total`, `page` y `pageSize`. Los filtros son parámetros de consulta y siempre se aplican dentro del alcance del usuario.
+- Concurrencia: los comandos de edición envían `expectedRevision`. Si otro usuario cambió el recurso, la respuesta es 409 `revision_conflict` con `currentRevision`, y nada se sobrescribe.
+- Idempotencia: los comandos de creación exigen la cabecera `Idempotency-Key`. Repetir la petición con la misma clave devuelve el resultado original; la misma clave con otro contenido responde 409 `idempotency_key_reused`.

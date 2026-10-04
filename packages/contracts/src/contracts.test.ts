@@ -32,6 +32,7 @@ describe('OpenAPI contracts', () => {
     expect(paths.every((path) => path.startsWith('/api/v1/'))).toBe(true);
     const publicDoc = JSON.stringify(openApiDocuments.gateway().paths);
     expect(publicDoc).not.toContain('"token"');
+    expect(publicDoc).toContain('Idempotency-Key');
     for (const route of publicRoutes.filter((r) => r.auth !== 'none')) {
       expect(Object.keys(route.responses)).toContain('401');
     }
