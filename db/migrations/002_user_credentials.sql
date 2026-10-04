@@ -1,6 +1,6 @@
 -- PHS local identity for the MVP (D06, BIT-0006). PostgreSQL 17+. Apply once after 001.
 -- Stores only a password hash; plaintext passwords never reach the database.
-BEGIN;
+-- migrate:up
 SET LOCAL search_path = phs, public;
 
 -- Local users need no external provider: issuer 'local', generated subject.
@@ -23,4 +23,9 @@ CREATE TABLE user_credential (
  created_at timestamptz NOT NULL DEFAULT now(),
  created_by uuid REFERENCES app_user
 );
-COMMIT;
+-- dbmate records the migration in the current schema; restore the default before it does.
+RESET search_path;
+
+-- migrate:down
+-- No destructive rollback: recover with a forward migration or a restored backup.
+DO $$ BEGIN RAISE EXCEPTION 'This migration has no down step'; END $$;

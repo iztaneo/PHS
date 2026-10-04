@@ -5,7 +5,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 ## Estado actual para retomar
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
-- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001 (inicial), 002 (credencial local) y 003 (sesiones), pruebas de integridad, especificación funcional, backlog y plan de entregas.
+- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–005 aplicadas con dbmate (inicial, credencial local, sesiones, endurecimiento y roles por servicio), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Esqueleto ejecutable (BIT-0009):** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects` y `packages/service-kit`. Solo expone estado de servicios; ver README para arrancarlo.
 - **Todavía no implementado:** inicio de sesión, permisos, funcionalidad de negocio, servicios Salud y Plataforma, motor de producción y procesos programados.
 - **Arquitectura decidida:** microservicios — gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma) sobre un PostgreSQL compartido con el esquema actual; REST y eventos por outbox. Ver [ADR-002](adr/002-microservicios.md) y [mapa de trazabilidad](MAPA-TRAZABILIDAD.md).
@@ -14,10 +14,11 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
 - **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 175 criterios de aceptación desde BIT-0008. Ninguna historia se considera implementada por la existencia de estos documentos.
 - **Decisiones abiertas:** D01–D04 y D07–D10 completas; D05 y D06 parcialmente confirmadas. Ver [DECISIONES.md](producto/DECISIONES.md).
-- **Hallazgos de revisión sin corregir:** lista en BIT-0005, a resolver en PHS-004 mediante una migración nueva.
+- **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos, identidad firmada entre servicios y roles de base por servicio.
-- **Siguiente paso funcional:** PHS-004 (dbmate y una migración `004` con los hallazgos 1–5 de BIT-0005) y PHS-005 (inicio de sesión contra `user_credential` y `user_session`, con hash Argon2id). D01 y D02 pueden resolverse antes de R2/R3.
+- **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
+- **Siguiente paso funcional:** PHS-005 — inicio de sesión en Identidad contra `user_credential` y `user_session` con hash Argon2id, sesión validada en el gateway e identidad firmada hacia los servicios. D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -350,6 +351,42 @@ Tomadas al implementar, no confirmadas por el usuario: TypeScript 6.0.3; compila
 ### Pendientes y siguiente paso
 
 PHS-004: dbmate, migración `004` con los hallazgos de BIT-0005 y roles de base por servicio. Después PHS-005: inicio de sesión en Identidad, sesión validada en el gateway e identidad firmada hacia los servicios. Siguiente entrada: BIT-0010.
+
+## BIT-0010 — dbmate, endurecimiento, roles por servicio y base local sin Docker
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** avanzar PHS-004 y dejar todo ejecutable en local sin Docker, como pidió el usuario.
+
+**Relación:** PHS-004, ADR-002, hallazgos de BIT-0005. La historia no se declara terminada.
+
+**Identificación:** commit con prefijo `BIT-0010`.
+
+### Trabajo realizado y archivos
+
+- Migraciones 001–003 adaptadas a dbmate: marcadores `migrate:up`/`migrate:down`, sin `BEGIN/COMMIT` propios, `SET LOCAL search_path` y `RESET` final. Su DDL no cambió. Aclaración: ya no se aplican con `psql -f` como indicaban BIT-0001, BIT-0006 y BIT-0007.
+- [004_integrity_hardening.sql](../db/migrations/004_integrity_hardening.sql): textos obligatorios no vacíos, sin `DELETE` en proyecto, hito, riesgo, renovación, evento y tarea, y fecha de procesamiento del outbox.
+- [005_service_roles.sql](../db/migrations/005_service_roles.sql): roles `phs_identity`, `phs_projects`, `phs_health` y `phs_platform` con sus permisos.
+- Pruebas [004_hardening.sql](../db/tests/004_hardening.sql) y [005_roles.sql](../db/tests/005_roles.sql).
+- [scripts/local-db.sh](../scripts/local-db.sh) y [db/local/dev_logins.sql](../db/local/dev_logins.sql); scripts `db:*` y dependencia `dbmate` en `package.json` y `pnpm-lock.yaml`; `.env.example`, `docker-compose.yml` y `.gitignore` (`.local/`).
+- `apps/identity` y `apps/projects` usan `IDENTITY_DATABASE_URL` y `PROJECTS_DATABASE_URL`.
+- [DATABASE-PHS.md](DATABASE-PHS.md), [DECISIONES.md](producto/DECISIONES.md) (clasificación de brechas), [BACKLOG.md](producto/BACKLOG.md) (avance de PHS-004), [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md), [README](../README.md) y esta bitácora.
+
+### Decisiones y supuestos
+
+Tomados al implementar, no confirmados por el usuario: no permitir borrado físico de filas operativas; reparto exacto de permisos; solo Identidad lee credenciales y sesiones; propietario local `phs_owner`; migraciones sin reversión. No se añadió la restricción de ciclos solapados (depende de D03), ni índices de claves foráneas, ni un CHECK de fecha de cumplimiento futura.
+
+### Validación y límites
+
+- Instancia local del proyecto, PostgreSQL 17.9, sin Docker: dbmate aplica 001–005 sobre base vacía (30 tablas); repetir `db:migrate` no aplica nada; pasan las cinco pruebas SQL (11, 8, 7 y 14 rechazos, y 12 denegaciones de permiso).
+- `build`, `typecheck` y las 9 pruebas de código pasan. Gateway, Identidad y Proyectos arrancaron con `.env` y sus usuarios restringidos y respondieron `ok`.
+- Defecto encontrado y corregido: con un propietario llamado `phs`, PostgreSQL usaba el esquema `phs` como predeterminado y dbmate no encontraba su tabla de control. Se renombró el propietario local y cada migración restablece `search_path`.
+- No probado: `docker-compose.yml`, actualización desde una base previa a dbmate (no existe ninguna), concurrencia. El PostgreSQL que ya corría en el puerto 5432 de la máquina no se tocó.
+- Se creó `.env` local a partir de `.env.example`; está ignorado por Git.
+
+### Pendientes y siguiente paso
+
+De PHS-004: procedimiento de actualización y recuperación, contrato de JSONB y brechas dependientes de D02–D04 y D08. Siguiente: PHS-005. Siguiente entrada: BIT-0011.
 
 ## Plantilla para próximas entradas
 

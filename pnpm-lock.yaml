@@ -164,7 +164,11 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      dbmate:
+        specifier: 2.36.0
+        version: 2.36.0
 
   apps/gateway:
     dependencies:
@@ -334,6 +338,41 @@ packages:
 
   '@borewit/text-codec@0.2.2':
     resolution: {integrity: sha512-DDaRehssg1aNrH4+2hnj1B7vnUGEjU6OIlyRdkMd0aUdIUvKXrJfXsy8LVtXAy7DRvYVluWbMspsRhz2lcW0mQ==}
+
+  '@dbmate/darwin-arm64@2.36.0':
+    resolution: {integrity: sha512-9NkTCUl4QxDypfiEvVoNucO+3xyKeVIAoIoX2GtCqfRLtMzZ9zvOWcDlLgvqeKDSYCTEziW9QldgH7RggbEmOQ==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@dbmate/darwin-x64@2.36.0':
+    resolution: {integrity: sha512-FmG84xyAm2s/pBXuB4jipjTJ4O4FDRv+XboXCKDGjVA7ZLJhUCl5HGQ6ih9HgWIsklriMvNcP/GnhlUdW3Ii1g==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@dbmate/linux-arm64@2.36.0':
+    resolution: {integrity: sha512-oGTjl1HgegCQ+Hppf7C1c0pX8KZa/X+TbAVGVmlC2wO2swuqRcCl9PzAHTw9wXKazfnK4EqdeoUWi099qOfJ9Q==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@dbmate/linux-arm@2.36.0':
+    resolution: {integrity: sha512-iUKfCdX5XwbPjA16oB6OJRSyeGCQnzJjVV2F59gKRo/xYhpcYrRe3jScq7IziSSUwrYQEjXARjC+vuMEKfhlXg==}
+    cpu: [arm]
+    os: [linux]
+
+  '@dbmate/linux-ia32@2.36.0':
+    resolution: {integrity: sha512-xLn1wZ3LSP6ed/8xM76AtHaFszDLEAFwT6t5dGOgOamufFIJVPmPY4v8khTZTnhbz1ZZka/KUC65nJOb9I1XRg==}
+    cpu: [ia32]
+    os: [linux]
+
+  '@dbmate/linux-x64@2.36.0':
+    resolution: {integrity: sha512-LdLpgyuluwJ93rWcvJjdlsjJ8rBeeAH52h3dSk0zAMaLrQn49dup1/o2tFpG1jM9f767HkuXdBrrjy6ZwG9BSg==}
+    cpu: [x64]
+    os: [linux]
+
+  '@dbmate/win32-x64@2.36.0':
+    resolution: {integrity: sha512-gruX3BWHdwC01NcK0H7/aZCMJ8bnG5Sggxr0h4f5EZkIIYK/mezHb766A00cnsZ5dcX90nGD8ePRDKYrtoE/8w==}
+    cpu: [x64]
+    os: [win32]
 
   '@jridgewell/resolve-uri@3.1.2':
     resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
@@ -629,6 +668,10 @@ packages:
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
+
+  dbmate@2.36.0:
+    resolution: {integrity: sha512-O7oyA9Z9Lfo+JauW7+ZUUURll5xCYb7n130anDTfOdOeDaXP7+FMyeZ76cfGpBVt/eDShj6tbGbc8yR5VT3ulg==}
+    hasBin: true
 
   debug@4.4.3:
     resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
@@ -1278,6 +1321,27 @@ snapshots:
 
   '@borewit/text-codec@0.2.2': {}
 
+  '@dbmate/darwin-arm64@2.36.0':
+    optional: true
+
+  '@dbmate/darwin-x64@2.36.0':
+    optional: true
+
+  '@dbmate/linux-arm64@2.36.0':
+    optional: true
+
+  '@dbmate/linux-arm@2.36.0':
+    optional: true
+
+  '@dbmate/linux-ia32@2.36.0':
+    optional: true
+
+  '@dbmate/linux-x64@2.36.0':
+    optional: true
+
+  '@dbmate/win32-x64@2.36.0':
+    optional: true
+
   '@jridgewell/resolve-uri@3.1.2': {}
 
   '@jridgewell/sourcemap-codec@1.6.0': {}
@@ -1499,6 +1563,16 @@ snapshots:
       vary: 1.1.2
 
   csstype@3.2.3: {}
+
+  dbmate@2.36.0:
+    optionalDependencies:
+      '@dbmate/darwin-arm64': 2.36.0
+      '@dbmate/darwin-x64': 2.36.0
+      '@dbmate/linux-arm': 2.36.0
+      '@dbmate/linux-arm64': 2.36.0
+      '@dbmate/linux-ia32': 2.36.0
+      '@dbmate/linux-x64': 2.36.0
+      '@dbmate/win32-x64': 2.36.0
 
   debug@4.4.3:
     dependencies:

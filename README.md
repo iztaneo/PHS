@@ -18,22 +18,21 @@ El repositorio contiene un prototipo navegable y el diseño inicial de arquitect
 - [Decisión técnica ADR-001](docs/adr/001-stack-mvp.md) y [ADR-002: microservicios](docs/adr/002-microservicios.md).
 - [Mapa pantalla → servicio → tablas → historias](docs/MAPA-TRAZABILIDAD.md).
 - [Diseño de PostgreSQL y diagrama](docs/DATABASE-PHS.md).
-- [Migración inicial](db/migrations/001_initial.sql) , [credenciales locales](db/migrations/002_user_credentials.sql) y [sesiones](db/migrations/003_user_session.sql).
-- Pruebas de [integridad](db/tests/001_integrity.sql), [credenciales](db/tests/002_credentials.sql) y [sesiones](db/tests/003_sessions.sql).
+- [Migraciones](db/migrations) 001–005 y [pruebas SQL](db/tests).
 
 ## Ejecutar el esqueleto de la aplicación
 
-Requiere Node.js 24 y PostgreSQL 17 (con Docker o instalado). Los comandos usan pnpm 12 mediante `npx`; también puede instalarse pnpm globalmente.
+Requiere Node.js 24 y PostgreSQL 17 instalado (por ejemplo con Homebrew). No necesita Docker: el proyecto crea su propia instancia en `.local/pg`, puerto 54329, sin tocar otros PostgreSQL de la máquina. Los comandos usan pnpm 12 mediante `npx`.
 
 ```sh
 cp .env.example .env                 # valores solo para desarrollo local
 npx pnpm@12.9.1 install
-npx pnpm@12.9.1 db:up                # PostgreSQL local con Docker Compose
+npx pnpm@12.9.1 db:setup             # base local, migraciones y usuarios de desarrollo
 npx pnpm@12.9.1 build
 npx pnpm@12.9.1 dev                  # web, gateway, identity y projects
 ```
 
-Abrir [127.0.0.1:5173](http://127.0.0.1:5173): la página muestra el estado de los servicios consultado a través del gateway. `npx pnpm@12.9.1 test` y `typecheck` validan el código. Sin Docker, apuntar `DATABASE_URL` en `.env` a un PostgreSQL 17 propio. Las migraciones se aplican por ahora con `psql`, como indica la guía de base de datos.
+Abrir [127.0.0.1:5173](http://127.0.0.1:5173): la página muestra el estado de los servicios consultado a través del gateway. `test` y `typecheck` validan el código; `db:test` ejecuta las pruebas SQL; `db:local:stop` detiene la base. Con Docker, `db:up` sustituye a `db:local:start`.
 
 Solo existen el gateway y los servicios Identidad y Proyectos con su comprobación de estado; todavía no hay inicio de sesión ni funcionalidad de negocio.
 
@@ -47,4 +46,4 @@ python3 Project-Health-System-Prototype/app.py
 
 Abrir [localhost:8000](http://localhost:8000). Los datos del prototipo se guardan en el navegador; todavía no utiliza PostgreSQL.
 
-La instalación y validación del esquema se describen en la guía de base de datos.
+La instalación y validación del esquema se describen en la [guía de base de datos](docs/DATABASE-PHS.md).

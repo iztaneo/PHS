@@ -131,7 +131,9 @@ Como **equipo técnico**, quiero disponer de un esquema consistente con los cont
 
 **Trazabilidad:** A2: 001_initial.sql; DECISIONES.md: brechas · RN-19, NF-09
 
-**Datos / artefactos:** 30 tablas (migraciones 001–003), migraciones posteriores y roles de base por servicio
+**Datos / artefactos:** 30 tablas (migraciones 001–005) y roles de base por servicio
+
+**Avance (BIT-0010):** dbmate, migraciones 004 y 005 con pruebas, instancia local sin Docker y clasificación de brechas en DECISIONES.md. No completa la historia: faltan el procedimiento de actualización y recuperación (criterio 4), el contrato de los JSONB y las brechas que dependen de D02–D04 y D08.
 
 Criterios de aceptación:
 

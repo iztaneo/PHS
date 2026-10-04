@@ -5,7 +5,7 @@ import { HealthController } from './health.controller.js';
 
 @Module({
   controllers: [HealthController],
-  providers: [{ provide: PG_POOL, useFactory: () => createPool(requireEnv('DATABASE_URL')) }],
+  providers: [{ provide: PG_POOL, useFactory: () => createPool(requireEnv('IDENTITY_DATABASE_URL')) }],
 })
 export class AppModule implements OnApplicationShutdown {
   constructor(@Inject(PG_POOL) private readonly pool: pg.Pool) {}

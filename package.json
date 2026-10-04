@@ -12,6 +12,17 @@
     "typecheck": "pnpm -r typecheck",
     "dev": "pnpm -r --parallel dev",
     "db:up": "docker compose up -d postgres",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "db:local:start": "sh scripts/local-db.sh start",
+    "db:local:stop": "sh scripts/local-db.sh stop",
+    "db:local:reset": "sh scripts/local-db.sh reset",
+    "db:migrate": "dbmate --migrations-dir db/migrations --no-dump-schema up",
+    "db:status": "dbmate --migrations-dir db/migrations --no-dump-schema status",
+    "db:logins": "sh scripts/local-db.sh logins",
+    "db:test": "sh scripts/local-db.sh test",
+    "db:setup": "pnpm db:local:start && pnpm db:migrate && pnpm db:logins"
+  },
+  "devDependencies": {
+    "dbmate": "2.36.0"
   }
 }

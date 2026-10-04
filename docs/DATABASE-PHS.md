@@ -60,7 +60,7 @@ Decisión del 2026-10-03 ([ADR-002](adr/002-microservicios.md)): los microservic
 | Plataforma | `evidence`, `notification_delivery`; procesa `outbox_message` |
 | Todos, solo inserción | `audit_entry`, `activity`, `outbox_message`, dentro de la transacción del cambio que registran |
 
-El DDL actual no impone esta propiedad. Se propone un rol de PostgreSQL por servicio con escritura en sus tablas, inserción en las compartidas y lectura en el resto, separado del propietario de migraciones (PHS-004/PHS-042). Las migraciones siguen en un solo historial; un cambio de esquema puede afectar a varios servicios. Donde este documento dice "el backend debe", se refiere al servicio dueño de la tabla.
+Desde la migración 005 la base impone esta propiedad mediante un rol de PostgreSQL por servicio, separado del propietario de migraciones; ver más abajo. Excepción de lectura: `user_credential` y `user_session` solo las lee Identidad. Las migraciones siguen en un solo historial; un cambio de esquema puede afectar a varios servicios. Donde este documento dice "el backend debe", se refiere al servicio dueño de la tabla.
 
 ## Diccionario por módulo
 
@@ -159,27 +159,39 @@ No se configura RLS en esta migración: la API será la única vía de acceso de
 
 Los campos `revision` no aumentan solos: el caso de uso debe comprobar versión e incrementar la del proyecto cuando cambie cualquier dato de entrada del motor. Si aumenta un hijo, también se incrementa la revisión del proyecto en la misma transacción.
 
+## Endurecimiento y roles (migraciones 004 y 005)
+
+`004_integrity_hardening.sql` corrige hallazgos de la revisión de BIT-0005: los textos obligatorios de práctica, cliente, tipo de servicio, proyecto, hito, riesgo, cambio, evento y tarea no pueden ser vacíos; una nota de resolución no puede quedar en blanco; `outbox_message.processed_at` no puede preceder a su creación; y proyecto, hito, riesgo, renovación, evento y tarea no admiten `DELETE`: cambian de estado.
+
+`005_service_roles.sql` hace cumplir la propiedad de tablas de [ADR-002](adr/002-microservicios.md) con cuatro roles de grupo sin inicio de sesión: `phs_identity`, `phs_projects`, `phs_health` y `phs_platform`. Cada uno lee el modelo compartido, escribe solo sus tablas e inserta en `audit_entry`, `activity` y `outbox_message`. Solo Identidad puede leer `user_credential` y `user_session`. Ningún rol de servicio puede hacer DDL ni `TRUNCATE`. La prueba 005 verifica que ninguna tabla tenga más de un servicio con `UPDATE` o `DELETE`.
+
+El despliegue crea los usuarios con contraseña y los hace miembros del rol de su servicio; las contraseñas no están en las migraciones. Aplicar la 005 requiere un propietario con permiso para crear roles. El propietario no debe llamarse igual que el esquema (`phs`): PostgreSQL lo tomaría como esquema por defecto mediante `"$user"` y dbmate buscaría ahí su tabla de control.
+
 ## Instalación y validación
 
-Archivos:
+Desde BIT-0010 las migraciones se aplican con [dbmate](https://github.com/amacneil/dbmate), que ejecuta cada archivo en una transacción y registra las aplicadas en `public.schema_migrations`. Los archivos ya no contienen `BEGIN/COMMIT` propios y no deben aplicarse con `psql -f`. No tienen reversión destructiva: el bloque `migrate:down` falla a propósito; se corrige con una migración nueva o restaurando un respaldo.
 
-- `db/migrations/001_initial.sql`: migración transaccional para una base vacía; no borra ni reemplaza objetos. Falla si `phs` ya existe.
-- `db/migrations/002_user_credentials.sql`: identidad local; se aplica una vez después de la 001 y falla si ya se aplicó.
-- `db/migrations/003_user_session.sql`: sesiones de servidor; se aplica una vez después de la 002.
-- `db/tests/003_sessions.sql`: ciclo de vida de la sesión y 7 rechazos esperados; se revierte.
-- `db/tests/001_integrity.sql`: recorrido válido y pruebas de restricciones; todas las filas de prueba se revierten.
-- `db/tests/002_credentials.sql`: credencial local y 8 rechazos esperados; también se revierte.
+Sin Docker, con el PostgreSQL de Homebrew ya instalado, el proyecto usa una instancia propia en `.local/pg` y el puerto 54329; no toca ningún otro PostgreSQL de la máquina:
 
 ```sh
-psql -X -v ON_ERROR_STOP=1 -d phs -f db/migrations/001_initial.sql
-psql -X -v ON_ERROR_STOP=1 -d phs -f db/migrations/002_user_credentials.sql
-psql -X -v ON_ERROR_STOP=1 -d phs -f db/migrations/003_user_session.sql
-psql -X -v ON_ERROR_STOP=1 -d phs -f db/tests/001_integrity.sql
-psql -X -v ON_ERROR_STOP=1 -d phs -f db/tests/002_credentials.sql
-psql -X -v ON_ERROR_STOP=1 -d phs -f db/tests/003_sessions.sql
+cp .env.example .env
+npx pnpm@12.9.1 db:setup     # arranca la instancia local, aplica migraciones y crea usuarios de desarrollo
+npx pnpm@12.9.1 db:test      # ejecuta db/tests/*.sql; cada archivo revierte sus datos
+npx pnpm@12.9.1 db:status    # migraciones aplicadas y pendientes
+npx pnpm@12.9.1 db:local:stop
 ```
 
-La base destino debe crearse y autorizarse explícitamente en el entorno elegido. No ejecutar sobre una base ajena. El script solo contiene el catálogo de tipos de servicio; no contiene usuarios ni proyectos demo permanentes.
+`db:local:reset` borra la instancia local. `db/local/dev_logins.sql` crea los usuarios `phs_*_dev` solo para desarrollo. En otro entorno, `DATABASE_URL` apunta al propietario de migraciones y cada servicio recibe su propia URL.
+
+| Archivo | Contenido |
+| --- | --- |
+| `001_initial.sql` | Esquema inicial de 28 tablas. |
+| `002_user_credentials.sql` | Credencial local y correo único. |
+| `003_user_session.sql` | Sesiones de servidor. |
+| `004_integrity_hardening.sql` | Textos obligatorios, sin borrado físico, fechas de outbox. |
+| `005_service_roles.sql` | Roles y permisos por servicio. |
+
+Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) y `005_roles.sql` (12 denegaciones de permiso). Se ejecutan con el propietario del esquema.
 
 ## Evolución pendiente
 
@@ -192,3 +204,5 @@ La migración se aplicó correctamente en una instancia temporal aislada de Post
 Actualización del 2026-10-03 (BIT-0006): sobre otra instancia temporal de PostgreSQL 17.9 se aplicaron 001 y 002 en una base vacía (29 tablas) y pasaron ambos archivos de pruebas, incluidos los 8 rechazos de la credencial local. No se probó la migración 002 sobre una base con usuarios existentes: fallaría si hubiera correos vacíos o repetidos.
 
 Actualización del 2026-10-03 (BIT-0007): en otra instancia temporal de PostgreSQL 17.9 se aplicaron 001–003 sobre una base vacía (30 tablas) y pasaron los tres archivos de pruebas, incluidos los 7 rechazos de sesiones. No se probaron concurrencia ni volumen de sesiones.
+
+Actualización del 2026-10-03 (BIT-0010): en la instancia local del proyecto (PostgreSQL 17.9, sin Docker) dbmate aplicó 001–005 sobre una base vacía (30 tablas), una segunda ejecución no aplicó nada y pasaron los cinco archivos de pruebas. Los servicios Identidad y Proyectos se conectaron con sus usuarios restringidos. No se probó la actualización de una base creada con los archivos anteriores a dbmate: no existe ninguna.

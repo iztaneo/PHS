@@ -1,6 +1,6 @@
 -- PHS server-side sessions for local login (D06, BIT-0007). PostgreSQL 17+. Apply once after 002.
 -- The cookie carries a random token; only its SHA-256 digest is stored here.
-BEGIN;
+-- migrate:up
 SET LOCAL search_path = phs, public;
 
 CREATE TABLE user_session (
@@ -22,4 +22,9 @@ CREATE TABLE user_session (
 );
 CREATE INDEX session_active_by_user ON user_session(user_id) WHERE revoked_at IS NULL;
 CREATE INDEX session_expiry ON user_session(expires_at);
-COMMIT;
+-- dbmate records the migration in the current schema; restore the default before it does.
+RESET search_path;
+
+-- migrate:down
+-- No destructive rollback: recover with a forward migration or a restored backup.
+DO $$ BEGIN RAISE EXCEPTION 'This migration has no down step'; END $$;

@@ -1,0 +1,49 @@
+#!/bin/sh
+# Local PostgreSQL for development without Docker. Data lives in .local/pg (ignored by git).
+# It is a separate instance on its own port; it never touches another PostgreSQL on this machine.
+set -eu
+cd "$(dirname "$0")/.."
+if [ -f .env ]; then set -a; . ./.env; set +a; fi
+: "${POSTGRES_USER:=phs_owner}" "${POSTGRES_PASSWORD:=phs_local_dev}" "${POSTGRES_DB:=phs}" "${POSTGRES_PORT:=54329}"
+export LC_ALL="${LC_ALL:-en_US.UTF-8}"
+export PGPASSWORD="$POSTGRES_PASSWORD"
+DATA=.local/pg
+run_psql() { psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$POSTGRES_PORT" -U "$POSTGRES_USER" "$@"; }
+
+case "${1:-}" in
+  start)
+    mkdir -p .local
+    if [ ! -d "$DATA" ]; then
+      pwfile=$(mktemp)
+      printf '%s\n' "$POSTGRES_PASSWORD" > "$pwfile"
+      initdb -D "$DATA" -U "$POSTGRES_USER" --auth=scram-sha-256 --pwfile="$pwfile" >/dev/null
+      rm -f "$pwfile"
+    fi
+    if ! pg_ctl -D "$DATA" status >/dev/null 2>&1; then
+      pg_ctl -D "$DATA" -o "-p $POSTGRES_PORT -c listen_addresses=127.0.0.1 -c unix_socket_directories=" -l .local/pg.log -w start >/dev/null
+    fi
+    if [ "$(run_psql -d postgres -Atc "SELECT 1 FROM pg_database WHERE datname = '$POSTGRES_DB'")" != "1" ]; then
+      run_psql -q -d postgres -c "CREATE DATABASE \"$POSTGRES_DB\""
+    fi
+    echo "PostgreSQL local en 127.0.0.1:$POSTGRES_PORT, base $POSTGRES_DB"
+    ;;
+  stop)
+    pg_ctl -D "$DATA" -m fast stop >/dev/null && echo "PostgreSQL local detenido"
+    ;;
+  logins)
+    run_psql -q -d "$POSTGRES_DB" -v dev_password="$POSTGRES_PASSWORD" -f db/local/dev_logins.sql
+    echo "Usuarios de desarrollo de los servicios listos"
+    ;;
+  test)
+    for file in db/tests/*.sql; do run_psql -q -d "$POSTGRES_DB" -f "$file"; done
+    ;;
+  reset)
+    pg_ctl -D "$DATA" -m fast stop >/dev/null 2>&1 || true
+    rm -rf "$DATA" .local/pg.log
+    echo "Datos locales eliminados"
+    ;;
+  *)
+    echo "Uso: $0 start|stop|logins|test|reset" >&2
+    exit 2
+    ;;
+esac

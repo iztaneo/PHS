@@ -1,8 +1,8 @@
--- PHS initial design. PostgreSQL 17+. Apply once to an empty database.
--- No application roles or grants: provisioning belongs to deployment.
-BEGIN;
+-- PHS initial design. PostgreSQL 17+. Applied by dbmate inside one transaction.
+-- Service roles and grants are added in 005.
+-- migrate:up
 CREATE SCHEMA phs;
-SET search_path = phs, public;
+SET LOCAL search_path = phs, public;
 
 CREATE TABLE app_user (
  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -479,4 +479,9 @@ CREATE INDEX evidence_project ON evidence(project_id);
 CREATE INDEX audit_timeline ON audit_entry(project_id,occurred_at DESC);
 CREATE INDEX outbox_pending ON outbox_message(available_at) WHERE processed_at IS NULL;
 CREATE INDEX notification_inbox ON notification_delivery(recipient_id,status);
-COMMIT;
+-- dbmate records the migration in the current schema; restore the default before it does.
+RESET search_path;
+
+-- migrate:down
+-- No destructive rollback: recover with a forward migration or a restored backup.
+DO $$ BEGIN RAISE EXCEPTION 'This migration has no down step'; END $$;
