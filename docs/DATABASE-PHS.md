@@ -48,6 +48,20 @@ erDiagram
   outbox_message ||--o{ notification_delivery : entrega
 ```
 
+## Propiedad de tablas por servicio
+
+Decisión del 2026-10-03 ([ADR-002](adr/002-microservicios.md)): los microservicios comparten esta base y este esquema, con todas sus claves foráneas. Cada tabla la escribe un solo servicio; los demás pueden leerla.
+
+| Servicio | Tablas que escribe |
+| --- | --- |
+| Identidad | `app_user`, `user_credential`, `user_session`, `practice`, `practice_membership` |
+| Proyectos | `client`, `service_type`, `project`, `project_member`, `milestone`, `risk`, `renewal`, `financial_observation`, `project_change`, `change_decision`, `baseline` |
+| Salud | `review_policy`, `review_cycle`, `review_draft`, `health_review`, `review_validation`, `rule_set`, `health_assessment`, `health_event`, `health_task` |
+| Plataforma | `evidence`, `notification_delivery`; procesa `outbox_message` |
+| Todos, solo inserción | `audit_entry`, `activity`, `outbox_message`, dentro de la transacción del cambio que registran |
+
+El DDL actual no impone esta propiedad. Se propone un rol de PostgreSQL por servicio con escritura en sus tablas, inserción en las compartidas y lectura en el resto, separado del propietario de migraciones (PHS-004/PHS-042). Las migraciones siguen en un solo historial; un cambio de esquema puede afectar a varios servicios. Donde este documento dice "el backend debe", se refiere al servicio dueño de la tabla.
+
 ## Diccionario por módulo
 
 | Módulo | Tablas | Contenido |

@@ -109,13 +109,13 @@ Como **equipo técnico**, quiero seleccionar stack y contratos de los casos de u
 
 **Datos / artefactos:** OpenAPI, contratos JSON y decisiones técnicas
 
-**Avance documental:** [stack propuesto](../STACK-TECNOLOGICO.md) y [ADR-001](../adr/001-stack-mvp.md) disponibles. No completa la historia: faltan contratos, restricciones de infraestructura/identidad y prueba de integración.
+**Avance documental:** [stack](../STACK-TECNOLOGICO.md), [ADR-001](../adr/001-stack-mvp.md), [ADR-002 de microservicios](../adr/002-microservicios.md) y [mapa de trazabilidad](../MAPA-TRAZABILIDAD.md) disponibles. No completa la historia: faltan contratos OpenAPI por servicio, protocolo entre servicios, infraestructura y prueba de integración.
 
 Criterios de aceptación:
 
 1. Se registran stack, identidad, despliegue, almacenamiento de archivos y forma de ejecutar workers; PostgreSQL se conserva.
 2. OpenAPI describe recursos, paginación, filtros, errores, versiones e idempotencia de envíos y decisiones.
-3. Los límites de módulos, manejo de transacciones y estrategia de pruebas se expresan en decisiones técnicas revisables.
+3. Los límites de servicios (ADR-002), propiedad de tablas, operaciones que cruzan servicios, manejo de transacciones y estrategia de pruebas se expresan en decisiones técnicas revisables.
 4. Se documentan variables de entorno y datos sintéticos necesarios sin guardar secretos.
 
 
@@ -131,7 +131,7 @@ Como **equipo técnico**, quiero disponer de un esquema consistente con los cont
 
 **Trazabilidad:** A2: 001_initial.sql; DECISIONES.md: brechas · RN-19, NF-09
 
-**Datos / artefactos:** 28 tablas iniciales y migraciones posteriores
+**Datos / artefactos:** 30 tablas (migraciones 001–003), migraciones posteriores y roles de base por servicio
 
 Criterios de aceptación:
 
@@ -150,14 +150,19 @@ Como **usuario**, quiero acceder con mi identidad real, para que mis operaciones
 
 **Trazabilidad:** F4: limitaciones; A1: identidad · NF-04
 
-**Datos / artefactos:** app_user
+**Datos / artefactos:** app_user, user_credential, user_session
+
+**Actualización 2026-10-03 (BIT-0008):** identidad validada en la base de datos (D06); atienden Identidad y el gateway. Criterios 5–7 añadidos; el 3 ya no depende de un proveedor externo.
 
 Criterios de aceptación:
 
 1. Una identidad válida y habilitada accede; la sesión identifica usuario sin aceptar un autor elegido desde el formulario.
 2. Credenciales inválidas, usuario deshabilitado o sesión vencida no permiten operaciones protegidas.
-3. Cerrar sesión invalida su uso según el proveedor; al vencer durante captura se ofrece recuperar el borrador después de autenticar.
+3. Cerrar sesión revoca la sesión en el servidor de inmediato; al vencer durante captura se ofrece recuperar el borrador después de autenticar.
 4. La UI distingue fallo temporal de autenticación y acceso no autorizado sin revelar datos de otros usuarios.
+5. La contraseña se verifica contra un hash Argon2id; nunca se guarda ni se registra en claro. Tras el número de intentos fallidos acordado la cuenta se bloquea temporalmente, y la respuesta no revela si el correo existe.
+6. La cookie de sesión es `HttpOnly` y lleva un token aleatorio del que solo se guarda el hash; la sesión caduca por límite absoluto y por inactividad, y el gateway entrega a los demás servicios la identidad validada, no la que envíe el navegador.
+7. El usuario cambia su propia contraseña indicando la actual; con una credencial recién creada o restablecida debe cambiarla antes de operar, y el cambio revoca sus demás sesiones.
 
 ### PHS-006 — Aplicar permisos por práctica y proyecto
 
@@ -188,14 +193,17 @@ Como **administrador**, quiero mantener identidades habilitadas y asignaciones, 
 
 **Trazabilidad:** F1: serviceType, roles; A2 · NF-04, RN-19
 
-**Datos / artefactos:** app_user, practice, practice_membership, service_type
+**Datos / artefactos:** app_user, user_credential, user_session, practice, practice_membership, service_type
+
+**Actualización 2026-10-03 (BIT-0008):** credencial local (D06); criterio 5 añadido y criterio 1 sin proveedor externo.
 
 Criterios de aceptación:
 
-1. Un administrador autorizado crea prácticas, asigna roles y habilita/deshabilita usuarios vinculados al proveedor.
+1. Un administrador autorizado crea prácticas, asigna roles y habilita/deshabilita usuarios.
 2. Un tipo de servicio puede desactivarse para nuevas altas conservando proyectos que ya lo usaban.
 3. Desactivar usuario conserva su autoría histórica y muestra responsables activos que necesitan reasignación.
 4. Cambios de acceso quedan auditados y se aplican a solicitudes posteriores; una asignación no autorizada se rechaza.
+5. El administrador crea la credencial inicial y restablece contraseñas con un valor temporal de un solo uso que no puede consultar después; deshabilitar un usuario o restablecer su contraseña revoca sus sesiones, y la auditoría no contiene contraseñas ni hashes.
 
 ### PHS-008 — Implementar auditoría y control de concurrencia
 

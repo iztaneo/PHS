@@ -45,3 +45,7 @@ Revisar ante restricción corporativa, proveedor obligatorio, incompatibilidad d
 - Consecuencias: la aplicación pasa a custodiar credenciales. Requiere hash de contraseña con un algoritmo adecuado (por ejemplo Argon2id), alta de usuarios por un administrador, restablecimiento, límite de intentos y sesión de servidor con cookie `HttpOnly`. Nunca guardar ni registrar contraseñas en claro. El esquema actual no tiene esa tabla; se añade en PHS-004/PHS-005.
 - Se conserva el acceso por adaptador para poder incorporar OIDC después sin cambiar los casos de uso; `app_user(identity_issuer, identity_subject)` admite un emisor local.
 - La autoaprobación durante el piloto (D05) es una regla de autorización de negocio y no modifica esta selección.
+
+## Revisión 2 — 2026-10-03
+
+El usuario decidió una arquitectura de microservicios en lugar del backend modular único. Las tecnologías de esta ADR se conservan; la división en servicios, la base compartida y la comunicación están en [ADR-002](002-microservicios.md). "NestJS para API y worker" pasa a ser un gateway y cuatro servicios NestJS.

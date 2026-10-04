@@ -13,13 +13,13 @@ La decisión y sus alternativas se resumen en [ADR-001](adr/001-stack-mvp.md). C
 | Frontend | React 19 + Vite + React Router | Aplicación web autenticada, navegación, formularios y tableros. |
 | Componentes y estilos | Tailwind CSS + shadcn/ui | Componentes propios a partir de primitivas; adaptar lenguaje visual del prototipo. |
 | Consultas y formularios | TanStack Query + React Hook Form + Zod | Datos remotos, estados de carga/error, formularios adaptativos y validación. |
-| Backend | NestJS 12 con adaptador Express, módulos ESM | API REST bajo `/api/v1`, casos de uso, autorización y transacciones. |
+| Backend | NestJS 12 con adaptador Express, módulos ESM | Gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma) según [ADR-002](adr/002-microservicios.md); API REST bajo `/api/v1` expuesta por el gateway. |
 | Contratos | OpenAPI mediante `@nestjs/swagger`; esquemas Zod | Documentación y cliente tipado; validación en servidor y frontend. |
 | Base de datos | PostgreSQL 17, parche vigente de la rama | Modelo relacional, JSONB histórico, restricciones, auditoría y outbox. |
 | Acceso a datos | Kysely + `pg` (node-postgres) | Consultas tipadas y transacciones explícitas sobre el SQL existente. |
 | Migraciones | dbmate con SQL versionado | Un solo historial de migraciones; conservar triggers e índices particulares del esquema. |
 | Motor PHF | Paquete TypeScript independiente + decimal.js | Reglas versionadas, cálculo reproducible y manejo decimal de importes. |
-| Procesos automáticos | Worker Node/Nest independiente + outbox PostgreSQL | Evaluaciones, vencimientos, generación de acciones y entregas internas persistentes. |
+| Procesos automáticos | Proceso programado de Salud y despachador de Plataforma + outbox PostgreSQL | Evaluaciones, vencimientos, generación de acciones y entregas internas persistentes. |
 | Identidad | Credenciales propias validadas en PostgreSQL (MVP); OpenID Connect pospuesto | Usuario y hash de contraseña en la base; adaptador para incorporar OIDC después. |
 | Evidencias | Adaptador de archivos privados; interfaz compatible con almacenamiento de objetos | Directorio privado en desarrollo; destino de producción por definir con infraestructura. |
 | Pruebas | Vitest, Testing Library, Testcontainers y Playwright | Dominio/componentes, PostgreSQL real y recorridos completos de navegador. |
@@ -43,21 +43,24 @@ Las familias de versiones sirven para tomar la decisión; el primer esqueleto de
 ```text
 apps/
   web/                React: navegación, formularios y vistas
-  api/                Nest: HTTP, sesión, autorización y casos de uso
-  worker/             Nest: consumo de trabajos y reconciliación periódica
+  gateway/            Nest: entrada única, sesión, identidad propagada y enrutamiento
+  identity/           Nest: usuarios, credenciales, sesiones, prácticas y membresías
+  projects/           Nest: proyectos, compromisos, cambios y baselines
+  health/             Nest: revisiones, motor, eventos, acciones y consultas; proceso programado
+  platform/           Nest: evidencias, historial, despacho de outbox y notificaciones
 packages/
   domain/             Entidades y reglas de transición sin infraestructura
   health-engine/      Cálculos PHF y ejemplos aprobados de D01
-  contracts/          Esquemas de entrada/salida y tipos compartibles
-  persistence/        Kysely, repositorios y unidad de trabajo
-  application/        Casos de uso reutilizados por API y worker
+  contracts/          Esquemas de entrada/salida y tipos compartibles, por servicio
+  persistence/        Kysely, tipos del esquema compartido y unidad de trabajo
+  service-kit/        Identidad entre servicios, auditoría, outbox, logs y salud comunes
   test-support/       Fixtures, reloj controlado y utilidades de pruebas
   config/             Configuración común de herramientas
  db/                  Migraciones SQL y pruebas de integridad existentes
  docs/                Especificaciones, decisiones, ADR y bitácora
 ```
 
-Es una estructura propuesta; esas aplicaciones y paquetes aún no existen. API y worker forman parte del mismo backend modular, comparten dominio y despliegan la misma versión de negocio. No se convierten en microservicios por correr en procesos distintos. La separación evita que una operación HTTP larga detenga el procesamiento de vencimientos y permite administrar ambos procesos.
+Estructura actualizada el 2026-10-03 conforme a [ADR-002](adr/002-microservicios.md); esas aplicaciones y paquetes aún no existen. Cada servicio se despliega por separado y escribe solo sus tablas; todos comparten el PostgreSQL y el historial único de migraciones, por lo que un cambio de esquema se coordina entre servicios. La auditoría y el outbox se insertan en la transacción del servicio que hace el cambio. Los servicios se llaman entre sí por REST con identidad firmada por el gateway y tiempo de espera, reintento idempotente y request ID propagado.
 
 `domain` y `health-engine` no importan React, Nest, red ni base de datos. `web` puede compartir contratos públicos, pero no recibe módulos de persistencia ni secretos. Los importes se transportan como decimales serializados de forma explícita y se calculan con una política común de precisión; no convertir `numeric` a `Number` indiscriminadamente. [decimal.js](https://mikemcl.github.io/decimal.js/).
 
@@ -75,6 +78,8 @@ Reglas del proyecto:
 6. El comando de negocio conserva datos, auditoría y outbox en una misma transacción. Las decisiones y correcciones históricas requieren sus casos de uso, no actualizaciones genéricas.
 
 ## 5. Worker y calendario
+
+Con [ADR-002](adr/002-microservicios.md), el "worker" de esta sección se reparte: Salud ejecuta la reconciliación de vencimientos y las evaluaciones; Plataforma despacha el outbox y las notificaciones. El protocolo de consumo descrito abajo aplica a ambos.
 
 El esquema ya tiene `outbox_message`, claves de deduplicación y estados de procesamiento. La propuesta inicial es usarlo como bandeja persistente y ejecutar un worker separado; no introducir otra base para sostener la cola del MVP.
 
@@ -122,7 +127,7 @@ Evidencias se guardan fuera de tablas transaccionales; PostgreSQL conserva metad
 - GitHub Actions para verificar formato, tipos, pruebas y build; no supone despliegue automático a producción. [GitHub Actions](https://docs.github.com/en/actions/get-started/understand-github-actions).
 - Logs JSON con request/job ID, endpoints de salud, métricas de errores y edad de trabajos; proveedor de monitorización y alertas operativas en D07. La auditoría del negocio permanece en PostgreSQL.
 
-Desarrollo: Docker Compose para PostgreSQL y servicios de apoyo; web/API/worker pueden correr localmente con recarga. Piloto: imágenes Docker separadas para web, API y worker, un reverse proxy/ingress del entorno y PostgreSQL persistente con restauración probada. Se definirá proveedor y sizing cuando se conozcan usuarios/concurrencia. Compose permite describir servicios de una aplicación; no proporciona por sí solo alta disponibilidad o una política de respaldos. [Docker Compose](https://docs.docker.com/compose/).
+Desarrollo: Docker Compose para PostgreSQL y servicios de apoyo; web/API/worker pueden correr localmente con recarga. Piloto: imágenes Docker separadas para web, gateway y cada servicio, un reverse proxy/ingress del entorno y PostgreSQL persistente con restauración probada. Se definirá proveedor y sizing cuando se conozcan usuarios/concurrencia. Compose permite describir servicios de una aplicación; no proporciona por sí solo alta disponibilidad o una política de respaldos. [Docker Compose](https://docs.docker.com/compose/).
 
 No se han contratado servicios, creado pipelines ni instalado paquetes en esta etapa. No se estiman costos de hosting sin proveedor, volumen y requisitos operativos.
 
@@ -136,4 +141,4 @@ La selección de tecnologías queda documentada. Para convertirla en base ejecut
 4. Completar OpenAPI y contratos JSON iniciales, patrón de sesión y protocolo del worker.
 5. En PHS-004 adaptar migraciones y agregar únicamente las brechas decididas; conservar trazabilidad.
 
-Prueba mínima futura: web consulta API autenticada, API lee PostgreSQL, comando crea dato + outbox de forma atómica, worker consume idempotentemente y UI muestra resultado. Que la documentación de cada herramienta admita estas capacidades no prueba por sí solo que nuestra integración funcione.
+Prueba mínima futura: web inicia sesión por el gateway contra Identidad, el gateway propaga la identidad a Proyectos, un comando crea dato + auditoría + outbox de forma atómica, Plataforma consume idempotentemente y la UI muestra el resultado. Que la documentación de cada herramienta admita estas capacidades no prueba por sí solo que nuestra integración funcione.

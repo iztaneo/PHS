@@ -47,32 +47,40 @@ El prototipo contempla seis dimensiones: desempeño 25%, finanzas 20%, riesgos 2
 
 Las referencias son al código original revisado. La expresión documental “baseline vigente + cambios aprobados” debe interpretarse sin sumar dos veces cambios ya incorporados en la versión vigente.
 
-## 4. Arquitectura lógica propuesta
+## 4. Arquitectura lógica
 
-Propuesta de diseño: backend modular con una base relacional y procesos programados. Los módulos comparten despliegue y transacciones, pero separan responsabilidades. El motor PHF debe poder probarse sin interfaz, red o base de datos.
+**Decisión del usuario, 2026-10-03 ([ADR-002](adr/002-microservicios.md)):** arquitectura de microservicios con cuatro servicios de negocio y un gateway, base PostgreSQL compartida con el esquema actual y comunicación por REST y eventos mediante outbox. Sustituye la propuesta original de un backend modular único. El motor PHF debe seguir pudiendo probarse sin interfaz, red o base de datos.
 
 ```mermaid
 flowchart TD
   U[PM / Líder / Dirección] --> W[Aplicación web]
-  W --> I[Identidad corporativa]
-  W --> A[API: permisos, validación y casos de uso]
-  A --> C[Proyectos y compromisos]
-  A --> R[Revisiones y aprobaciones]
-  A --> T[Eventos y acciones]
-  A --> Q[Portafolio, timeline e historial]
-  C --> DB[(Base relacional)]
-  R --> DB
-  T --> DB
-  Q --> DB
-  A --> H[Motor PHF versionado]
-  H --> S[Evaluaciones explicables]
-  S --> DB
-  A --> O[Almacenamiento privado de evidencias]
-  J[Procesos programados] --> H
-  J --> DB
-  DB --> B[Bandeja transaccional de trabajos]
-  B --> N[Procesamiento de notificaciones]
+  W --> G[Gateway: sesión y enrutamiento]
+  G --> ID[Identidad]
+  G --> PR[Proyectos]
+  G --> SA[Salud]
+  G --> PL[Plataforma]
+  SA -- comandos REST --> PR
+  SA --> H[Motor PHF versionado]
+  J[Proceso programado de Salud] --> SA
+  ID --> DB[(PostgreSQL compartido, esquema phs)]
+  PR --> DB
+  SA --> DB
+  PL --> DB
+  DB --> B[outbox_message]
+  B --> PL
+  PL --> N[Notificaciones internas]
+  PL --> O[Almacenamiento privado de evidencias]
 ```
+
+| Servicio | Módulos que agrupa | Tablas que escribe |
+| --- | --- | --- |
+| Gateway | Entrada única, validación de sesión y propagación de identidad. | Ninguna |
+| Identidad | Identidad y acceso. | `app_user`, `user_credential`, `user_session`, `practice`, `practice_membership` |
+| Proyectos | Proyectos y compromisos; baselines y cambios. | `client`, `service_type`, `project`, `project_member`, `milestone`, `risk`, `renewal`, `financial_observation`, `project_change`, `change_decision`, `baseline` |
+| Salud | Revisiones; motor PHF; eventos y acciones; consultas de gobierno. | `review_policy`, `review_cycle`, `review_draft`, `health_review`, `review_validation`, `rule_set`, `health_assessment`, `health_event`, `health_task` |
+| Plataforma | Evidencias; consulta de historial y auditoría; outbox y notificaciones. | `evidence`, `notification_delivery`; procesa `outbox_message` |
+
+Reglas: una tabla tiene un solo servicio que la escribe y los demás pueden leerla. `audit_entry`, `activity` y `outbox_message` son tablas compartidas de solo inserción: cada servicio las inserta en la misma transacción que su cambio. El mapa completo por pantalla está en [MAPA-TRAZABILIDAD.md](MAPA-TRAZABILIDAD.md).
 
 ### Responsabilidades
 
@@ -87,7 +95,7 @@ flowchart TD
 | Consultas de gobierno | Portafolio, timeline y vistas según alcance de acceso. |
 | Evidencias y auditoría | Archivos privados, metadatos y registro de quién cambió qué y cuándo. |
 
-La arquitectura lógica se concreta en la [selección inicial de stack](STACK-TECNOLOGICO.md): React/Vite, TypeScript, NestJS para API y worker, PostgreSQL y migraciones SQL. Es una propuesta técnica pendiente de restricciones del equipo y validación de integración; identidad corporativa y proveedor de infraestructura siguen por definir. La presencia de `app.py` no establece una preferencia de backend.
+La arquitectura se concreta en el [stack](STACK-TECNOLOGICO.md): React/Vite, TypeScript, un servicio NestJS por cada fila de la tabla anterior, PostgreSQL y migraciones SQL. El stack y la identidad local están confirmados; la validación de integración y el proveedor de infraestructura siguen por definir. La presencia de `app.py` no establece una preferencia de backend.
 
 ## 5. Modelo de datos inicial
 
@@ -106,6 +114,8 @@ La arquitectura lógica se concreta en la [selección inicial de stack](STACK-TE
 | Evidence | Archivo o texto, autor, entidad referida, tipo, tamaño y acceso privado. |
 | AuditEntry, OutboxMessage, NotificationDelivery | Auditoría, trabajos persistentes y estado de entrega. |
 
+Aclaración del 2026-10-03: `BaselineMilestone`, `MilestoneUpdate`, `RiskUpdate`, `ChangeImpact`, `ReviewRevision` y `TaskUpdate` no son tablas. El esquema los resuelve con los snapshots JSONB de `baseline`, `project_change.requested_impact`, las filas sucesivas de `health_review` y la tabla `activity`. La identidad local añadió `user_credential` y `user_session`.
+
 Restricciones: claves foráneas, versión de baseline única por proyecto, importes decimales, fechas válidas y control de concurrencia por versión. Las fechas de compromiso son fechas de negocio; las operaciones llevan timestamp UTC y se interpretan usando la zona horaria configurada.
 
 Conservar una evaluación histórica sin recalcularla silenciosamente con reglas nuevas. Las recalculaciones retrospectivas se identifican como tales. Dirección debe poder ver el dato y la regla que explican cada resultado.
@@ -113,6 +123,8 @@ Conservar una evaluación histórica sin recalcularla silenciosamente con reglas
 ## 6. Operaciones críticas
 
 ### Aprobar cambio
+
+Ocurre completo dentro del servicio Proyectos, en una transacción.
 
 1. Verificar permiso y que el cambio siga propuesto.
 2. Bloquear o comprobar la versión del proyecto y baseline vigente.
@@ -122,6 +134,8 @@ Conservar una evaluación histórica sin recalcularla silenciosamente con reglas
 6. Recalcular con la nueva referencia; reintentar una aprobación no debe aplicar el impacto otra vez.
 
 ### Enviar revisión
+
+Cruza Salud y Proyectos: con microservicios deja de ser una transacción única. [ADR-002](adr/002-microservicios.md) propone que Salud aplique los cambios operativos con comandos idempotentes de Proyectos y después registre la revisión; el protocolo está pendiente de validar (PHS-003, D02). Los pasos siguientes describen el resultado que debe garantizarse.
 
 1. Revalidar expectativas en servidor y detectar modificaciones concurrentes.
 2. Verificar campos y evidencia; bloquear “nada cambió” ante condiciones que requieren tratamiento.
@@ -143,17 +157,21 @@ Prefijo propuesto `/api/v1`; toda consulta aplica permisos, paginación y filtro
 
 | Operación | Contrato conceptual |
 | --- | --- |
+| Sesión (Identidad) | `POST /session`, `DELETE /session`, `GET /session`, cambio de contraseña propio. |
+| Administración (Identidad) | Usuarios, credencial inicial y restablecimiento, prácticas y membresías; catálogo de tipos de servicio en Proyectos. |
 | Gestión | `GET/POST /projects`, `GET/PATCH /projects/{id}` |
 | Compromisos | Recursos de hitos, riesgos, observaciones financieras y renovaciones bajo el proyecto. |
 | Baselines | `GET /projects/{id}/baselines`; alta inicial y posteriores mediante casos de uso autorizados. |
 | Cambios | `POST /projects/{id}/changes`, `POST /changes/{id}/decisions` |
+| Ciclo (Salud) | Consultar y configurar política y ciclos de revisión del proyecto. |
 | Revisión | `GET /projects/{id}/expectations`, crear borrador, enviar revisión y registrar validación. |
 | Evaluación | `GET /projects/{id}/assessments/latest`, consultas históricas y detalle explicativo. |
+| Eventos y alertas (Salud, Plataforma) | Consultar eventos y episodios del proyecto; bandeja de alertas y marcar notificaciones como leídas. |
 | Acciones | Consultar tareas autorizadas y registrar actualizaciones con transición de estado válida. |
 | Gobierno | Consultas de portafolio, timeline y auditoría según alcance. |
 | Evidencias | Carga autorizada y descarga temporal de archivos privados. |
 
-Especificar estos contratos en OpenAPI al elegir el stack. Los comandos de decisión/envío aceptarán una clave de idempotencia; actualizaciones concurrentes devolverán conflicto de versión en lugar de sobrescribir datos ajenos.
+Especificar estos contratos en OpenAPI, uno por servicio; el gateway publica el contrato externo. Los comandos de decisión/envío aceptarán una clave de idempotencia; actualizaciones concurrentes devolverán conflicto de versión en lugar de sobrescribir datos ajenos.
 
 ## 8. Permisos y operación
 

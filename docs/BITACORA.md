@@ -6,15 +6,17 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001 (inicial), 002 (credencial local) y 003 (sesiones), pruebas de integridad, especificación funcional, backlog y plan de entregas.
-- **Todavía no implementado:** backend de negocio, interfaz multiusuario conectada a PostgreSQL, autenticación real, motor de producción y workers.
+- **Todavía no implementado:** gateway, servicios, interfaz multiusuario conectada a PostgreSQL, autenticación real, motor de producción y procesos programados.
+- **Arquitectura decidida:** microservicios — gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma) sobre un PostgreSQL compartido con el esquema actual; REST y eventos por outbox. Ver [ADR-002](adr/002-microservicios.md) y [mapa de trazabilidad](MAPA-TRAZABILIDAD.md).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
-- **Stack:** TypeScript, React/Vite, NestJS para API y worker, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
+- **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
-- **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 171 criterios de aceptación. Ninguna historia se considera implementada por la existencia de estos documentos.
+- **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 175 criterios de aceptación desde BIT-0008. Ninguna historia se considera implementada por la existencia de estos documentos.
 - **Decisiones abiertas:** D01–D04 y D07–D10 completas; D05 y D06 parcialmente confirmadas. Ver [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de revisión sin corregir:** lista en BIT-0005, a resolver en PHS-004 mediante una migración nueva.
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
-- **Siguiente paso funcional:** crear el esqueleto del monorepo (pnpm, web, API, worker) con versiones fijadas y la prueba mínima de punta a punta de PHS-003; después PHS-004 (dbmate y una migración `004` con los hallazgos 1–5 de BIT-0005) y PHS-005 (inicio de sesión contra `user_credential` y `user_session`, con hash Argon2id). D01 y D02 pueden resolverse antes de R2/R3.
+- **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos, identidad firmada entre servicios y roles de base por servicio.
+- **Siguiente paso funcional:** crear el esqueleto del monorepo (pnpm, web, gateway y los cuatro servicios) con versiones fijadas y la prueba mínima de punta a punta de PHS-003, empezando por gateway + Identidad; después PHS-004 (dbmate y una migración `004` con los hallazgos 1–5 de BIT-0005) y PHS-005 (inicio de sesión contra `user_credential` y `user_session`, con hash Argon2id). D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -272,6 +274,45 @@ El usuario eligió una tabla de sesiones propia frente a la tabla de una bibliot
 ### Pendientes y siguiente paso
 
 Esqueleto del monorepo y PHS-003; PHS-004 (dbmate y migración `004`); PHS-005 con alta de usuarios, verificación Argon2id, emisión y rotación del token, cookie `HttpOnly`, revocación y limpieza de sesiones vencidas. Siguiente entrada: BIT-0008.
+
+## BIT-0008 — Arquitectura de microservicios y mapa de trazabilidad
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** cruzar arquitectura, base de datos y backlog para mapear pantallas, servicios y requerimientos, y registrar el cambio de arquitectura pedido por el usuario.
+
+**Relación:** D06, PHS-003, PHS-004, PHS-005, PHS-007, ADR-001 y ADR-002. Ninguna historia se declara terminada; no hay código de servicios.
+
+**Identificación:** commit con prefijo `BIT-0008`.
+
+### Decisiones confirmadas por el usuario
+
+- La arquitectura no será monolítica: microservicios.
+- Entre las alternativas presentadas eligió: cuatro servicios más gateway; base compartida con el esquema actual; REST más eventos por outbox en PostgreSQL.
+- Aprobó guardar el mapa de trazabilidad y actualizar PHS-005 y PHS-007 con la identidad local.
+
+### Trabajo realizado y archivos
+
+- [ADR-002](adr/002-microservicios.md): servicios, propiedad de tablas, tablas compartidas de solo inserción, comunicación, alternativas y consecuencias.
+- [MAPA-TRAZABILIDAD.md](MAPA-TRAZABILIDAD.md): pantalla → servicio → tablas → historias → reglas, capacidades sin pantalla, tablas por servicio y brechas.
+- [ARQUITECTURA-PHS.md](ARQUITECTURA-PHS.md): §4 reescrita con el diagrama y la tabla de servicios; aclaración de entidades que no son tablas; notas en las operaciones críticas; contratos conceptuales añadidos para sesión, administración, ciclo, eventos y alertas.
+- [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md) (estructura de `apps/`, paquete `service-kit`, reparto del worker), [ADR-001](adr/001-stack-mvp.md) (Revisión 2), [DATABASE-PHS.md](DATABASE-PHS.md) (propiedad de tablas), [DECISIONES.md](producto/DECISIONES.md), [ESPECIFICACION.md](producto/ESPECIFICACION.md) y [README](../README.md).
+- [BACKLOG.md](producto/BACKLOG.md): PHS-003 (avance y criterio 3), PHS-004 (30 tablas y roles), PHS-005 (criterio 3 reformulado y criterios 5–7 nuevos), PHS-007 (criterio 1 reformulado y criterio 5 nuevo). El total pasa de 171 a 175 criterios; IDs, dependencias y entregas no cambian.
+- No se modificaron migraciones, pruebas SQL ni prototipo.
+
+### Supuestos propuestos, no confirmados
+
+Reparto exacto de tablas por servicio, consultas de gobierno dentro de Salud, tablas compartidas de solo inserción, identidad firmada por el gateway, un rol de PostgreSQL por servicio y el protocolo de envío de revisión.
+
+### Validación y límites
+
+- Se comprobó que las 30 tablas quedan asignadas una sola vez (5 + 11 + 9 + 2 + 3 compartidas) y que el backlog tiene 45 historias y 175 criterios numerados.
+- El cruce usó la tabla de pantallas de la especificación, la línea "Datos / artefactos" de cada historia y el SQL; no se revisaron uno por uno todos los criterios.
+- Nada de la arquitectura está probado en ejecución. Límites aceptados: los servicios quedan acoplados por el esquema compartido; enviar una revisión deja de ser una transacción única; hay más procesos que operar con un equipo de una persona.
+
+### Pendientes y siguiente paso
+
+Validar en el esqueleto (PHS-003) la identidad entre servicios y el protocolo Salud → Proyectos; definir roles de base por servicio en PHS-004; OpenAPI por servicio. Empezar por gateway + Identidad con inicio de sesión. Siguiente entrada: BIT-0009.
 
 ## Plantilla para próximas entradas
 

@@ -2,7 +2,7 @@
 
 Aplicación para gestionar la salud de proyectos y servicios mediante el Project Health Framework (PHF).
 
-El repositorio contiene un prototipo navegable y el diseño inicial de arquitectura y base de datos. El backend multiusuario todavía no está implementado.
+El repositorio contiene un prototipo navegable y el diseño inicial de arquitectura y base de datos. La arquitectura decidida es de microservicios con base compartida; el backend todavía no está implementado.
 
 ## Contenido
 
@@ -15,7 +15,8 @@ El repositorio contiene un prototipo navegable y el diseño inicial de arquitect
 - [Decisiones pendientes](docs/producto/DECISIONES.md).
 - [Arquitectura propuesta](docs/ARQUITECTURA-PHS.md).
 - [Stack tecnológico propuesto](docs/STACK-TECNOLOGICO.md).
-- [Decisión técnica ADR-001](docs/adr/001-stack-mvp.md).
+- [Decisión técnica ADR-001](docs/adr/001-stack-mvp.md) y [ADR-002: microservicios](docs/adr/002-microservicios.md).
+- [Mapa pantalla → servicio → tablas → historias](docs/MAPA-TRAZABILIDAD.md).
 - [Diseño de PostgreSQL y diagrama](docs/DATABASE-PHS.md).
 - [Migración inicial](db/migrations/001_initial.sql) , [credenciales locales](db/migrations/002_user_credentials.sql) y [sesiones](db/migrations/003_user_session.sql).
 - Pruebas de [integridad](db/tests/001_integrity.sql), [credenciales](db/tests/002_credentials.sql) y [sesiones](db/tests/003_sessions.sql).

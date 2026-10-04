@@ -10,7 +10,7 @@ El MVP incluye acceso real, proyectos, equipo, líneas base, hitos, riesgos, obs
 
 Fuera del MVP propuesto: SaaS multiempresa, aplicación móvil nativa, IA predictiva, sincronización con herramientas externas, correo automático, importación masiva de datos locales y gestión documental avanzada. Estas exclusiones son una propuesta de alcance, no una cancelación definitiva.
 
-Supuestos de trabajo: una empresa, varias prácticas, interfaz en español, usuarios autenticados (decisión del 2026-10-03: credenciales propias validadas en la base de datos para el MVP; identidad corporativa pospuesta), importes de cada proyecto en una sola moneda y despliegue inicialmente centralizado. El [stack propuesto](../STACK-TECNOLOGICO.md) concreta React/Vite, NestJS y PostgreSQL. Restricciones del equipo, proveedor de identidad, infraestructura y compatibilidad de dependencias permanecen pendientes.
+Supuestos de trabajo: una empresa, varias prácticas, interfaz en español, usuarios autenticados (decisión del 2026-10-03: credenciales propias validadas en la base de datos para el MVP; identidad corporativa pospuesta), importes de cada proyecto en una sola moneda y despliegue inicialmente centralizado. El [stack](../STACK-TECNOLOGICO.md) concreta React/Vite, NestJS y PostgreSQL, organizados como microservicios con base compartida ([ADR-002](../adr/002-microservicios.md)); el servicio que atiende cada pantalla está en el [mapa de trazabilidad](../MAPA-TRAZABILIDAD.md). Restricciones del equipo, proveedor de identidad, infraestructura y compatibilidad de dependencias permanecen pendientes.
 
 ## 2. Fuentes y precedencia
 
