@@ -16,12 +16,12 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
 - **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 175 criterios de aceptación desde BIT-0008. Ninguna historia se considera implementada por la existencia de estos documentos.
-- **Decisiones abiertas:** D01–D04 y D07–D10 completas; D06 parcialmente confirmada; de D05 solo quedan la separación de funciones tras el piloto y los responsables externos. Ver [DECISIONES.md](producto/DECISIONES.md).
+- **Decisiones abiertas:** D02–D04 y D07–D10 completas; D06 parcialmente confirmada; de D05 solo quedan la separación de funciones tras el piloto y los responsables externos. D01 confirmada como reglas versión 1 ([REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md)); faltan el peso del hito y la calibración. Ver [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** aceptación de R1 por el usuario; después R2: PHS-012 (economía), PHS-016 (riesgos), PHS-017 (evidencias), PHS-018/019 (cambios) y el motor (PHS-025/026), que requiere cerrar D01. D01 y D02 pueden resolverse antes de R2/R3.
+- **Siguiente paso funcional:** aceptación de R1 por el usuario; después R2: PHS-012 (economía), PHS-016 (riesgos), PHS-017 (evidencias), PHS-018/019 (cambios) y el motor (PHS-025/026) con las reglas versión 1. D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -643,6 +643,43 @@ Tomados al implementar, no confirmados por el usuario: valores exactos de color 
 ### Pendientes y siguiente paso
 
 Validación visual por el usuario. Después, R2. Siguiente entrada: BIT-0018.
+
+## BIT-0018 — Decisión D01: reglas del motor versión 1
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** revisar con el usuario las reglas del motor de salud antes de construirlo.
+
+**Relación:** D01, PHS-002, RN-02 a RN-10. Solo documentación; el motor no está construido.
+
+**Identificación:** commit con prefijo `BIT-0018`.
+
+### Hechos comprobados en el prototipo
+
+Se leyeron `plannedProgress`, `actualProgress`, `projectDeviation`, `financialDeviation`, las seis funciones `dim*`, `gateStatus`, `assess`, `confidence`, `trend` y `forecast`. El avance cuenta hitos con 50% fijo para los que están en curso; la desviación financiera compara el costo con un gasto lineal por calendario; sin dimensiones evaluables el score es 70 y Gobernanza vale 40 sin ciclo configurado.
+
+### Decisiones confirmadas por el usuario
+
+1. Avance por peso de cada hito.
+2. Desviación financiera contra el avance real.
+3. Sin datos no hay score: "Sin evaluación"; una dimensión sin dato no entra al promedio y baja la confianza.
+4. Pesos, topes, semáforo y demás coeficientes del prototipo adoptados como versión 1.
+
+### Trabajo realizado y archivos
+
+[REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md) (nuevo: fórmulas, dimensiones, topes, redondeo, confianza, tendencia, pronóstico y 15 ejemplos), [DECISIONES.md](producto/DECISIONES.md), [ESPECIFICACION.md](producto/ESPECIFICACION.md), [BACKLOG.md](producto/BACKLOG.md) (PHS-002), [README](../README.md) y esta bitácora.
+
+### Detalles propuestos y confirmados por el usuario
+
+Avance comprometido calculado con los pesos de los hitos de la línea base cuya fecha ya pasó; hitos cancelados fuera del cálculo; logro de un hito en curso igual a su porcentaje reportado, 0 si no se reportó; sin línea base o sin hitos la desviación queda sin dato; cálculo con decimales exactos, umbrales antes de redondear y dos decimales guardados.
+
+### Validación y límites
+
+Los 15 ejemplos se calcularon a mano; no hay código que los ejecute. Ningún coeficiente está calibrado con proyectos reales. El peso de un hito no se captura todavía: todos valen 1.
+
+### Pendientes y siguiente paso
+
+Construir R2 empezando por economía y riesgos, que son entradas del motor. Siguiente entrada: BIT-0019.
 
 ## Plantilla para próximas entradas
 

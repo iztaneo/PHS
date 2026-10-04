@@ -103,6 +103,8 @@ Completar una acción no elimina una desviación que sigue existiendo. Resolver 
 
 ## 7. Catálogo de reglas
 
+Las reglas RN-02 a RN-10 quedaron definidas como versión 1 en [REGLAS-PHF-v1.md](REGLAS-PHF-v1.md) (D01, 2026-10-03). Donde esta tabla dice "candidato" o "D01", prevalece ese documento; las diferencias respecto del prototipo son el avance por peso de hito, la desviación financiera contra el avance real y la ausencia de score cuando no hay datos.
+
 | ID | Regla / contrato | Estado / origen |
 | --- | --- | --- |
 | RN-01 | Salud administrativa y score son conceptos distintos. | Derivado F1. |

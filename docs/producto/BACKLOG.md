@@ -90,6 +90,8 @@ Como **dueño PHF**, quiero formalizar fórmulas y casos de referencia, para obt
 
 **Datos / artefactos:** Contrato RuleSet
 
+**Avance (BIT-0018):** [REGLAS-PHF-v1.md](REGLAS-PHF-v1.md) contiene fórmulas, entradas, redondeo y 15 ejemplos con resultado, incluidos los límites 10/10.01 y 3/3.01. Las decisiones y los detalles propuestos están confirmados por el usuario; falta la revisión de negocio con proyectos reales (criterio 3).
+
 Criterios de aceptación:
 
 1. Existe una tabla versionada con entradas, unidades, fórmula, ausencia de datos, precisión, redondeo, umbrales y explicación de cada dimensión, gate, confianza y forecast.
