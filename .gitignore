@@ -9,3 +9,5 @@ venv/
 *.log
 node_modules/
 coverage/
+dist/
+*.tsbuildinfo

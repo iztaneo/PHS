@@ -6,7 +6,8 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001 (inicial), 002 (credencial local) y 003 (sesiones), pruebas de integridad, especificación funcional, backlog y plan de entregas.
-- **Todavía no implementado:** gateway, servicios, interfaz multiusuario conectada a PostgreSQL, autenticación real, motor de producción y procesos programados.
+- **Esqueleto ejecutable (BIT-0009):** monorepo pnpm con `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects` y `packages/service-kit`. Solo expone estado de servicios; ver README para arrancarlo.
+- **Todavía no implementado:** inicio de sesión, permisos, funcionalidad de negocio, servicios Salud y Plataforma, motor de producción y procesos programados.
 - **Arquitectura decidida:** microservicios — gateway y cuatro servicios (Identidad, Proyectos, Salud, Plataforma) sobre un PostgreSQL compartido con el esquema actual; REST y eventos por outbox. Ver [ADR-002](adr/002-microservicios.md) y [mapa de trazabilidad](MAPA-TRAZABILIDAD.md).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
@@ -16,7 +17,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Hallazgos de revisión sin corregir:** lista en BIT-0005, a resolver en PHS-004 mediante una migración nueva.
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos, identidad firmada entre servicios y roles de base por servicio.
-- **Siguiente paso funcional:** crear el esqueleto del monorepo (pnpm, web, gateway y los cuatro servicios) con versiones fijadas y la prueba mínima de punta a punta de PHS-003, empezando por gateway + Identidad; después PHS-004 (dbmate y una migración `004` con los hallazgos 1–5 de BIT-0005) y PHS-005 (inicio de sesión contra `user_credential` y `user_session`, con hash Argon2id). D01 y D02 pueden resolverse antes de R2/R3.
+- **Siguiente paso funcional:** PHS-004 (dbmate y una migración `004` con los hallazgos 1–5 de BIT-0005) y PHS-005 (inicio de sesión contra `user_credential` y `user_session`, con hash Argon2id). D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -313,6 +314,42 @@ Reparto exacto de tablas por servicio, consultas de gobierno dentro de Salud, ta
 ### Pendientes y siguiente paso
 
 Validar en el esqueleto (PHS-003) la identidad entre servicios y el protocolo Salud → Proyectos; definir roles de base por servicio en PHS-004; OpenAPI por servicio. Empezar por gateway + Identidad con inicio de sesión. Siguiente entrada: BIT-0009.
+
+## BIT-0009 — Esqueleto del monorepo: web, gateway, Identidad y Proyectos
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** crear la base ejecutable de la arquitectura de ADR-002 con las piezas que necesita la primera entrega (R1).
+
+**Relación:** PHS-003 y D06; avance, la historia no se declara terminada. Sin funcionalidad de negocio.
+
+**Identificación:** commit con prefijo `BIT-0009`.
+
+### Trabajo realizado y archivos
+
+- Raíz: `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `tsconfig.base.json`, `.node-version`, `.env.example`, `docker-compose.yml` (PostgreSQL 17 local, puerto solo en 127.0.0.1) y `.gitignore` (`dist/`).
+- `packages/service-kit`: carga de `.env`, validación de variables, pool de PostgreSQL, comprobación de base y formato de estado.
+- `apps/identity` y `apps/projects`: servicios NestJS que escuchan en 127.0.0.1 y exponen `GET /health` con el estado de su conexión a la base.
+- `apps/gateway`: NestJS; `GET /health`, `GET /api/v1/status` (estado agregado de los servicios) y proxy de `/api/v1/identity/*` y `/api/v1/projects/*` hacia cada servicio.
+- `apps/web`: React + Vite; página que muestra el estado consultando al gateway mediante el proxy de desarrollo.
+- [README](../README.md) (cómo arrancarlo), [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md) (estado del esqueleto, versiones y diferencias), [BACKLOG.md](producto/BACKLOG.md) (avance de PHS-003) y esta bitácora.
+- No se modificaron migraciones, pruebas SQL ni prototipo.
+
+### Decisiones y supuestos
+
+Tomadas al implementar, no confirmadas por el usuario: TypeScript 6.0.3; compilar con `tsc` sin el CLI de Nest; `@Inject` explícito; `service-kit` como paquete común; puertos 3000–3002 y 5173; prefijos `/api/v1/identity` y `/api/v1/projects`; servicios internos ligados a 127.0.0.1. Detalle en el documento de stack.
+
+### Validación y límites
+
+- `build`, `typecheck` y `test` pasan en los cinco paquetes: 9 pruebas (3 de `service-kit`, 2 por servicio y 2 del gateway).
+- Ejecución real contra un PostgreSQL 17.9 temporal con las tres migraciones, eliminado al terminar: estado `ok` de ambos servicios, proxy del gateway hacia cada `/health`, 404 en ruta desconocida y la misma respuesta a través del proxy de Vite.
+- Defecto encontrado y corregido durante la prueba: al caer la base, los servicios terminaban por un error no manejado del pool. Ahora siguen activos, informan `degraded` y vuelven a `ok` al recuperarse la base; se comprobó deteniendo y arrancando PostgreSQL.
+- No probado: `docker-compose.yml` (Docker no estaba activo), el modo `dev` con recarga, la página en un navegador (solo se verificó que Vite sirve el HTML y el proxy) y el caso de un único servicio caído en ejecución real (cubierto por prueba unitaria).
+- Límites: no hay autenticación ni identidad propagada, de modo que el gateway reenvía cualquier petición; no hay CI; `corepack` no inicia pnpm 12 en esta máquina y se usa `npx`.
+
+### Pendientes y siguiente paso
+
+PHS-004: dbmate, migración `004` con los hallazgos de BIT-0005 y roles de base por servicio. Después PHS-005: inicio de sesión en Identidad, sesión validada en el gateway e identidad firmada hacia los servicios. Siguiente entrada: BIT-0010.
 
 ## Plantilla para próximas entradas
 

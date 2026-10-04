@@ -64,6 +64,19 @@ Estructura actualizada el 2026-10-03 conforme a [ADR-002](adr/002-microservicios
 
 `domain` y `health-engine` no importan React, Nest, red ni base de datos. `web` puede compartir contratos públicos, pero no recibe módulos de persistencia ni secretos. Los importes se transportan como decimales serializados de forma explícita y se calculan con una política común de precisión; no convertir `numeric` a `Number` indiscriminadamente. [decimal.js](https://mikemcl.github.io/decimal.js/).
 
+### Estado del esqueleto (BIT-0009, 2026-10-03)
+
+Creados y probados: `apps/web`, `apps/gateway`, `apps/identity`, `apps/projects` y `packages/service-kit`. Todavía no existen `health`, `platform` ni los demás paquetes.
+
+Versiones fijadas en `package.json` y `pnpm-lock.yaml`: pnpm 12.9.1, TypeScript 6.0.3, NestJS 12.1.2, React 19.3.0, Vite 8.3.2, Vitest 5.0.3, `pg` 8.23.1, `http-proxy-middleware` 4.2.0. Diferencias y límites respecto de esta selección:
+
+- TypeScript 6.0.3 y no la 7: es la línea de la que depende el CLI de Nest 12 (`~6.0.2`); no se probó la 7 con decoradores.
+- No se usa el CLI de Nest: los servicios compilan con `tsc` y arrancan con `node`. Por eso no aplica aquí el mínimo de Node 24.15 del CLI; el esqueleto se probó con Node 24.2.0.
+- Los constructores usan `@Inject(...)` explícito, de modo que Vitest ejecuta las pruebas de Nest sin depender de metadatos de tipos.
+- pnpm se ejecuta con `npx pnpm@12.9.1`: el `corepack` 0.33 de esta máquina falla al iniciar pnpm 12.
+- Aún no se añadieron Kysely, Zod, OpenAPI, React Router, TanStack Query, Tailwind/shadcn, Testcontainers, Playwright, dbmate ni GitHub Actions; entran con la primera historia que los necesite.
+- `docker-compose.yml` no se ejecutó: el servicio de Docker no estaba activo. La prueba usó un PostgreSQL 17.9 temporal local.
+
 ## 4. Persistencia y migraciones
 
 Kysely ofrece consultas SQL tipadas; se adapta a un diseño cuyo contrato ya está expresado mediante SQL, claves compuestas, índices parciales y triggers. `pg` proporciona el driver PostgreSQL. Las transacciones deben utilizar el mismo contexto/conexión para todas sus operaciones. [Kysely](https://kysely.dev/), [transacciones node-postgres](https://node-postgres.com/features/transactions).

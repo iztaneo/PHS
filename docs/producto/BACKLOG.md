@@ -109,7 +109,7 @@ Como **equipo técnico**, quiero seleccionar stack y contratos de los casos de u
 
 **Datos / artefactos:** OpenAPI, contratos JSON y decisiones técnicas
 
-**Avance documental:** [stack](../STACK-TECNOLOGICO.md), [ADR-001](../adr/001-stack-mvp.md), [ADR-002 de microservicios](../adr/002-microservicios.md) y [mapa de trazabilidad](../MAPA-TRAZABILIDAD.md) disponibles. No completa la historia: faltan contratos OpenAPI por servicio, protocolo entre servicios, infraestructura y prueba de integración.
+**Avance documental:** [stack](../STACK-TECNOLOGICO.md), [ADR-001](../adr/001-stack-mvp.md), [ADR-002 de microservicios](../adr/002-microservicios.md) y [mapa de trazabilidad](../MAPA-TRAZABILIDAD.md) disponibles. Desde BIT-0009 existe un esqueleto ejecutable (web, gateway, Identidad, Proyectos). No completa la historia: faltan contratos OpenAPI por servicio, protocolo e identidad entre servicios, infraestructura y la prueba mínima con comando + auditoría + outbox.
 
 Criterios de aceptación:
 
