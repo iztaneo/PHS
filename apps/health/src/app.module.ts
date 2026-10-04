@@ -3,13 +3,15 @@ import { PG_POOL, createPool, requireEnv } from '@phs/service-kit';
 import type pg from 'pg';
 import { AssessmentsController } from './assessments.controller.js';
 import { AssessmentsService } from './assessments.service.js';
+import { GovernanceController } from './governance.controller.js';
+import { GovernanceService } from './governance.service.js';
 import { HealthController } from './health.controller.js';
 import { InternalAuthGuard } from './internal-auth.guard.js';
 import { OpenApiController } from './openapi.controller.js';
 import { ProjectsClient } from './projects.client.js';
 
 @Module({
-  controllers: [HealthController, OpenApiController, AssessmentsController],
+  controllers: [HealthController, OpenApiController, AssessmentsController, GovernanceController],
   providers: [
     InternalAuthGuard,
     { provide: PG_POOL, useFactory: () => createPool(requireEnv('HEALTH_DATABASE_URL')) },
@@ -18,6 +20,11 @@ import { ProjectsClient } from './projects.client.js';
       provide: AssessmentsService,
       useFactory: (pool: pg.Pool, projects: ProjectsClient) => new AssessmentsService(pool, projects),
       inject: [PG_POOL, ProjectsClient],
+    },
+    {
+      provide: GovernanceService,
+      useFactory: (pool: pg.Pool, projects: ProjectsClient, assessments: AssessmentsService) => new GovernanceService(pool, projects, assessments),
+      inject: [PG_POOL, ProjectsClient, AssessmentsService],
     },
   ],
 })

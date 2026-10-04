@@ -692,6 +692,8 @@ Criterios de aceptación:
 3. Persistencia mantiene episodio; resolución conserva historia; recurrencia posterior crea otro episodio.
 4. Completar una tarea no resuelve un evento cuya condición sigue activa; el vínculo permite inspeccionar ambos.
 
+**Estado (BIT-0024):** construida, en revisión. Se detectan hito vencido, mitigación vencida, riesgo materializado, desviación de proyecto y financiera, renovación próxima o vencida y cambio pendiente; con episodios, resolución y, por D04, causa y plan del PM validados por el líder. Límites: la detección ocurre al consultar el proyecto, no en segundo plano (PHS-033); faltan las condiciones que dependen del ciclo de revisión (PHS-020) y la prueba de dos ejecuciones simultáneas.
+
 ### PHS-031 — Generar acciones automáticas
 
 Como **PM**, quiero recibir trabajo con dueño y plazo al surgir una condición, para convertir alertas en intervención.
@@ -711,6 +713,8 @@ Criterios de aceptación:
 3. Con autoTasks desactivado se conserva alerta y siguiente paso manual según D04; no desaparece el problema.
 4. Acción vencida escala su propio seguimiento; no crea una cadena infinita de nuevas acciones.
 
+**Estado (BIT-0024):** construida en parte, en revisión. Cumple los criterios 1 y 2 con la regla del prototipo (D04) y cierra sola la acción automática cuando desaparece la causa. Falta: pantalla para desactivar las acciones automáticas por proyecto (el servicio ya respeta `review_policy.auto_tasks`) y el escalamiento de acciones vencidas (criterio 4); hoy solo se marcan como vencidas.
+
 ### PHS-032 — Gestionar tareas manuales y seguimiento
 
 Como **responsable de acción**, quiero actualizar mi trabajo hasta su cierre, para mantener compromiso y evidencia de resolución.
@@ -729,6 +733,8 @@ Criterios de aceptación:
 2. Cambiar estado/dueño/plazo deja comentario y antes/después; la bandeja filtra por estado, responsable, proyecto y vencimiento.
 3. Completar/cancelar exige fecha y comentario, más soporte si política aplica; reabrir sigue D04 y conserva cierre previo.
 4. Cerrar tarea no borra condición origen; un usuario sin acceso no puede actualizarla aunque sea dueño de otra tarea.
+
+**Estado (BIT-0024):** construida en parte, en revisión. Alta manual, cambios de estado con comentario, bandeja "Mis acciones" y permisos. Falta: cambiar responsable o plazo, filtros de la bandeja, reabrir una acción cerrada, evidencia en acciones y vincular la acción manual a un evento desde la pantalla (la API lo admite).
 
 ### PHS-033 — Ejecutar evaluación y vencimientos en segundo plano
 

@@ -59,6 +59,8 @@ Los cuatro servicios y el gateway existen. Construidas, pendientes de aceptació
 
 Tablas añadidas desde este mapa: `command_idempotency`, `evidence_withdrawal` (Plataforma) y `project_status_log` (Proyectos); 33 en total.
 
+**BIT-0024:** Health Events y Acciones están construidas en parte (pestaña "Alertas y acciones" del proyecto y bandeja "Mis acciones"), pendientes de aceptación; ver el estado de PHS-030 a PHS-032 en el backlog. Salud añade `event_response` y `event_response_validation`: 35 tablas.
+
 ## Brechas detectadas en el cruce
 
 | # | Brecha | Estado |

@@ -52,10 +52,10 @@ export const gatewayOwnRoutes: RouteContract[] = [
 ];
 
 // Proxied routes add the gateway's own failure modes to what the service documents.
-function proxied(routes: RouteContract[], select: (path: string) => boolean): RouteContract[] {
+function proxied(routes: RouteContract[], select: (path: string) => boolean, prefix = '/api/v1'): RouteContract[] {
   return routes.filter((route) => select(route.path)).map((route) => ({
     ...route,
-    path: `/api/v1${route.path}`,
+    path: `${prefix}${route.path}`,
     responses: {
       ...route.responses,
       401: errors.unauthenticated,
@@ -71,5 +71,7 @@ export const publicRoutes: RouteContract[] = [
   ...proxied(identityRoutes, (path) => path.startsWith('/admin/')),
   ...proxied(platformRoutes, (path) => path.startsWith('/evidence')),
   ...proxied(healthRoutes, (path) => path.startsWith('/assessments/')),
+  // Events and actions of the Health service are published under /governance.
+  ...proxied(healthRoutes, (path) => !path.startsWith('/assessments/') && path !== '/health', '/api/v1/governance'),
   ...proxied(projectsRoutes, (path) => ['/projects', '/catalog/', '/clients', '/people'].some((prefix) => path.startsWith(prefix))),
 ];

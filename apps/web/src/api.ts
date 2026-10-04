@@ -147,6 +147,22 @@ export interface RiskInput {
 }
 export interface RiskHistoryEntry { occurredAt: string; actor: Person | null; note: string; before: Record<string, unknown>; after: Record<string, unknown> }
 
+export interface Task {
+  id: string; projectId: string; projectName: string; eventId: string | null; title: string; description: string; owner: Person;
+  dueOn: string; priority: 'high' | 'medium' | 'low'; status: 'pending' | 'in_progress' | 'blocked' | 'completed' | 'cancelled';
+  automatic: boolean; overdue: boolean; closedAt: string | null; closureNote: string | null; revision: number; canUpdate: boolean;
+}
+export interface HealthEvent {
+  id: string; ruleKey: string; severity: 'info' | 'warning' | 'critical'; title: string; episode: number; openedAt: string;
+  resolvedAt: string | null; resolutionNote: string | null;
+  responseStatus: 'not_required' | 'missing' | 'pending' | 'returned' | 'validated';
+  response: null | {
+    id: string; revisionNo: number; cause: string; kind: 'remediation' | 'replan'; plan: string; changeId: string | null; submittedBy: Person;
+    submittedAt: string; validation: null | { decision: 'validated' | 'returned'; validator: Person; decidedAt: string; comment: string };
+  };
+  task: Task | null; canRespond: boolean; canValidate: boolean;
+}
+
 export interface StatusView {
   status: string; since: string | null; daysInStatus: number | null; allowed: string[]; justificationRequired: boolean;
   justificationAfterDays: number; open: Responsibilities4;
@@ -288,6 +304,17 @@ export const api = {
   baselines: (id: string) => call<Baseline[]>('GET', `/api/v1/projects/${id}/baselines`),
   publishBaseline: (id: string, input: { expectedRevision: number; scope: string; budget: string | null; effortHours: string | null }, key: string) =>
     call<Baseline>('POST', `/api/v1/projects/${id}/baselines`, input, key),
+  events: (id: string) => call<HealthEvent[]>('GET', `/api/v1/governance/projects/${id}/events`),
+  respondEvent: (eventId: string, input: { cause: string; kind: 'remediation' | 'replan'; plan: string; changeId: string | null }) =>
+    call<HealthEvent>('POST', `/api/v1/governance/events/${eventId}/responses`, input),
+  validateResponse: (responseId: string, decision: 'validated' | 'returned', comment: string) =>
+    call<HealthEvent>('POST', `/api/v1/governance/responses/${responseId}/validation`, { decision, comment }),
+  tasks: (id: string) => call<Task[]>('GET', `/api/v1/governance/projects/${id}/tasks`),
+  myTasks: () => call<Task[]>('GET', '/api/v1/governance/tasks/mine'),
+  createTask: (id: string, input: { title: string; description: string; ownerId: string; dueOn: string; priority: string }, key: string) =>
+    call<Task>('POST', `/api/v1/governance/projects/${id}/tasks`, input, key),
+  transitionTask: (taskId: string, expectedRevision: number, to: string, note?: string) =>
+    call<Task>('POST', `/api/v1/governance/tasks/${taskId}/transition`, { expectedRevision, to, ...(note ? { note } : {}) }),
   projectStatus: (id: string) => call<StatusView>('GET', `/api/v1/projects/${id}/status`),
   changeStatus: (id: string, expectedRevision: number, to: string, reason: string) =>
     call<ProjectDetail>('POST', `/api/v1/projects/${id}/status`, { expectedRevision, to, reason }),
@@ -367,6 +394,9 @@ const MESSAGES: Record<string, string> = {
   invalid_completion_date: 'La fecha de cumplimiento no puede ser futura.',
   invalid_effective_date: 'La fecha efectiva no puede ser futura.',
   already_superseded: 'Esa observación ya fue corregida. Corrige la más reciente.',
+  change_required: 'Para replanificar, elige la propuesta de cambio que mueve la fecha.',
+  response_not_expected: 'Esta alerta no requiere causa y plan, o ya está resuelta.',
+  response_already_submitted: 'Ya hay una respuesta en espera de validación o validada.',
   status_justification_required: 'El proyecto lleva un mes o más pausado o cerrado. Describe el motivo de la situación antes de continuar.',
   justification_not_required: 'No hay una justificación pendiente.',
   empty_evidence: 'Escribe un texto o elige un archivo.',

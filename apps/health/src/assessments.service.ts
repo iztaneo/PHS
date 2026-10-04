@@ -29,7 +29,7 @@ export class AssessmentsService {
   constructor(private readonly pool: pg.Pool, private readonly projects: ProjectsClient) {}
 
   // Everything the engine needs, read in one snapshot so the inputs are consistent with each other.
-  private async inputs(client: pg.PoolClient, projectId: string): Promise<{ input: AssessmentInput; revision: number; baselineId: string | null } | null> {
+  async inputs(client: pg.PoolClient | pg.Pool, projectId: string): Promise<{ input: AssessmentInput; revision: number; baselineId: string | null } | null> {
     const found = await client.query<{
       revision: string; today: string; baseline_id: string | null; budget: string | null; effort_hours: string | null;
       weights: Record<string, number> | null; client_contact: string; escalation_notes: string; members: number;

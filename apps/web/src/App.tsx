@@ -1,7 +1,8 @@
-import { Briefcase, LogOut, Menu, ShieldCheck, UserRound, X } from 'lucide-react';
+import { Briefcase, ListChecks, LogOut, Menu, ShieldCheck, UserRound, X } from 'lucide-react';
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { Admin } from './Admin';
 import { ApiError, api, errorMessage, type SessionUser } from './api';
+import { MyTasks } from './Governance';
 import { Projects } from './Projects';
 import { Badge, Button, Card, Empty, Field, Input, Loading, Notice, PageHeader } from './ui';
 
@@ -144,7 +145,7 @@ function PasswordForm({ onChanged, onSessionLost }: { onChanged: () => void; onS
 }
 
 const ROLE_TEXT = { pm: 'PM', lead: 'Líder', director: 'Dirección' } as const;
-type Section = 'projects' | 'roles' | 'admin';
+type Section = 'projects' | 'tasks' | 'roles' | 'admin';
 
 function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?: string) => void }) {
   const [section, setSection] = useState<Section>('projects');
@@ -153,6 +154,7 @@ function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?
 
   const items: { key: Section; label: string; icon: ReactNode }[] = [
     { key: 'projects', label: 'Proyectos', icon: <Briefcase size={18} aria-hidden /> },
+    { key: 'tasks', label: 'Mis acciones', icon: <ListChecks size={18} aria-hidden /> },
     { key: 'roles', label: 'Mis roles', icon: <UserRound size={18} aria-hidden /> },
     ...(user.isAdmin ? [{ key: 'admin' as const, label: 'Administración', icon: <ShieldCheck size={18} aria-hidden /> }] : []),
   ];
@@ -205,6 +207,7 @@ function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?
         {error && <div className="mb-4"><Notice tone="red">{error}</Notice></div>}
         {section === 'admin' && user.isAdmin && <Admin currentUserId={user.id} />}
         {section === 'projects' && <Projects user={user} />}
+        {section === 'tasks' && <MyTasks />}
         {section === 'roles' && (
           <>
             <PageHeader title="Mis roles" subtitle="Lo que puedes ver y hacer depende de estos roles." />

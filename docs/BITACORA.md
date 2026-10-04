@@ -5,12 +5,13 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 ## Estado actual para retomar
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
-- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–008 (la 008 añade contacto por proyecto y fecha comprometida del hito; 31 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
+- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–011 (35 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, los cuatro servicios (`identity`, `projects`, `health`, `platform`) y los paquetes `service-kit`, `contracts` y `health-engine`; ver README para arrancarlo.
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
-- **Todavía no implementado:** R3 a R5: ciclo de revisión y Health Review, validaciones, eventos, acciones automáticas, procesos programados, alertas, Health Center, portafolio, timeline e historial, y operación del piloto.
+- **R3 en curso (en revisión, sin aceptar):** alertas con episodios, acciones automáticas y manuales, causa y plan del PM con validación del líder (PHS-030 a PHS-032 en parte, BIT-0024).
+- **Todavía no implementado:** el resto de R3 a R5: ciclo de revisión y Health Review, validaciones de revisión, procesos programados, notificaciones, Health Center, portafolio, timeline e historial, y operación del piloto.
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
@@ -21,7 +22,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Datos de demostración:** `seed:demo` carga seis usuarios y cinco proyectos (DEMO-001 a DEMO-005); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** aceptación de R1 y R2 por el usuario y confirmación de las interpretaciones de D02, D03, D04 y D08; después R3, empezando por ciclo de revisión (PHS-020) y Health Review (PHS-021 a PHS-024).
+- **Siguiente paso funcional:** que el usuario pruebe "Alertas y acciones" y "Mis acciones"; después ciclo de revisión (PHS-020) y Health Review (PHS-021 a PHS-024). Siguen sin confirmar las interpretaciones de D02 y D08.
 
 ## Cómo se mantiene
 
@@ -863,6 +864,47 @@ La validación por Dirección contradecía D05. El usuario eligió entre alterna
 ### Pendientes y siguiente paso
 
 Construir R3. Siguiente entrada: BIT-0024.
+
+## BIT-0024 — Alertas, acciones y respuesta con causa y plan
+
+**Fecha:** 2026-10-04, America/Mexico_City.
+
+**Objetivo:** primer incremento de R3: detectar lo que va mal en un proyecto, asignar la acción y exigir al PM causa y plan validados por el líder.
+
+**Relación:** PHS-030, PHS-031, PHS-032; D04 y D05 (BIT-0023); RN-15 a RN-17.
+
+**Identificación:** commit con prefijo `BIT-0024`.
+
+### Trabajo realizado
+
+- **Base.** Migración [011](../db/migrations/011_event_response.sql): `event_response` y `event_response_validation`, de solo inserción, escritas por Salud; 35 tablas. Prueba [011](../db/tests/011_event_response.sql).
+- **Salud.** [governance.service.ts](../apps/health/src/governance.service.ts) y su controlador. Al consultar un proyecto se abren alertas por hito vencido, mitigación de riesgo vencida, riesgo materializado, desviación de proyecto, desviación financiera, renovación próxima o vencida y cambio pendiente; cada una con un episodio y, salvo que el proyecto las tenga desactivadas, una acción automática con la regla del prototipo: responsable del elemento y 2 días para hitos y riesgos; PM y 5 días para desviaciones; responsable y 10 días, sin pasar del vencimiento, para renovaciones; líder y 7 días para cambios. Cuando la condición desaparece la alerta se resuelve y su acción automática abierta se cierra con una nota del sistema; si reaparece es un episodio nuevo. Completar la acción no resuelve la alerta.
+- **Causa y plan (D04).** En hito vencido, mitigación vencida y las dos desviaciones, quien puede editar el proyecto registra la causa y un plan de remediación o una replanificación vinculada a una propuesta de cambio pendiente. El líder valida o devuelve con comentario; devuelta, el PM envía una versión nueva. Dirección lo ve y no decide.
+- **Acciones.** Alta manual idempotente, transiciones (pendiente, en curso, bloqueada, completada, cancelada) con comentario obligatorio al cerrar y control de versión, y bandeja del usuario.
+- **Gateway y contratos.** Prefijo público `/api/v1/governance` hacia Salud; siete rutas nuevas en `packages/contracts` y en `docs/api`.
+- **Web.** [Governance.tsx](../apps/web/src/Governance.tsx): pestaña "Alertas y acciones" en el proyecto y sección "Mis acciones" en el menú.
+- **Datos de demostración.** [seed-demo de Salud](../apps/health/src/cli/seed-demo.ts), añadido a `seed:demo`: detecta las alertas de los cinco proyectos y deja en DEMO-001 una respuesta en validación del líder y una acción manual.
+- `AssessmentsService.inputs` pasa a ser público para reutilizar el cálculo de desviaciones.
+
+### Archivos
+
+`db/migrations/011_event_response.sql`, `db/tests/011_event_response.sql`, `apps/health/src/{governance.service,governance.controller,app.module,assessments.service}.ts`, `apps/health/src/cli/seed-demo.ts`, `apps/health/test/governance.int.test.ts`, `apps/health/package.json`, `apps/gateway/src/routes.ts`, `packages/contracts/src/{health,gateway}.ts`, `docs/api/{health,gateway}.openapi.json`, `docs/api/README.md`, `apps/web/src/{Governance,App,Projects}.tsx`, `apps/web/src/api.ts`, `scripts/local-db.sh`, y documentación: backlog, base de datos, mapa y esta bitácora.
+
+### Decisiones y supuestos
+
+- Aplicadas las decisiones del usuario de BIT-0023.
+- Supuestos míos, sin confirmar: cerrar sola la acción automática cuando desaparece la causa; exigir causa y plan también en hitos vencidos no críticos y en mitigaciones vencidas de severidad media; no exigirlos en riesgo materializado, renovaciones ni cambios pendientes; validar la respuesta de replanificación no aprueba el cambio, que se decide en la pestaña Cambios.
+
+### Validación y límites
+
+- `pnpm typecheck` y `pnpm build` sin errores. `pnpm test`: 132 pruebas en 8 paquetes, todas aprobadas (Salud 11, seis de ellas nuevas). `pnpm db:test`: 11 de 11. La prueba SQL 011 falló una vez por un error de la propia prueba (reutilizaba un número de versión) y se corrigió.
+- Por el gateway con los usuarios de demostración: DEMO-001 muestra seis alertas; el PM puede responder tres y tiene cuatro acciones; el líder puede validar la respuesta cargada y tiene dos acciones; Dirección ve las seis y no puede responder ni validar; la lectora no tiene acciones.
+- **No comprobado:** las pantallas nuevas no se revisaron en el navegador (compilan y pasan la verificación de tipos); tampoco hay prueba de dos detecciones simultáneas.
+- La detección ocurre al consultar, no en segundo plano (PHS-033); sin notificaciones (PHS-034).
+
+### Pendientes y siguiente paso
+
+Lo que falta de PHS-030 a PHS-032 está en el estado de cada historia en el backlog. Siguiente: prueba del usuario; después ciclo de revisión (PHS-020). Siguiente entrada: BIT-0025.
 
 ## Plantilla para próximas entradas
 

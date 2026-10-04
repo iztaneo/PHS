@@ -194,6 +194,8 @@ Los snapshots `milestone_snapshot` y `team_snapshot` de la línea base tienen su
 
 Con estas dos migraciones el esquema tiene 33 tablas. `evidence_withdrawal` la escribe Plataforma y `project_status_log` la escribe Proyectos.
 
+`011_event_response.sql` aplica D04: `event_response` guarda cada versión de la causa y el plan que el PM da a una alerta (remediación, o replanificación vinculada a una propuesta de cambio del mismo proyecto) y `event_response_validation` la única decisión del líder sobre cada versión. Ambas son de solo inserción y las escribe Salud. Con ellas el esquema tiene 35 tablas.
+
 ## Instalación y validación
 
 Desde BIT-0010 las migraciones se aplican con [dbmate](https://github.com/amacneil/dbmate), que ejecuta cada archivo en una transacción y registra las aplicadas en `public.schema_migrations`. Los archivos ya no contienen `BEGIN/COMMIT` propios y no deben aplicarse con `psql -f`. No tienen reversión destructiva: el bloque `migrate:down` falla a propósito; se corrige con una migración nueva o restaurando un respaldo.
@@ -222,8 +224,9 @@ npx pnpm@12.9.1 db:local:stop
 | `008_project_context_and_commitments.sql` | Contacto por proyecto y fecha comprometida del hito. |
 | `009_evidence_addendum_and_withdrawal.sql` | Adendas y retiro de evidencias. |
 | `010_project_status_log_and_renewal_outcome.sql` | Historial de estado con motivos y resultado de renovaciones. |
+| `011_event_response.sql` | Causa y plan de una alerta y su validación (D04). |
 
-Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso), `006_admin.sql` (3 rechazos), `007_idempotency.sql` (6 rechazos), `008_context.sql`, `009_evidence.sql` (6 rechazos) y `010_status_and_renewals.sql` (8 rechazos). Se ejecutan con el propietario del esquema.
+Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso), `006_admin.sql` (3 rechazos), `007_idempotency.sql` (6 rechazos), `008_context.sql`, `009_evidence.sql` (6 rechazos) `010_status_and_renewals.sql` (8 rechazos) y `011_event_response.sql` (9 rechazos). Se ejecutan con el propietario del esquema.
 
 ## Evolución pendiente
 

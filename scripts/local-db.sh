@@ -57,6 +57,7 @@ case "${1:-}" in
     (cd apps/identity && node dist/cli/seed-demo.js)
     (cd apps/projects && node dist/cli/seed-demo.js)
     (cd apps/platform && node dist/cli/seed-demo.js)
+    (cd apps/health && node dist/cli/seed-demo.js)
     ;;
   reset)
     pg_ctl -D "$DATA" -m fast stop >/dev/null 2>&1 || true

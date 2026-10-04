@@ -33,6 +33,7 @@ export function proxiedRoutes(): ServiceRoute[] {
     { name: 'projects-clients', prefix: '/api/v1/clients', target: new URL('/clients', projects).toString() },
     { name: 'projects-people', prefix: '/api/v1/people', target: new URL('/people', projects).toString() },
     { name: 'platform-evidence', prefix: '/api/v1/evidence', target: new URL('/evidence', requireEnv('PLATFORM_URL')).toString() },
+    { name: 'health-governance', prefix: '/api/v1/governance', target: requireEnv('HEALTH_URL') },
     { name: 'health-assessments', prefix: '/api/v1/assessments', target: new URL('/assessments', requireEnv('HEALTH_URL')).toString() },
   ];
 }
