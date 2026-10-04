@@ -27,7 +27,9 @@ Cuando hay conflicto, registrar la decisión en [DECISIONES.md](DECISIONES.md). 
 
 Clasificación: **derivado** = presente en F1–F4; **propuesto** = adaptación para producción o decisión de diseño; **pendiente** = necesita definición de negocio/entorno antes de aceptar las historias afectadas.
 
-## 3. Personas y autorización propuesta — D05
+## 3. Personas y autorización — D05
+
+La tabla siguiente fue confirmada por el usuario el 2026-10-03 con estas precisiones: Dirección solo consulta, sin aprobar por delegación; el administrador no accede a datos de negocio salvo que tenga además un rol de negocio; los datos económicos los ven PM, líder y Dirección, no colaboradores ni lectores. Detalle en [DECISIONES.md](DECISIONES.md), que incluye las decisiones de diseño de la pantalla de administración: roles acumulables, el responsable de un elemento puede actualizarlo, y responsable técnico y sponsor solo consultan.
 
 | Capacidad | PM | Líder | Dirección | Administrador |
 | --- | --- | --- | --- | --- |

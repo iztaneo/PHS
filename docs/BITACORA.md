@@ -14,12 +14,12 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
 - **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 175 criterios de aceptación desde BIT-0008. Ninguna historia se considera implementada por la existencia de estos documentos.
-- **Decisiones abiertas:** D01–D04 y D07–D10 completas; D05 y D06 parcialmente confirmadas. Ver [DECISIONES.md](producto/DECISIONES.md).
+- **Decisiones abiertas:** D01–D04 y D07–D10 completas; D06 parcialmente confirmada; de D05 solo quedan la separación de funciones tras el piloto y los responsables externos. Ver [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** PHS-006 (permisos por práctica y proyecto; requiere cerrar el alcance de D05) y PHS-007 (administración de usuarios y prácticas), luego PHS-008 (auditoría y concurrencia). D01 y D02 pueden resolverse antes de R2/R3.
+- **Siguiente paso funcional:** PHS-006 (permisos por práctica y proyecto, con los perfiles confirmados en BIT-0012) y PHS-007 (administración de usuarios y prácticas), luego PHS-008 (auditoría y concurrencia). D01 y D02 pueden resolverse antes de R2/R3.
 
 ## Cómo se mantiene
 
@@ -426,6 +426,36 @@ Tomados al implementar, no confirmados por el usuario: contraseña de 12 a 128 c
 ### Pendientes y siguiente paso
 
 Aceptación de PHS-005 por el usuario. Siguiente: PHS-006 y PHS-007; D05 debe definir alcance por rol antes de aceptar permisos. Siguiente entrada: BIT-0012.
+
+## BIT-0012 — Perfiles y alcance de acceso (D05)
+
+**Fecha:** 2026-10-03, America/Mexico_City.
+
+**Objetivo:** describir los perfiles de la demo y terminar de definirlos con el usuario antes de implementar permisos.
+
+**Relación:** D05, PHS-006, PHS-007. Solo documentación; no hay cambios de código ni de esquema.
+
+**Identificación:** commit con prefijo `BIT-0012`.
+
+### Hechos comprobados en la demo
+
+Tres perfiles (PM, Líder, Dirección) con un selector que solo cambia el contenido del Health Center; todos los menús, acciones y proyectos quedan disponibles para cualquiera; no existe administrador; los responsables nombrados en un proyecto son texto sin permisos.
+
+### Decisiones confirmadas por el usuario
+
+PM ve solo sus proyectos; Dirección solo consulta; los datos económicos los ven PM, líder y Dirección; el administrador no accede a datos de negocio por serlo. Confirmó además, como decisiones de diseño de la pantalla de administración: roles acumulables, el responsable de un elemento puede actualizarlo, y responsable técnico y sponsor solo consultan.
+
+### Archivos
+
+[DECISIONES.md](producto/DECISIONES.md) (tabla de perfiles y fila D05), [ESPECIFICACION.md](producto/ESPECIFICACION.md) §3 y esta bitácora.
+
+### Validación y límites
+
+Revisión estática del prototipo (`ROLES`, `centerPM`, `centerLead`, `centerDir` y definiciones de vistas en `phf.html`). Ningún permiso está implementado todavía: hoy cualquier usuario autenticado pasa por el gateway.
+
+### Pendientes y siguiente paso
+
+Implementar PHS-006 y PHS-007 con estos perfiles. Siguiente entrada: BIT-0013.
 
 ## Plantilla para próximas entradas
 
