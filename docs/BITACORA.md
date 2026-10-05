@@ -13,7 +13,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
 - **R3 construido (en revisión, sin aceptar):** alertas, acciones y causa y plan (BIT-0024); ciclo de revisión, Health Review, validación y festivos (BIT-0025); confianza explicada, tendencia, proyección y proceso programado (BIT-0026). Lo que falta de cada historia está en su estado en el backlog.
 - **R4 construido (en revisión, sin aceptar):** notificaciones y Health Center (BIT-0028); historial y línea de tiempo, modelo PHF y consulta de pausados y cerrados (BIT-0030); portafolio con las reglas de D10 (BIT-0031). Lo que falta de cada historia está en su estado en el backlog.
-- **Todavía no implementado:** R5: recorrido integral con escenarios (PHS-040), usabilidad, accesibilidad y rendimiento (PHS-041) y operación del piloto (PHS-042).
+- **R5 en curso:** PHS-040 tiene un runner E2E reproducible por gateway (BIT-0032): 8 de 10 escenarios aprobados y dos defectos abiertos; sigue en revisión. Todavía no implementados: usabilidad, accesibilidad y rendimiento (PHS-041) y operación del piloto (PHS-042).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
@@ -24,7 +24,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Datos de demostración:** `seed:demo` carga seis usuarios y cinco proyectos (DEMO-001 a DEMO-005); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** prueba y aceptación del usuario de R1 a R4, ninguna aceptada todavía; después R5, que necesita D07 y la definición del entorno del piloto. Por confirmar: las interpretaciones marcadas en DECISIONES y los supuestos de BIT-0024, BIT-0026, BIT-0028 y BIT-0031.
+- **Siguiente paso funcional:** corregir E2E-H01 (envío anticipado de ciclos) y E2E-H02 (fixture saludable), repetir PHS-040 y completar sus casos parciales o pendientes. R1 a R4 siguen sin aceptación del usuario; PHS-041/042 necesitan D07 y la definición del entorno del piloto. Por confirmar: las interpretaciones marcadas en DECISIONES y los supuestos de BIT-0024, BIT-0026, BIT-0028 y BIT-0031.
 
 ## Cómo se mantiene
 
@@ -1205,6 +1205,50 @@ Eligió entre alternativas: promedio simple; cuentan solo activos y en renovaci�
 ### Pendientes y siguiente paso
 
 Prueba del usuario de R1 a R4. Después R5. Siguiente entrada: BIT-0032.
+
+## BIT-0032 — Primera corrida end to end de PHS-040
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** ejecutar y dejar reproducible el recorrido integral de R1 a R4, documentando resultados y hallazgos antes de aceptar PHS-040.
+
+**Relación:** PHS-040; AT-01 a AT-18; D07; hallazgos E2E-H01 a E2E-H06. PHS-040 queda en revisión, no aceptada.
+
+**Identificación:** commit con prefijo `BIT-0032`.
+
+### Trabajo realizado
+
+- Se añadió `pnpm test:e2e`. El orquestador recrea exclusivamente `phs_e2e`, aplica las 15 migraciones, carga los seeds, inicia los cinco procesos y ejecuta el runner por el gateway. No modifica la base local `phs`.
+- El runner crea un proyecto sintético con equipo, tres hitos y baseline; recorre economía, riesgo, evidencia, cambio aprobado, conflictos, Health Review, evento/acción, evaluación, vistas de gobierno e historial.
+- Se ejecutaron permisos cruzados, archivo inválido, soporte obligatorio, idempotencia, dos ediciones concurrentes, dos decisiones concurrentes y tres sincronizaciones simultáneas del mismo evento.
+- Los servicios se reiniciaron contra la misma base. Se comprobó persistencia del proyecto y recuperación de los cinco componentes.
+- Se creó [INFORME-E2E-2026-10-05.md](pruebas/INFORME-E2E-2026-10-05.md) con escenario por escenario, cobertura AT-01–AT-18 y seis hallazgos.
+
+### Archivos relevantes
+
+`tests/e2e/gateway-flow.mjs`, `scripts/e2e.sh`, `package.json`, `docs/pruebas/INFORME-E2E-2026-10-05.md`, `docs/producto/BACKLOG.md` y esta bitácora.
+
+### Validación y resultados
+
+- Corrida definitiva: 8 de 10 escenarios aprobados; dos fallos reproducibles.
+- `pnpm test:e2e` recreó la base, compiló, levantó y detuvo los servicios; terminó con código 1 por esos dos hallazgos, como está diseñado.
+- `pnpm typecheck` sin errores; `pnpm test`: 165 pruebas aprobadas; `pnpm db:test`: 15 de 15; `pnpm db:dictionary -- --check`: 38 tablas y 349 columnas, al día.
+- E2E-H01: el ciclo futuro 2026-10-06 a 2026-10-12 aparece `canSubmit: true` el 2026-10-05.
+- E2E-H02: DEMO-002 termina en riesgo, score 45, aunque debe ser el fixture saludable con renovación.
+- Reinicio: el proyecto `E2E-MUVP2OR4` persistió y gateway, Identidad, Proyectos, Salud y Plataforma regresaron con servicio y base `ok`.
+- Scheduler/outbox tras reinicio: 194 ejecuciones, ninguna incompleta ni fallida; 172 mensajes procesados, cero pendientes, máximo un intento y cero entregas duplicadas.
+- La prueba aislada deja datos en `phs_e2e` para diagnóstico y los sustituye en la próxima ejecución.
+
+### Límites y pendientes
+
+- El runner termina con código distinto de cero mientras los dos defectos permanezcan; es el resultado esperado de esta evidencia, no una falla del entorno.
+- No hay E2E de navegador; `apps/web` sigue sin pruebas automatizadas.
+- La matriz del informe identifica ocho casos pendientes y cuatro parciales. No se probó restauración de backup, RPO/RTO, accesibilidad completa, carga ni diez revisiones humanas.
+- Corregir E2E-H01 y E2E-H02, repetir `pnpm test:e2e` y ampliar la suite antes de aceptar PHS-040. D07 sigue bloqueando PHS-041/042.
+
+### Siguiente paso
+
+Corregir primero la prohibición de envío anticipado y separar el fixture de tendencia del fixture saludable. Después completar la cobertura pendiente de PHS-040. Siguiente entrada: BIT-0033.
 
 ## Plantilla para próximas entradas
 

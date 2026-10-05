@@ -937,6 +937,8 @@ Como **equipo de calidad**, quiero probar el flujo completo y sus excepciones, p
 
 **Datos / artefactos:** Fixtures sintéticos y pruebas E2E
 
+**Estado (BIT-0032): en revisión, no aceptada.** Existe un recorrido reproducible por el gateway sobre `phs_e2e`; aprobó 8 de 10 escenarios y documentó reinicio, scheduler y outbox. Bloquean la aceptación: un ciclo futuro queda habilitado para envío y DEMO-002 ya no representa el fixture saludable. Faltan además los casos E2E y pruebas de piloto detallados en [el informe del 2026-10-05](../pruebas/INFORME-E2E-2026-10-05.md).
+
 Criterios de aceptación:
 
 1. Los tres escenarios de F4 tienen fixtures repetibles: proyecto en riesgo, saludable con renovación y sin revisión.
