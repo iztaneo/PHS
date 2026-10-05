@@ -9,7 +9,8 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, los cuatro servicios (`identity`, `projects`, `health`, `platform`) y los paquetes `service-kit`, `contracts` y `health-engine`; ver README para arrancarlo.
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Diccionario de datos:** [DICCIONARIO-DATOS.md](DICCIONARIO-DATOS.md), con diagramas entidad-relación por módulo y el contenido de los catálogos, generado desde la base con `pnpm db:dictionary` (BIT-0029, BIT-0038).
-- **Integración continua:** GitHub Actions valida cada cambio en `main` y cada pull request con compilación, pruebas, documentos generados y el recorrido e2e (BIT-0035).
+- **Integración continua:** GitHub Actions valida cada cambio en `main` y cada pull request con compilación, pruebas, documentos generados, el recorrido e2e y la construcción y arranque de las imágenes Docker (BIT-0035, BIT-0040).
+- **Docker para pruebas:** `docker compose -f docker-compose.app.yml up --build -d --wait` levanta base, servicios y web en `localhost:8080` con datos de demostración; guía en [DOCKER.md](DOCKER.md) (BIT-0040). No es el entorno del piloto.
 - **Ambientación y prueba:** [MANUAL-AMBIENTACION-Y-PRUEBAS.md](MANUAL-AMBIENTACION-Y-PRUEBAS.md) describe el arranque limpio con un administrador, la configuración inicial, el primer proyecto, el recorrido por roles, la carga demo y las suites automatizadas (BIT-0039).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
@@ -1495,6 +1496,47 @@ Revisar la corrida. Después AT-16 y D07. Siguiente entrada: BIT-0039.
 ### Pendientes y siguiente paso
 
 Revisar el manual con el responsable que ambientará el primer entorno y adaptar nombres, prácticas y responsables reales. Después completar AT-16/D07 y convertir las decisiones operativas en el procedimiento de despliegue de PHS-042. Siguiente entrada: BIT-0040.
+
+## BIT-0040 — Aplicación completa en Docker para pruebas
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** el usuario pidió un Docker para que otras personas puedan probar la aplicación integrada con su base de datos.
+
+**Relación:** PHS-040, PHS-042 (antecedente, no lo cumple); D06, D07.
+
+**Identificación:** commit con prefijo `BIT-0040`.
+
+### Trabajo realizado
+
+- [Dockerfile](../Dockerfile) con tres etapas: compilación, imagen de servicios (una sola para gateway, Identidad, Proyectos, Salud y Plataforma, que corre sin privilegios) e imagen web con nginx.
+- [docker-compose.app.yml](../docker-compose.app.yml): PostgreSQL 17; tres pasos que se ejecutan y terminan en cada arranque (migraciones, usuarios de base de cada servicio, administrador y datos de demostración); los cinco procesos con verificación de salud; y la web, lo único publicado, en `127.0.0.1:8080`. Datos en dos volúmenes. Opciones: puerto, interfaz, orígenes permitidos y arrancar sin datos de demostración.
+- [docker/nginx.conf](../docker/nginx.conf): sirve la web y reenvía `/api` al gateway, para que el navegador use un solo origen.
+- Servicios: nueva variable `LISTEN_HOST` (por defecto `127.0.0.1`, igual que antes); en Docker vale `0.0.0.0` porque cada contenedor tiene su propia red y el aislamiento lo da no publicar el puerto.
+- Integración continua: trabajo "Imágenes Docker" que construye, levanta el entorno y comprueba que la web carga, los servicios responden y un usuario de demostración inicia sesión y ve sus proyectos.
+- [DOCKER.md](DOCKER.md), sección en el README y comandos `docker:up`, `docker:down` y `docker:reset`.
+
+### Archivos
+
+`Dockerfile`, `.dockerignore`, `docker-compose.app.yml`, `docker/nginx.conf`, `packages/service-kit/src/{env,index}.ts`, `apps/{gateway,identity,projects,health,platform}/src/main.ts`, `.github/workflows/ci.yml`, `package.json`, `docs/DOCKER.md`, `README.md` y esta bitácora.
+
+### Decisiones y supuestos
+
+- Decisiones mías: un contenedor por proceso en lugar de uno solo con todo; la web se publica solo en la propia máquina y abrirla a la red es una opción explícita, porque las contraseñas de demostración son públicas; las credenciales salen de `.env.example` para no repetirlas en otro archivo; se conserva `docker-compose.yml`, que solo levanta la base para desarrollo.
+- No cambia la decisión de desarrollar y probar en local sin Docker: esto es una vía adicional para quien no tiene el entorno instalado.
+
+### Validación y límites
+
+- En esta máquina (Docker 28.5): construcción y arranque con todos los contenedores saludables. Por `localhost:8080` y `127.0.0.1:8080`: la web carga, el estado reporta los cuatro servicios y sus bases en orden, un usuario de demostración inicia sesión, ve sus cinco proyectos, Inicio, notificaciones e historial; subir y descargar un archivo de evidencia funciona; un origen no permitido recibe 403; los servicios internos no responden desde fuera. Un segundo arranque no duplicó datos. Con `PHS_DEMO_DATA=false` y otro puerto quedó un usuario y cero proyectos.
+- Primer intento fallido: todos los servicios declaraban la misma construcción y Compose intentó crear la misma imagen varias veces; ahora la construye solo `migrate` y los demás la reutilizan.
+- `pnpm typecheck` sin errores y `pnpm test` con 165 pruebas aprobadas después del cambio de `LISTEN_HOST`.
+- En una base nueva DEMO-002 queda saludable (96) y DEMO-006 muestra la tendencia, como se esperaba desde BIT-0033.
+- **No comprobado:** la pantalla después de iniciar sesión en el navegador contra Docker (solo se vio la de acceso), la apertura a otra máquina de la red, ni otros sistemas operativos. El trabajo de integración continua se verifica con la corrida de este commit.
+- Límites: sin HTTPS, respaldos ni monitoreo; imagen de servicios de unos 640 MB con dependencias de desarrollo; usa los usuarios de base y el secreto interno de desarrollo. El despliegue del piloto sigue siendo PHS-042 y necesita D07.
+
+### Pendientes y siguiente paso
+
+Revisar la corrida de integración continua. Después AT-16 y D07. Siguiente entrada: BIT-0041.
 
 ## Plantilla para próximas entradas
 

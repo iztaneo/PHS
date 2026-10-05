@@ -81,6 +81,33 @@ jobs:
       - name: Matriz de pruebas
         run: pnpm test:matrix
 
+  docker:
+    name: Imágenes Docker
+    needs: verificar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Construir y levantar el entorno completo
+        run: docker compose -f docker-compose.app.yml up --build -d --wait
+      # Lo mínimo que tiene que funcionar para quien lo pruebe: la web carga, los servicios y su
+      # base responden, un usuario de demostración inicia sesión y ve sus proyectos.
+      - name: Comprobar que se puede usar
+        run: |
+          base=http://localhost:8080
+          curl -fsS "$base/" | grep -q '<div id="root">'
+          curl -fsS "$base/api/v1/status" | grep -q '"status":"ok"'
+          password=$(grep '^DEMO_USER_PASSWORD=' .env.example | cut -d= -f2-)
+          curl -fsS -c cookies.txt -H "Origin: $base" -H 'content-type: application/json' \
+            -d "{\"email\":\"ana.pm@phs.test\",\"password\":\"$password\"}" "$base/api/v1/session" > /dev/null
+          curl -fsS -b cookies.txt "$base/api/v1/projects" | grep -q 'DEMO-001'
+      - name: Registros si falla
+        if: failure()
+        run: docker compose -f docker-compose.app.yml logs --no-color --tail 200
+      - name: Detener
+        if: always()
+        run: docker compose -f docker-compose.app.yml down --volumes
+
   e2e:
     name: Recorrido de punta a punta
     needs: verificar

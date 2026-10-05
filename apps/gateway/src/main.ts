@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { loadEnv, portFromEnv } from '@phs/service-kit';
+import { hostFromEnv, loadEnv, portFromEnv } from '@phs/service-kit';
 import { json } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { openApiDocuments } from '@phs/contracts';
@@ -28,4 +28,4 @@ const identity = app.get(IdentityClient);
 for (const route of proxiedRoutes()) {
   app.use(route.prefix, authenticate(identity), createProxyMiddleware({ target: route.target, changeOrigin: true }));
 }
-await app.listen(portFromEnv('GATEWAY_PORT', 3000), '127.0.0.1');
+await app.listen(portFromEnv('GATEWAY_PORT', 3000), hostFromEnv());

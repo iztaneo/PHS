@@ -66,12 +66,23 @@ Los scores no se anotan aquí porque cambian con la fecha; se ven en la pantalla
 
 Funciona: acceso y administración (usuarios, prácticas, tipos de servicio y días festivos); proyectos con equipo, hitos, riesgos, línea base, cambios aprobados, economía, evidencias, renovaciones y estado; evaluación de salud con confianza, tendencia y proyección; ciclo de revisión con Health Review y validación del líder; alertas con causa y plan, acciones automáticas y manuales; proceso programado; notificaciones; Inicio (Health Center), portafolio, historial y línea de tiempo, pausados y cerrados, y la ayuda del modelo PHF. `test:e2e` ejecuta el recorrido de punta a punta sobre una base desechable `phs_e2e`. Lo que falta de cada historia está en su estado en el [backlog](docs/producto/BACKLOG.md).
 
+## Probar con Docker
+
+Para probar la aplicación completa sin instalar Node.js ni PostgreSQL:
+
+```sh
+docker compose -f docker-compose.app.yml up --build -d --wait
+```
+
+Abrir [localhost:8080](http://localhost:8080) e iniciar sesión con los usuarios de demostración. Detalle, opciones y problemas frecuentes en [docs/DOCKER.md](docs/DOCKER.md). Es un entorno de prueba, no el del piloto.
+
 ## Integración continua
 
 Cada cambio en `main` y cada pull request ejecuta [.github/workflows/ci.yml](.github/workflows/ci.yml) en GitHub Actions, con PostgreSQL 17 y los valores de desarrollo de `.env.example`:
 
 1. **Compilar y probar:** compilación, tipos, pruebas de código, pruebas SQL, diccionario de datos al día y matriz de pruebas.
 2. **Recorrido de punta a punta:** `test:e2e` con los servicios y la web reales; si falla, guarda los registros y las capturas como artefacto.
+3. **Imágenes Docker:** construye las imágenes, levanta el entorno completo y comprueba que la web responde y que un usuario de demostración inicia sesión.
 
 ## Abrir el prototipo
 

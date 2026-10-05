@@ -33,3 +33,10 @@ export function portFromEnv(name: string, fallback: number): number {
   }
   return port;
 }
+
+// Where a service listens. By default only on this machine: the services trust the gateway and
+// must not be reachable from anywhere else. In containers each service has its own network
+// namespace, so LISTEN_HOST=0.0.0.0 is needed and the isolation comes from not publishing the port.
+export function hostFromEnv(): string {
+  return process.env.LISTEN_HOST?.trim() || '127.0.0.1';
+}

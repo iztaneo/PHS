@@ -1,0 +1,17 @@
+# Nada local entra a las imágenes: se instala y se compila dentro.
+.git
+.github
+.env
+.env.*
+!.env.example
+.local
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+test-results
+playwright-report
+coverage
+docs
+Project-Health-System-Prototype
+tests
+.DS_Store

@@ -1,0 +1,171 @@
+# PHS completo en Docker para probarlo: base de datos, cinco procesos de la aplicación y la web.
+# Uso:  docker compose -f docker-compose.app.yml up --build     (guía en docs/DOCKER.md)
+# Solo para pruebas y demostración: usa los valores de desarrollo de .env.example, carga datos de
+# demostración y no cifra el tráfico. No es la configuración del piloto (PHS-042).
+name: phs
+
+x-app: &app
+  # La imagen la construye el servicio "migrate", el primero en ejecutarse; los demás la reutilizan.
+  image: phs-app:local
+  pull_policy: never
+  # Usuarios, contraseñas de demostración y secreto interno salen de .env.example; lo que cambia
+  # dentro de Docker (direcciones y carpetas) se redefine abajo.
+  env_file: .env.example
+  environment: &app-env
+    LISTEN_HOST: 0.0.0.0
+    DATABASE_URL: postgres://phs_owner:${POSTGRES_PASSWORD:-phs_local_dev}@db:5432/phs?sslmode=disable
+    IDENTITY_DATABASE_URL: postgres://phs_identity_dev:${POSTGRES_PASSWORD:-phs_local_dev}@db:5432/phs
+    PROJECTS_DATABASE_URL: postgres://phs_projects_dev:${POSTGRES_PASSWORD:-phs_local_dev}@db:5432/phs
+    HEALTH_DATABASE_URL: postgres://phs_health_dev:${POSTGRES_PASSWORD:-phs_local_dev}@db:5432/phs
+    PLATFORM_DATABASE_URL: postgres://phs_platform_dev:${POSTGRES_PASSWORD:-phs_local_dev}@db:5432/phs
+    IDENTITY_URL: http://identity:3001
+    PROJECTS_URL: http://projects:3002
+    HEALTH_URL: http://health:3003
+    PLATFORM_URL: http://platform:3004
+    EVIDENCE_DIR: /data/evidence
+    # El navegador debe abrir exactamente una de estas direcciones; cualquier otra se rechaza.
+    WEB_ORIGIN: ${PHS_WEB_ORIGIN:-http://localhost:${PHS_WEB_PORT:-8080},http://127.0.0.1:${PHS_WEB_PORT:-8080}}
+    COOKIE_SECURE: "false"
+    API_DOCS: "true"
+  restart: unless-stopped
+
+x-ready: &ready
+  depends_on:
+    seed:
+      condition: service_completed_successfully
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: phs_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-phs_local_dev}
+      POSTGRES_DB: phs
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phs_owner -d phs"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # 1. Esquema: aplica las migraciones pendientes. Repetirlo no cambia nada.
+  migrate:
+    <<: *app
+    build:
+      context: .
+      target: app
+    restart: "no"
+    command: ["./node_modules/.bin/dbmate", "--migrations-dir", "db/migrations", "--no-dump-schema", "up"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # 2. Usuarios de base de datos de cada servicio (las migraciones crean sus roles).
+  roles:
+    image: postgres:17
+    restart: "no"
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-phs_local_dev}
+    volumes:
+      - ./db/local/dev_logins.sql:/dev_logins.sql:ro
+    command: ["psql", "-X", "-q", "-v", "ON_ERROR_STOP=1", "-h", "db", "-U", "phs_owner", "-d", "phs", "-v", "dev_password=${POSTGRES_PASSWORD:-phs_local_dev}", "-f", "/dev_logins.sql"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # 3. Datos: el administrador inicial y, salvo que PHS_DEMO_DATA=false, los usuarios y proyectos de
+  #    demostración. Se puede repetir: no duplica ni modifica lo que ya existe.
+  seed:
+    <<: *app
+    restart: "no"
+    environment:
+      <<: *app-env
+      PHS_DEMO_DATA: ${PHS_DEMO_DATA:-true}
+    volumes:
+      - evidence:/data/evidence
+    command:
+      - sh
+      - -ec
+      - |
+        PHS_NEW_USER_EMAIL="$$DEV_USER_EMAIL" PHS_NEW_USER_NAME="$$DEV_USER_NAME" PHS_NEW_USER_PASSWORD="$$DEV_USER_PASSWORD" \
+          PHS_NEW_USER_ADMIN=true node apps/identity/dist/cli/create-user.js
+        if [ "$$PHS_DEMO_DATA" = "true" ]; then
+          node apps/identity/dist/cli/seed-demo.js
+          node apps/projects/dist/cli/seed-demo.js
+          node apps/platform/dist/cli/seed-demo.js
+          node apps/health/dist/cli/seed-demo.js
+        fi
+    depends_on:
+      roles:
+        condition: service_completed_successfully
+
+  identity:
+    <<: [*app, *ready]
+    command: ["node", "apps/identity/dist/main.js"]
+    healthcheck: &health
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+process.env.CHECK_PORT+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      <<: *app-env
+      CHECK_PORT: "3001"
+
+  projects:
+    <<: [*app, *ready]
+    command: ["node", "apps/projects/dist/main.js"]
+    healthcheck: *health
+    environment:
+      <<: *app-env
+      CHECK_PORT: "3002"
+
+  health:
+    <<: [*app, *ready]
+    command: ["node", "apps/health/dist/main.js"]
+    healthcheck: *health
+    environment:
+      <<: *app-env
+      CHECK_PORT: "3003"
+
+  platform:
+    <<: [*app, *ready]
+    command: ["node", "apps/platform/dist/main.js"]
+    healthcheck: *health
+    environment:
+      <<: *app-env
+      CHECK_PORT: "3004"
+    volumes:
+      - evidence:/data/evidence
+
+  # Único punto de entrada de la web hacia los servicios; no se publica fuera de Docker.
+  gateway:
+    <<: *app
+    command: ["node", "apps/gateway/dist/main.js"]
+    healthcheck: *health
+    environment:
+      <<: *app-env
+      CHECK_PORT: "3000"
+    depends_on:
+      identity: { condition: service_healthy }
+      projects: { condition: service_healthy }
+      health: { condition: service_healthy }
+      platform: { condition: service_healthy }
+
+  # Lo único publicado, y solo en esta máquina. Para abrirlo a la red, ver docs/DOCKER.md.
+  web:
+    image: phs-web:local
+    build:
+      context: .
+      target: web
+    ports:
+      - "${PHS_WEB_BIND:-127.0.0.1}:${PHS_WEB_PORT:-8080}:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  evidence:

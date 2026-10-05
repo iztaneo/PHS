@@ -1,4 +1,4 @@
-export { loadEnv, requireEnv, portFromEnv } from './env.js';
+export { hostFromEnv, loadEnv, requireEnv, portFromEnv } from './env.js';
 export {
   PG_POOL, createPool, checkDatabase, withTransaction, insertAudit, insertOutbox, runIdempotent, loadAccess,
   IdempotencyKeyReused,
