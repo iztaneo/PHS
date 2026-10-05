@@ -41,7 +41,7 @@ try {
     }
     const manual = await pool.query("SELECT 1 FROM phs.health_task WHERE project_id = $1 AND NOT automatic LIMIT 1", [portal.id]);
     if (!manual.rowCount) {
-      const due = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
+      const due = addDays(portal.today, 3);
       await governance.createTask(actor(portal.pm_id), portal.id, {
         title: 'Reunión de escalación con el proveedor de facturación', description: 'Acordar una fecha firme de entrega de la API.',
         ownerId: portal.lead_id, dueOn: due, priority: 'high', eventId: null,

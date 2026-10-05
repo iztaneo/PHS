@@ -65,6 +65,13 @@ Los scores no se anotan aquí porque cambian con la fecha; se ven en la pantalla
 
 Funciona: acceso y administración (usuarios, prácticas, tipos de servicio y días festivos); proyectos con equipo, hitos, riesgos, línea base, cambios aprobados, economía, evidencias, renovaciones y estado; evaluación de salud con confianza, tendencia y proyección; ciclo de revisión con Health Review y validación del líder; alertas con causa y plan, acciones automáticas y manuales; proceso programado; notificaciones; Inicio (Health Center), portafolio, historial y línea de tiempo, pausados y cerrados, y la ayuda del modelo PHF. `test:e2e` ejecuta el recorrido de punta a punta sobre una base desechable `phs_e2e`. Lo que falta de cada historia está en su estado en el [backlog](docs/producto/BACKLOG.md).
 
+## Integración continua
+
+Cada cambio en `main` y cada pull request ejecuta [.github/workflows/ci.yml](.github/workflows/ci.yml) en GitHub Actions, con PostgreSQL 17 y los valores de desarrollo de `.env.example`:
+
+1. **Compilar y probar:** compilación, tipos, pruebas de código, pruebas SQL, diccionario de datos al día y matriz de pruebas.
+2. **Recorrido de punta a punta:** `test:e2e` con los servicios y la web reales; si falla, guarda los registros y las capturas como artefacto.
+
 ## Abrir el prototipo
 
 Desde la raíz del repositorio:

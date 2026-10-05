@@ -9,6 +9,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, los cuatro servicios (`identity`, `projects`, `health`, `platform`) y los paquetes `service-kit`, `contracts` y `health-engine`; ver README para arrancarlo.
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Diccionario de datos:** [DICCIONARIO-DATOS.md](DICCIONARIO-DATOS.md), con diagramas entidad-relación por módulo, generado desde la base con `pnpm db:dictionary` (BIT-0029).
+- **Integración continua:** GitHub Actions valida cada cambio en `main` y cada pull request con compilación, pruebas, documentos generados y el recorrido e2e (BIT-0035).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
 - **R3 construido (en revisión, sin aceptar):** alertas, acciones y causa y plan (BIT-0024); ciclo de revisión, Health Review, validación y festivos (BIT-0025); confianza explicada, tendencia, proyección y proceso programado (BIT-0026). Lo que falta de cada historia está en su estado en el backlog.
@@ -1329,6 +1330,44 @@ Cuando la otra sesión confirme su trabajo, repetir `pnpm test:e2e` y resolver E
 ### Siguiente paso
 
 Implementar una prueba controlada de fallo/recuperación y restauración de respaldo para AT-16. Luego definir el entorno y volumen del piloto para PHS-041 y cerrar D07 antes de PHS-042. Siguiente entrada: BIT-0035.
+
+## BIT-0035 — Integración continua
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** el usuario señaló que faltaba la integración continua; crearla para que cada cambio se valide fuera de la máquina de desarrollo.
+
+**Relación:** PHS-040, PHS-042; hallazgo propio sobre fechas en UTC en las pruebas.
+
+**Identificación:** commit con prefijo `BIT-0035`.
+
+### Trabajo realizado
+
+- [.github/workflows/ci.yml](../.github/workflows/ci.yml), en GitHub Actions, para `push` a `main`, pull requests y ejecución manual; una corrida por rama, con permiso de solo lectura sobre el repositorio.
+  - Trabajo "Compilar y probar": PostgreSQL 17 como servicio, Node 24, pnpm de `packageManager`, `.env` copiado de `.env.example`; instala, compila, verifica tipos, migra, crea los usuarios de los servicios y la base `phs_test`, y ejecuta `pnpm test`, `pnpm db:test`, `pnpm db:dictionary -- --check` y `pnpm test:matrix`.
+  - Trabajo "Recorrido de punta a punta": `pnpm test:e2e` con gateway, servicios y web reales y el Chrome del ejecutor; si falla, sube registros y resultados de Playwright como artefacto por siete días.
+- **Fechas de las pruebas.** Las utilidades `day()` de siete archivos de prueba y de semilla, y `today`/`day` del runner e2e, calculaban el día en UTC mientras el sistema usa la zona del proyecto: entre las 18:00 y la medianoche de México diferían y varias aserciones habrían fallado según la hora de la corrida. Ahora usan `America/Mexico_City`.
+- README: sección de integración continua.
+
+### Archivos
+
+`.github/workflows/ci.yml`, `apps/health/test/{assessments,governance}.int.test.ts`, `apps/projects/test/{status,finance-risks,changes,children}.int.test.ts`, `apps/projects/src/cli/seed-demo.ts`, `apps/health/src/cli/seed-demo.ts`, `tests/e2e/gateway-flow.mjs`, `README.md` y esta bitácora.
+
+### Decisiones y supuestos
+
+- Decisiones mías: GitHub Actions por ser donde vive el repositorio; el recorrido e2e corre en cada cambio y no solo de noche; las acciones se fijan por versión mayor (`@v4`), no por hash.
+- No se usan secretos: las credenciales del flujo son las de desarrollo publicadas en `.env.example`, válidas solo para la base efímera del ejecutor.
+
+### Validación y límites
+
+- En local, después del cambio de fechas: `pnpm typecheck` sin errores y `pnpm test` con 165 pruebas aprobadas. El archivo del flujo se validó solo en sintaxis.
+- **El flujo no se pudo ejecutar antes de subirlo**: su primera corrida real ocurre al publicar este commit. El resultado se informa al usuario y, si falla, se corrige en una entrada posterior.
+- El cambio de fechas no se probó con el reloj después de las 18:00; se comprobó la función con una hora equivalente.
+- Sin despliegue, sin análisis de seguridad de dependencias y sin caché de compilación. Las corridas consumen minutos de GitHub Actions del repositorio privado.
+
+### Pendientes y siguiente paso
+
+Revisar la primera corrida. Después AT-16 y D07. Siguiente entrada: BIT-0036.
 
 ## Plantilla para próximas entradas
 

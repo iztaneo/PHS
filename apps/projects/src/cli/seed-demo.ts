@@ -24,7 +24,9 @@ const changes = new ChangesService(pool, projects);
 const status = new StatusService(pool, projects);
 
 // Dates are relative to today so overdue and upcoming items stay meaningful whenever the seed runs.
-const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+// The calendar day in the projects' time zone, not in UTC: after 18:00 in Mexico they differ.
+const localDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' });
+const day = (offset: number) => localDate.format(new Date(Date.now() + offset * 86_400_000));
 const key = () => randomUUID();
 
 async function idOf(table: 'app_user' | 'practice', column: 'email' | 'code', value: string): Promise<string> {

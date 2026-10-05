@@ -5,8 +5,10 @@ const baseUrl = process.env.PHS_E2E_URL ?? 'http://127.0.0.1:3000';
 const password = process.env.DEMO_USER_PASSWORD;
 if (!password) throw new Error('DEMO_USER_PASSWORD is required');
 
-const today = new Date().toISOString().slice(0, 10);
-const day = (offset) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+// The calendar day in the projects' time zone, not in UTC: after 18:00 in Mexico they differ.
+const localDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' });
+const day = (offset) => localDate.format(new Date(Date.now() + offset * 86_400_000));
+const today = day(0);
 const runId = Date.now().toString(36).toUpperCase();
 const results = [];
 

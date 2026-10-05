@@ -1,0 +1,133 @@
+# Integración continua de PHS. Cada cambio en main y cada pull request se valida igual que en local:
+# compilación, tipos, pruebas de código, pruebas SQL, documentos generados y el recorrido de punta a punta.
+# Los valores de conexión son los de desarrollo de .env.example; aquí no se usa ningún secreto real.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Una sola corrida por rama: un commit nuevo cancela la validación del anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: 24
+  # Cliente de PostgreSQL de la misma versión mayor que el servidor.
+  PG_BIN: /usr/lib/postgresql/17/bin
+
+jobs:
+  verificar:
+    name: Compilar y probar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: phs_owner
+          POSTGRES_PASSWORD: phs_local_dev
+          POSTGRES_DB: phs
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U phs_owner -d phs"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      # La versión de pnpm es la del campo packageManager de package.json.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Cliente de PostgreSQL 17
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+          echo "$PG_BIN" >> "$GITHUB_PATH"
+      - name: Configuración de desarrollo
+        run: cp .env.example .env
+      - name: Dependencias
+        run: pnpm install --frozen-lockfile
+      - name: Compilar
+        run: pnpm build
+      - name: Tipos
+        run: pnpm typecheck
+      - name: Migraciones y usuarios de los servicios
+        run: |
+          pnpm db:migrate
+          pnpm db:logins
+          pnpm db:test:setup
+      - name: Pruebas de código
+        run: pnpm test
+      - name: Pruebas SQL
+        run: pnpm db:test
+      - name: Diccionario de datos al día
+        run: pnpm db:dictionary -- --check
+      - name: Matriz de pruebas
+        run: pnpm test:matrix
+
+  e2e:
+    name: Recorrido de punta a punta
+    needs: verificar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: phs_owner
+          POSTGRES_PASSWORD: phs_local_dev
+          POSTGRES_DB: phs
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U phs_owner -d phs"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      # La versión de pnpm es la del campo packageManager de package.json.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Cliente de PostgreSQL 17
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+          echo "$PG_BIN" >> "$GITHUB_PATH"
+      - name: Configuración de desarrollo
+        run: cp .env.example .env
+      - name: Dependencias
+        run: pnpm install --frozen-lockfile
+      # Gateway, cuatro servicios y web reales sobre la base desechable phs_e2e; API por el gateway
+      # y navegador con el Chrome del ejecutor.
+      - name: Recorrido e2e
+        # scripts/e2e.sh deja en TMPDIR los registros de los servicios y de la web.
+        env:
+          TMPDIR: ${{ github.workspace }}/.ci-tmp
+        run: |
+          mkdir -p "$TMPDIR"
+          pnpm test:e2e
+      - name: Guardar evidencia si falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-evidencia
+          path: |
+            .ci-tmp/phs-e2e-*.log
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -17,7 +17,9 @@ const pool = ready ? createPool(serviceUrl!) : undefined;
 const id = async (sql: string, params: unknown[]) => (await owner!.query(sql, params)).rows[0].id as string;
 const user = (name: string) =>
   id('INSERT INTO phs.app_user(display_name, email) VALUES($1, $2) RETURNING id', [name, `${name}-${randomUUID()}@example.invalid`]);
-const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+// The calendar day in the projects' time zone, not in UTC: after 18:00 in Mexico they differ.
+const localDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' });
+const day = (offset: number) => localDate.format(new Date(Date.now() + offset * 86_400_000));
 const ago = (days: number) => new Date(Date.now() - days * 86_400_000);
 
 afterAll(async () => { await pool?.end(); await owner?.end(); });

@@ -13,7 +13,9 @@ const ready = Boolean(ownerUrl && serviceUrl);
 const owner = ready ? createPool(ownerUrl!) : undefined;
 const pool = ready ? createPool(serviceUrl!) : undefined;
 const id = async (sql: string, params: unknown[]) => (await owner!.query(sql, params)).rows[0].id as string;
-const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+// The calendar day in the projects' time zone, not in UTC: after 18:00 in Mexico they differ.
+const localDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' });
+const day = (offset: number) => localDate.format(new Date(Date.now() + offset * 86_400_000));
 const NONE: ProjectCapabilities = { view: true, editOperation: false, proposeAndReview: false, decide: false, seeFinancials: false };
 const PM: ProjectCapabilities = { ...NONE, editOperation: true, proposeAndReview: true, seeFinancials: true };
 const LEAD: ProjectCapabilities = { ...NONE, editOperation: true, decide: true, seeFinancials: true };

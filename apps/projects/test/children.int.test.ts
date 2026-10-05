@@ -18,7 +18,9 @@ const id = async (sql: string, params: unknown[]) => (await owner!.query(sql, pa
 const user = (name: string) =>
   id('INSERT INTO phs.app_user(display_name, email) VALUES($1, $2) RETURNING id', [name, `${name}-${randomUUID()}@example.invalid`]);
 const value = async (sql: string, params: unknown[]) => (await owner!.query(sql, params)).rows[0];
-const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+// The calendar day in the projects' time zone, not in UTC: after 18:00 in Mexico they differ.
+const localDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' });
+const day = (offset: number) => localDate.format(new Date(Date.now() + offset * 86_400_000));
 
 afterAll(async () => { await pool?.end(); await owner?.end(); });
 
