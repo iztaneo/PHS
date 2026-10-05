@@ -772,7 +772,7 @@ Criterios de aceptación:
 3. Se miden plazos NF-03 con zona/calendario acordados; la UI puede conocer un cálculo pendiente o fallido.
 4. Cambios mientras se calcula invalidan publicación obsoleta; reconciliación recupera un trabajo omitido sin duplicar efectos.
 
-**Estado (BIT-0026):** construida en parte, en revisión. Salud recorre cada cinco minutos (configurable) los proyectos no cerrados: detecta alertas, crea o cierra acciones automáticas y guarda la evaluación, sin nadie conectado; una sola pasada a la vez aunque haya varias instancias; un proyecto que falla se registra y se reintenta en la siguiente; la pantalla de salud muestra la última pasada. Falta: despacho del outbox y notificaciones (Plataforma, PHS-034), medición de los plazos NF-03, depuración del registro de pasadas y una prueba con reloj simulado (la prueba cruza la fecha con datos, no con reloj).
+**Estado (BIT-0026):** construida en parte, en revisión. Salud recorre cada cinco minutos (configurable) los proyectos no cerrados: detecta alertas, crea o cierra acciones automáticas y guarda la evaluación, sin nadie conectado; una sola pasada a la vez aunque haya varias instancias; un proyecto que falla se registra y se reintenta en la siguiente; la pantalla de salud muestra la última pasada; el detalle de las pasadas se conserva tres meses y lo anterior queda resumido por día (BIT-0027). Falta: despacho del outbox y notificaciones (Plataforma, PHS-034), medición de los plazos NF-03 y una prueba con reloj simulado (la prueba cruza la fecha con datos, no con reloj).
 
 ### PHS-034 — Consultar alertas y notificaciones internas
 

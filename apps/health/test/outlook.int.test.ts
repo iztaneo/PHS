@@ -152,4 +152,33 @@ describe.skipIf(!ready)('confidence, trend, forecast and the scheduled process (
       other.release();
     }
   });
+
+  it('runs older than three months are summarised by day and removed; recent ones stay', async () => {
+    // A day of its own in the distant past, so repeating the test never adds to an earlier summary.
+    const day = `${1970 + Math.floor(Math.random() * 30)}-0${1 + Math.floor(Math.random() * 9)}-1${Math.floor(Math.random() * 10)}`;
+    const bad = randomUUID();
+    const old = (hour: string, finished: boolean, processed: number, failures: object[]) => owner!.query(
+      `INSERT INTO phs.scheduler_run(started_at, finished_at, projects_processed, failures)
+       VALUES($1::timestamptz, CASE WHEN $2 THEN $1::timestamptz + interval '2 seconds' END, $3, $4)`,
+      [`${day} ${hour}:00:00+00`, finished, processed, JSON.stringify(failures)]);
+    await old('08', true, 5, []);
+    await old('09', true, 4, [{ projectId: bad, error: 'sin conexión' }]);
+    await old('10', true, 4, [{ projectId: bad, error: 'sin conexión' }]);
+    await old('11', false, 0, []);
+    const recent = await id("INSERT INTO phs.scheduler_run(started_at, finished_at, projects_processed) VALUES(now() - interval '80 days', now() - interval '80 days', 7) RETURNING id", []);
+
+    const scheduler = new SchedulerService(pool!, governance, assessments, 0);
+    expect(await scheduler.runOnce([])).toMatchObject({ projects: 0, failures: 0 });
+    const summary = await owner!.query(
+      `SELECT runs, completed, interrupted, runs_with_failures, projects_processed::int AS projects_processed, failures FROM phs.scheduler_run_daily WHERE day = $1`, [day]);
+    expect(summary.rows).toEqual([{
+      runs: 4, completed: 3, interrupted: 1, runs_with_failures: 2, projects_processed: 13, failures: [{ projectId: bad, error: 'sin conexión', runs: 2 }],
+    }]);
+    expect((await owner!.query("SELECT count(*)::int AS n FROM phs.scheduler_run WHERE started_at < now() - interval '4 months'")).rows[0].n).toBe(0);
+    expect((await owner!.query('SELECT count(*)::int AS n FROM phs.scheduler_run WHERE id = $1', [recent])).rows[0].n).toBe(1);
+    // Nothing left to archive: another pass changes nothing.
+    await scheduler.runOnce([]);
+    expect((await owner!.query('SELECT runs FROM phs.scheduler_run_daily WHERE day = $1', [day])).rows[0].runs).toBe(4);
+    expect((await scheduler.status()).lastRun).toMatchObject({ projects: 0, failures: 0 });
+  });
 });

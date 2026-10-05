@@ -5,7 +5,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 ## Estado actual para retomar
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
-- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–014 (37 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
+- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–015 (38 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, los cuatro servicios (`identity`, `projects`, `health`, `platform`) y los paquetes `service-kit`, `contracts` y `health-engine`; ver README para arrancarlo.
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
@@ -1010,6 +1010,41 @@ Prueba del usuario. Después PHS-027 a PHS-029 y PHS-033. Siguiente entrada: BIT
 ### Pendientes y siguiente paso
 
 Aceptación del usuario de R1 a R3. Después R4. Siguiente entrada: BIT-0027.
+
+## BIT-0027 — Histórico del proceso programado
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** que el registro de pasadas del proceso programado deje de crecer sin límite, conservando lo útil.
+
+**Relación:** PHS-033. Resuelve un límite anotado en BIT-0026.
+
+**Identificación:** commit con prefijo `BIT-0027`.
+
+### Decisión del usuario
+
+Borrar lo viejo y conservarlo en un histórico. Entre tabla y archivo eligió la propuesta: tabla con un resumen por día. El detalle se conserva tres meses.
+
+### Trabajo realizado
+
+- Migración [015](../db/migrations/015_scheduler_run_daily.sql): `scheduler_run_daily` y permiso de borrado de `scheduler_run` para Salud; 38 tablas.
+- [scheduler.service.ts](../apps/health/src/scheduler.service.ts): al terminar cada pasada, las de más de tres meses se resumen por día (UTC) y se borran en una transacción. Si el archivado falla, la pasada no falla y se reintenta en la siguiente.
+- Cada fila diaria guarda pasadas, completadas, interrumpidas, pasadas con fallos, proyectos procesados y cada fallo distinto (proyecto y error) con el número de pasadas en que apareció.
+
+### Archivos
+
+`db/migrations/015_scheduler_run_daily.sql`, `db/tests/{014_scheduler_run,015_scheduler_run_daily}.sql`, `apps/health/src/scheduler.service.ts`, `apps/health/test/outlook.int.test.ts`, `docs/DATABASE-PHS.md`, `docs/producto/BACKLOG.md` y esta bitácora.
+
+### Validación y límites
+
+- `pnpm test`: 151 pruebas en 8 paquetes (Salud 25, una nueva). `pnpm db:test`: 15 de 15.
+- Aclaración sobre BIT-0026: la prueba SQL 014 comprobaba que Salud no podía borrar pasadas. Desde la migración 015 sí puede, así que esa comprobación se quitó de la 014 (queda con 3 rechazos) y la 015 comprueba quién puede borrar.
+- El histórico diario no tiene pantalla ni ruta de consulta; se lee en la base. El plazo de tres meses es una constante del código, no un parámetro.
+- La base local del usuario no tiene pasadas de más de tres meses, así que ahí el archivado todavía no mueve nada; se comprobó con datos de prueba.
+
+### Pendientes y siguiente paso
+
+Aceptación del usuario de R1 a R3; después R4. Siguiente entrada: BIT-0028.
 
 ## Plantilla para próximas entradas
 

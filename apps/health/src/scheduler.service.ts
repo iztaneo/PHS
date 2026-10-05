@@ -13,6 +13,8 @@ export interface RunSummary {
 export interface SchedulerStatus { intervalSeconds: number; lastRun: RunSummary | null }
 
 const LOCK = 'phs-health-scheduler';
+// How long the detail of each run is kept before it is summarised by day (decided by the user, BIT-0027).
+const RETENTION = '3 months';
 
 // Keeps alerts, automatic actions and assessments up to date with nobody connected (PHS-033).
 // Every pass does the whole job again and each step is idempotent, so a missed or interrupted
@@ -66,6 +68,8 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
         const done = await lock.query<{ started_at: Date; finished_at: Date }>(
           'UPDATE phs.scheduler_run SET finished_at = now(), projects_processed = $2, failures = $3 WHERE id = $1 RETURNING started_at, finished_at',
           [run, projects.rows.length - failures.length, JSON.stringify(failures)]);
+        // Housekeeping never fails the pass: whatever was not archived now is archived by a later one.
+        await this.archive(lock).catch((error: unknown) => console.error('Scheduler history could not be archived', error));
         return {
           startedAt: done.rows[0]!.started_at.toISOString(), finishedAt: done.rows[0]!.finished_at.toISOString(),
           projects: projects.rows.length - failures.length, failures: failures.length,
@@ -75,6 +79,37 @@ export class SchedulerService implements OnModuleInit, OnModuleDestroy {
       }
     } finally {
       lock.release();
+    }
+  }
+
+  // Runs older than three months are summarised, one row per day (UTC), and removed, in one
+  // transaction: either both happen or neither. Returns how many runs were archived.
+  private async archive(client: pg.PoolClient): Promise<number> {
+    await client.query('BEGIN');
+    try {
+      const cutoff = (await client.query<{ cutoff: Date }>(`SELECT date_trunc('day', now() AT TIME ZONE 'UTC' - interval '${RETENTION}') AT TIME ZONE 'UTC' AS cutoff`)).rows[0]!.cutoff;
+      await client.query(
+        `WITH old AS (SELECT *, (started_at AT TIME ZONE 'UTC')::date AS day FROM phs.scheduler_run WHERE started_at < $1),
+              failed AS (
+                SELECT day, jsonb_agg(jsonb_build_object('projectId', project_id, 'error', error, 'runs', runs) ORDER BY project_id, error) AS failures
+                  FROM (SELECT o.day, f->>'projectId' AS project_id, f->>'error' AS error, count(*)::int AS runs
+                          FROM old o, jsonb_array_elements(o.failures) f GROUP BY 1, 2, 3) x GROUP BY day)
+         INSERT INTO phs.scheduler_run_daily(day, runs, completed, interrupted, runs_with_failures, projects_processed, failures)
+         SELECT o.day, count(*)::int, count(o.finished_at)::int, (count(*) - count(o.finished_at))::int,
+                count(*) FILTER (WHERE jsonb_array_length(o.failures) > 0)::int, sum(o.projects_processed), coalesce(max(f.failures::text)::jsonb, '[]')
+           FROM old o LEFT JOIN failed f ON f.day = o.day GROUP BY o.day
+         ON CONFLICT (day) DO UPDATE SET
+           runs = phs.scheduler_run_daily.runs + excluded.runs, completed = phs.scheduler_run_daily.completed + excluded.completed,
+           interrupted = phs.scheduler_run_daily.interrupted + excluded.interrupted,
+           runs_with_failures = phs.scheduler_run_daily.runs_with_failures + excluded.runs_with_failures,
+           projects_processed = phs.scheduler_run_daily.projects_processed + excluded.projects_processed,
+           failures = phs.scheduler_run_daily.failures || excluded.failures, archived_at = now()`, [cutoff]);
+      const removed = await client.query('DELETE FROM phs.scheduler_run WHERE started_at < $1', [cutoff]);
+      await client.query('COMMIT');
+      return removed.rowCount ?? 0;
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
     }
   }
 

@@ -1,4 +1,5 @@
 -- Run as the migration owner after migrations 001-014; all fixtures roll back.
+-- Since migration 015 Health may delete runs it has archived, so that is checked in test 015.
 BEGIN;
 SET search_path = phs, public;
 CREATE FUNCTION pg_temp.expect_error(command text, expected_state text)
@@ -22,11 +23,10 @@ BEGIN
  UPDATE phs.scheduler_run SET finished_at = now(), projects_processed = 3, failures = '[{"projectId":"x","error":"y"}]' WHERE id = r;
  PERFORM pg_temp.expect_error(format('UPDATE phs.scheduler_run SET failures = %L WHERE id = %L','{}',r),'23514');
  PERFORM pg_temp.expect_error(format('UPDATE phs.scheduler_run SET finished_at = started_at - interval %L WHERE id = %L','1 second',r),'23514');
- PERFORM pg_temp.expect_error(format('DELETE FROM phs.scheduler_run WHERE id = %L',r),'42501');
  RESET ROLE;
  SET LOCAL ROLE phs_platform;
  PERFORM pg_temp.expect_error('INSERT INTO phs.scheduler_run DEFAULT VALUES','42501');
  RESET ROLE;
- RAISE NOTICE 'PASS: scheduler runs recorded by Health; 4 expected rejections';
+ RAISE NOTICE 'PASS: scheduler runs recorded by Health; 3 expected rejections';
 END $$;
 ROLLBACK;
