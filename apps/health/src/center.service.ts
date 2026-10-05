@@ -87,7 +87,7 @@ export class CenterService {
              FROM phs.review_cycle c
              LEFT JOIN LATERAL (SELECT r.id FROM phs.health_review r WHERE r.cycle_id = c.id ORDER BY r.revision_no DESC LIMIT 1) l ON true
              LEFT JOIN phs.review_validation v ON v.review_id = l.id
-            WHERE c.project_id = p.id AND (l.id IS NULL OR v.decision = 'returned'
+            WHERE c.project_id = p.id AND c.starts_on <= (now() AT TIME ZONE p.timezone)::date AND (l.id IS NULL OR v.decision = 'returned'
                   OR (v.review_id IS NULL AND coalesce((c.policy_snapshot->>'leadValidationRequired')::boolean, true)))
             ORDER BY (v.decision = 'returned') DESC NULLS LAST, (l.id IS NULL) DESC, c.due_on LIMIT 1) cy ON true
         WHERE p.id = ANY($1::uuid[])`, [ids, [...NEEDS_RESPONSE]]);

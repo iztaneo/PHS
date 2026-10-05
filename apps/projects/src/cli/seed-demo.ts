@@ -182,7 +182,29 @@ try {
     await status.change(as(ana), project.id, { expectedRevision: await revision(ana, project.id), to: 'paused', reason: 'El cliente suspendió el proyecto por un cambio de prioridades.' }, ago(45));
     console.log('Proyecto creado: DEMO-005 Tablero de indicadores (pausado hace 45 días, requiere justificación)');
   }
-  console.log('Proyectos de demostración listos: DEMO-001 a DEMO-005');
+  // 6. Healthy and steady, three weeks into its reviews: the Health seed gives it two past review
+  //    cycles so the trend between cycles can be seen (PHS-028).
+  if (!(await exists('DEMO-006'))) {
+    const { project } = await projects.create(as(ana), {
+      ...base, practiceId: cons, code: 'DEMO-006', name: 'Mesa de ayuda corporativa', clientName: 'Grupo Altamira',
+      serviceTypeCode: 'support', pmId: ana, leadId: luis, startsOn: day(-120), endsOn: day(240),
+      clientContact: 'Marta Solís, gerente de servicios', escalationNotes: 'Escalar a Luis Herrera.',
+    }, key());
+    const id = project.id;
+    await team.put(as(ana), id, diego, { role: 'contributor', allocationPct: 30 });
+    const one = await milestones.create(as(ana), id, { title: 'Transición del servicio', deliverable: 'Acta de transición', ownerId: ana, dueOn: day(-80), critical: true }, key());
+    const two = await milestones.create(as(ana), id, { title: 'Catálogo de servicios publicado', deliverable: 'Catálogo aprobado', ownerId: diego, dueOn: day(-25), critical: false }, key());
+    await milestones.create(as(ana), id, { title: 'Informe semestral de niveles de servicio', deliverable: 'Informe entregado', ownerId: ana, dueOn: day(60), critical: false }, key());
+    await baselines.publishInitial(as(ana), id, {
+      expectedRevision: await revision(ana, id), scope: 'Mesa de ayuda de primer y segundo nivel.', budget: '600000', effortHours: '2400', reason: 'Línea base inicial',
+    }, key());
+    await milestones.transition(as(ana), id, one.id, { expectedRevision: 1, to: 'completed', note: 'Transición firmada por el cliente.', completedOn: day(-82) });
+    await milestones.transition(as(diego), id, two.id, { expectedRevision: 1, to: 'completed', note: 'Catálogo aprobado.', completedOn: day(-26) });
+    await finance.record(as(ana), id, { effectiveOn: day(-5), totalCost: '390000', totalEffortHours: '1560', source: 'Reporte de costos del mes', supersedesId: null }, key());
+    await status.change(as(ana), id, { expectedRevision: await revision(ana, id), to: 'active', reason: 'Servicio en operación.' }, ago(118));
+    console.log('Proyecto creado: DEMO-006 Mesa de ayuda corporativa (saludable, con historia de revisiones)');
+  }
+  console.log('Proyectos de demostración listos: DEMO-001 a DEMO-006');
 } finally {
   await pool.end();
 }

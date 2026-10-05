@@ -38,6 +38,8 @@ type CycleStatus = 'open' | 'overdue' | 'submitted' | 'returned' | 'validated' |
 interface PolicySnapshot { cadence: Cadence; forecastCycles: number; evidenceRequired: boolean; leadValidationRequired: boolean }
 export interface CycleView {
   id: string; projectId: string; projectName: string; startsOn: string; dueOn: string; status: CycleStatus; policy: PolicySnapshot;
+  // false: the cycle is scheduled but its period has not begun, so it cannot be reviewed yet.
+  started: boolean;
   expectations: Expectation[]; draft: { revision: number; payload: DraftPayload; updatedAt: string } | null; reviews: ReviewView[];
   lastClimate: Climate | null; projectRevision: number; canSubmit: boolean; canValidate: boolean;
 }
@@ -46,7 +48,7 @@ export interface ScheduleView { projectId: string; policy: PolicyView | null; ca
 export type ReviewErrorCode =
   | 'not_found' | 'forbidden' | 'due_date_in_past' | 'project_not_active' | 'revision_conflict' | 'review_already_submitted'
   | 'support_required' | 'finance_rejected' | 'climate_required' | 'invalid_request' | 'nothing_changed_blocked'
-  | 'idempotency_key_reused' | 'already_decided' | 'stale_review' | 'validation_not_required';
+  | 'cycle_not_started' | 'idempotency_key_reused' | 'already_decided' | 'stale_review' | 'validation_not_required';
 export class ReviewError extends Error {
   constructor(readonly code: ReviewErrorCode, readonly currentRevision?: number) {
     super(code);
@@ -158,11 +160,14 @@ export class ReviewService {
       const status: CycleStatus = !latest ? (row.due_on < row.today ? 'overdue' : 'open')
         : latest.validation ? latest.validation.decision
           : policy.leadValidationRequired ? 'submitted' : 'closed';
-      const submittable = SUBMITTABLE.includes(status);
+      // A cycle is reviewed during its period, never before: a review of the future would publish an
+      // official assessment of something that has not happened (E2E-H01).
+      const started = row.starts_on <= row.today;
+      const submittable = SUBMITTABLE.includes(status) && started;
       const draft = drafts.rows.find((d) => d.cycle_id === row.id);
       result.push({
-        id: row.id, projectId: row.project_id, projectName: row.project_name, startsOn: row.starts_on, dueOn: row.due_on, status, policy,
-        expectations: submittable ? await this.expectations(db, row, policy) : latest!.expectations,
+        id: row.id, projectId: row.project_id, projectName: row.project_name, startsOn: row.starts_on, dueOn: row.due_on, status, policy, started,
+        expectations: submittable ? await this.expectations(db, row, policy) : latest?.expectations ?? [],
         draft: draft ? { revision: Number(draft.revision), payload: draft.payload, updatedAt: draft.updated_at.toISOString() } : null,
         reviews: own, lastClimate: row.last_climate, projectRevision: Number(row.project_revision),
         canSubmit: submittable && capabilities.proposeAndReview && !INACTIVE.includes(row.project_status),
@@ -271,6 +276,7 @@ export class ReviewService {
     return withTransaction(this.pool, async (client) => {
       const view = await this.one(client, actor, capabilities, cycleId);
       if (!SUBMITTABLE.includes(view.status)) throw new ReviewError('review_already_submitted');
+      if (!view.started) throw new ReviewError('cycle_not_started');
       const payload = JSON.stringify(input.payload);
       const written = input.expectedRevision === 0
         ? await client.query('INSERT INTO phs.review_draft(cycle_id, author_id, payload) VALUES($1, $2, $3) ON CONFLICT (cycle_id, author_id) DO NOTHING',
@@ -304,6 +310,8 @@ export class ReviewService {
             const row = await this.cycleRow(client, cycleId);
             const before = await this.one(client, actor, capabilities, cycleId);
             if (!SUBMITTABLE.includes(before.status)) throw new ReviewError('review_already_submitted');
+            // Checked on the server too: a client that calls the command directly gets the same answer.
+            if (!before.started) throw new ReviewError('cycle_not_started');
             if (INACTIVE.includes(row.project_status)) throw new ReviewError('project_not_active');
             if (before.projectRevision !== input.expectedProjectRevision) throw new ReviewError('revision_conflict', before.projectRevision);
             if (input.nothingChanged && before.expectations.some((e) => e.blocking)) throw new ReviewError('nothing_changed_blocked');

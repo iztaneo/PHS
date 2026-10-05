@@ -203,7 +203,8 @@ export const reviewCycle = z.object({
   startsOn: z.iso.date(),
   dueOn: z.iso.date(),
   status: z.enum(['open', 'overdue', 'submitted', 'returned', 'validated', 'closed'])
-    .describe('open/overdue: sin envío. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación.'),
+    .describe('open: sin envío (ver `started`). overdue: sin envío y vencido. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación.'),
+  started: z.boolean().describe('false: el ciclo está programado pero su periodo aún no comienza; no admite borrador ni envío.'),
   policy: z.object({ cadence, forecastCycles: z.number().int(), evidenceRequired: z.boolean(), leadValidationRequired: z.boolean() })
     .describe('Política vigente cuando se programó el ciclo.'),
   expectations: z.array(expectation).describe('Calculadas ahora si el ciclo admite envío; si no, las del último envío.'),
@@ -433,7 +434,7 @@ export const healthRoutes: RouteContract[] = [
     responses: {
       200: { description: 'Borrador guardado para este usuario y ciclo.', schema: reviewCycle },
       400: errors.invalidRequest, 401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
-      409: { description: 'El borrador cambió en otra pestaña o sesión (`revision_conflict`), o el ciclo ya no admite envío (`review_already_submitted`).', schema: conflictResponse },
+      409: { description: 'El borrador cambió en otra pestaña o sesión (`revision_conflict`), el ciclo ya no admite envío (`review_already_submitted`) o aún no comienza (`cycle_not_started`).', schema: conflictResponse },
     } },
   { method: 'post', path: '/cycles/:cycleId/reviews', summary: 'Enviar el Health Review del ciclo', tag: 'Revisiones', auth: 'session',
     params: { cycleId: z.uuid() }, headers: { 'Idempotency-Key': idempotencyKey }, body: submitReviewBody,
@@ -441,7 +442,7 @@ export const healthRoutes: RouteContract[] = [
       201: { description: 'Revisión registrada y vigente desde este momento (D02). El primer envío programa el siguiente ciclo. Repetir la petición con la misma clave devuelve el mismo resultado.', schema: reviewCycle },
       400: { description: 'Datos inválidos, `idempotency_key_required`, falta el texto de soporte (`support_required`) o el clima del cliente (`climate_required`), o Proyectos rechazó las cifras económicas (`finance_rejected`).', schema: errorResponse },
       401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
-      409: { description: 'Los datos del proyecto cambiaron (`revision_conflict`); hay alertas críticas sin causa y plan y se envió "nada cambió" (`nothing_changed_blocked`); el ciclo ya tiene un envío vigente (`review_already_submitted`); el proyecto está pausado o cerrado (`project_not_active`); o `idempotency_key_reused`.', schema: conflictResponse },
+      409: { description: 'Los datos del proyecto cambiaron (`revision_conflict`); hay alertas críticas sin causa y plan y se envió "nada cambió" (`nothing_changed_blocked`); el ciclo ya tiene un envío vigente (`review_already_submitted`); el periodo del ciclo aún no comienza (`cycle_not_started`); el proyecto está pausado o cerrado (`project_not_active`); o `idempotency_key_reused`.', schema: conflictResponse },
     } },
   { method: 'post', path: '/reviews/:reviewId/validation', summary: 'Validar o devolver una revisión', tag: 'Revisiones', auth: 'session',
     params: { reviewId: z.uuid() }, body: validateReviewBody,

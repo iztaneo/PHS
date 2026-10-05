@@ -189,7 +189,7 @@ export interface Review {
 }
 export interface ReviewCycle {
   id: string; projectId: string; projectName: string; startsOn: string; dueOn: string;
-  status: 'open' | 'overdue' | 'submitted' | 'returned' | 'validated' | 'closed';
+  status: 'open' | 'overdue' | 'submitted' | 'returned' | 'validated' | 'closed'; started: boolean;
   policy: { cadence: Cadence; forecastCycles: number; evidenceRequired: boolean; leadValidationRequired: boolean };
   expectations: Expectation[]; draft: null | { revision: number; payload: DraftPayload; updatedAt: string }; reviews: Review[];
   lastClimate: Climate | null; projectRevision: number; canSubmit: boolean; canValidate: boolean;
@@ -539,6 +539,7 @@ const MESSAGES: Record<string, string> = {
   due_date_in_past: 'La próxima fecha de revisión no puede ser anterior a hoy.',
   project_not_active: 'El proyecto está pausado o cerrado; no admite revisiones mientras siga así.',
   review_already_submitted: 'Este ciclo ya tiene una revisión enviada.',
+  cycle_not_started: 'Este ciclo aún no comienza; se podrá revisar a partir de su fecha de inicio.',
   support_required: 'Escribe el soporte de la revisión: qué respalda lo que reportas.',
   finance_rejected: 'No se pudieron registrar el costo y el esfuerzo. Revisa las cifras.',
   holiday_taken: 'Ese día ya está registrado como festivo.',

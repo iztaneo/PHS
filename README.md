@@ -2,7 +2,7 @@
 
 Aplicación para gestionar la salud de proyectos y servicios mediante el Project Health Framework (PHF).
 
-El repositorio contiene un prototipo navegable y el diseño inicial de arquitectura y base de datos. La arquitectura decidida es de microservicios con base compartida. Existe un esqueleto ejecutable (web, gateway, Identidad y Proyectos) sin funcionalidad de negocio.
+El repositorio contiene la aplicación (web, gateway y cuatro servicios: Identidad, Proyectos, Salud y Plataforma, sobre una base PostgreSQL compartida), el prototipo navegable que le dio origen y la documentación de producto y arquitectura. Las entregas R1 a R4 están construidas y en revisión; ninguna está aceptada todavía y falta R5, el piloto. El estado exacto está en la [bitácora](docs/BITACORA.md).
 
 ## Contenido
 
@@ -23,7 +23,7 @@ El repositorio contiene un prototipo navegable y el diseño inicial de arquitect
 - [Diseño de PostgreSQL](docs/DATABASE-PHS.md) y [diccionario de datos con diagramas entidad-relación](docs/DICCIONARIO-DATOS.md), generado con `pnpm db:dictionary`.
 - [Migraciones](db/migrations) 001–005 y [pruebas SQL](db/tests).
 
-## Ejecutar el esqueleto de la aplicación
+## Ejecutar la aplicación
 
 Requiere Node.js 24 y PostgreSQL 17 instalado (por ejemplo con Homebrew). No necesita Docker: el proyecto crea su propia instancia en `.local/pg`, puerto 54329, sin tocar otros PostgreSQL de la máquina. Los comandos usan pnpm 12 mediante `npx`.
 
@@ -39,13 +39,13 @@ Abrir [127.0.0.1:5173](http://127.0.0.1:5173) e iniciar sesión con el usuario d
 
 ### Datos de demostración
 
-`db:setup` carga, y `seed:demo` vuelve a cargar sin duplicar, seis usuarios y cinco proyectos para recorrer el flujo completo:
+`db:setup` carga, y `seed:demo` vuelve a cargar sin duplicar, seis usuarios y seis proyectos para recorrer el flujo completo:
 
 | Usuario (`@phs.test`) | Perfil | Qué ve |
 | --- | --- | --- |
-| `ana.pm` | PM de Consultoría | Sus proyectos: DEMO-001, 002, 003 y 005 |
-| `luis.lider` | Líder de Consultoría | Los tres proyectos de la práctica; puede reasignar |
-| `carla.direccion` | Dirección de ambas prácticas | Los cuatro proyectos, solo consulta |
+| `ana.pm` | PM de Consultoría | Sus proyectos: DEMO-001, 002, 003, 005 y 006 |
+| `luis.lider` | Líder de Consultoría | Los cinco proyectos de la práctica; valida revisiones y decide cambios |
+| `carla.direccion` | Dirección de ambas prácticas | Los seis proyectos, solo consulta |
 | `pablo.pm` | PM y líder de Datos | Solo DEMO-004 |
 | `diego.dev` | Sin rol; integrante y responsable de hitos y riesgos | Los proyectos donde participa, sin importes |
 | `elena.lectora` | Sin rol; lectora en DEMO-001 | Solo DEMO-001, sin economía |
@@ -54,13 +54,16 @@ Todos usan la contraseña `DEMO_USER_PASSWORD` de `.env`. El administrador de de
 
 | Proyecto | Situación |
 | --- | --- |
-| DEMO-001 Portal de clientes | En riesgo (score 49): hito crítico vencido, gasto por delante del avance, riesgo materializado, un cambio pendiente de decisión y evidencias |
-| DEMO-002 Migración a la nube | Saludable (score 97): hitos a tiempo, un cambio aprobado con línea base v2 y una renovación próxima |
-| DEMO-003 Soporte de aplicaciones | Recién iniciado, con equipo e hitos, sin línea base |
-| DEMO-004 Modelo de predicción de demanda | De otra práctica, para comprobar el alcance por rol |
+| DEMO-001 Portal de clientes | En riesgo: hito crítico vencido, gasto por delante del avance, riesgo materializado, alertas con y sin causa y plan, un cambio pendiente y un ciclo semanal abierto con borrador |
+| DEMO-002 Migración a la nube | Saludable: hitos a tiempo, un cambio aprobado con línea base v2, una renovación próxima y una revisión en validación del líder |
+| DEMO-003 Soporte de aplicaciones | Recién iniciado, sin línea base, con una revisión devuelta por el líder y su acción de corrección |
+| DEMO-004 Modelo de predicción de demanda | De otra práctica, para comprobar el alcance por rol; sin ciclo de revisión |
 | DEMO-005 Tablero de indicadores | Pausado hace 45 días: exige describir el motivo antes de editar |
+| DEMO-006 Mesa de ayuda corporativa | Saludable, con dos ciclos de revisión anteriores para ver la tendencia entre ciclos |
 
-Existen el gateway y los cuatro servicios (Identidad, Proyectos, Salud y Plataforma). Funcionan acceso, administración, proyectos con equipo, hitos, riesgos, línea base, cambios aprobados, economía, evidencias, renovaciones, estado del proyecto y la evaluación de salud con score. Todavía no hay ciclo de revisión, acciones, alertas ni vistas de portafolio.
+Los scores no se anotan aquí porque cambian con la fecha; se ven en la pantalla Inicio o en el Portafolio.
+
+Funciona: acceso y administración (usuarios, prácticas, tipos de servicio y días festivos); proyectos con equipo, hitos, riesgos, línea base, cambios aprobados, economía, evidencias, renovaciones y estado; evaluación de salud con confianza, tendencia y proyección; ciclo de revisión con Health Review y validación del líder; alertas con causa y plan, acciones automáticas y manuales; proceso programado; notificaciones; Inicio (Health Center), portafolio, historial y línea de tiempo, pausados y cerrados, y la ayuda del modelo PHF. `test:e2e` ejecuta el recorrido de punta a punta sobre una base desechable `phs_e2e`. Lo que falta de cada historia está en su estado en el [backlog](docs/producto/BACKLOG.md).
 
 ## Abrir el prototipo
 

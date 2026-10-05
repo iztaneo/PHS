@@ -1,9 +1,10 @@
-// Detects the demo projects' alerts and loads a response and a manual action. Safe to run again.
+// Detects the demo projects' alerts and loads responses, actions and review cycles. Safe to run again.
 // The seed is trusted: it stands in for the Projects service when asked what the user may do.
 import { randomUUID } from 'node:crypto';
+import { RULE_SET_DEFINITION, RULE_SET_VERSION, assess } from '@phs/health-engine';
 import { createPool, loadEnv, requireEnv, type ProjectCapabilities } from '@phs/service-kit';
 import { AssessmentsService } from '../assessments.service.js';
-import { addDays } from '../cadence.js';
+import { addDays, skipHolidays } from '../cadence.js';
 import { GovernanceService } from '../governance.service.js';
 import { HolidayService } from '../holiday.service.js';
 import type { ProjectsClient } from '../projects.client.js';
@@ -101,19 +102,58 @@ try {
     await reviews.validate(actor(returned.lead_id), sent.reviews[0]!.id, { decision: 'returned', comment: 'Falta indicar desde cuándo y con qué dedicación.' });
     console.log('DEMO-003: revisión devuelta por el líder, con acción de corrección');
   }
-  // A second cycle on DEMO-002 so the trend has two cuts to compare (PHS-028).
-  const trending = projects.rows.find((p) => p.code === 'DEMO-002');
-  if (trending) {
-    const { cycles } = await reviews.schedule(actor(trending.pm_id), trending.id);
-    const open = cycles.find((c) => c.canSubmit && c.status === 'open');
-    if (open && cycles.filter((c) => c.reviews.length > 0).length === 1) {
-      await reviews.submit(actor(trending.pm_id), open.id, {
-        nothingChanged: false, topics: ['client', 'risks'], notes: {}, clientClimate: 'critical',
-        supportText: 'Correo del cliente escalando el retraso del tercer ambiente.', activeSeconds: 200,
-        expectedProjectRevision: open.projectRevision, declaredConfidence: 'medium', finance: null,
-      }, randomUUID());
-      console.log('DEMO-002: segundo ciclo enviado; la tendencia compara dos cortes');
+  // DEMO-006: two review cycles already in the past, so the trend between cycles has something to
+  // compare (PHS-028). EXCEPTION to the rule of loading demo data through the services, approved by
+  // the user on 2026-10-05 (BIT-0033): the services never accept a review dated in the past, nor of a
+  // cycle that has not started, so these rows are written directly, with their real past dates.
+  const steady = fresh('DEMO-006');
+  const loaded = steady ? await assessments.inputs(pool, steady.id) : null;
+  if (steady && loaded?.baselineId) {
+    const due3 = skipHolidays(steady.today, new Set((await pool.query<{ day: string }>('SELECT day::text AS day FROM phs.holiday')).rows.map((r) => r.day)));
+    const snapshot = JSON.stringify({ cadence: 'weekly', forecastCycles: 2, evidenceRequired: true, leadValidationRequired: true });
+    await pool.query(
+      `INSERT INTO phs.review_policy(project_id, cadence, anchor_on, forecast_cycles, updated_by) VALUES($1, 'weekly', $2, 2, $3)`, [steady.id, due3, steady.pm_id]);
+    await pool.query(
+      `INSERT INTO phs.rule_set(version, definition, engine_version, created_by) VALUES($1, $2, $1, $3) ON CONFLICT (version) DO NOTHING`,
+      [RULE_SET_VERSION, JSON.stringify(RULE_SET_DEFINITION), steady.pm_id]);
+    // Two weeks ago the client was tense; last week things were back to normal.
+    const past = [
+      { dueOn: addDays(due3, -14), climate: 'tense' as const, topics: ['client', 'risks'], support: 'Minuta: el cliente reclamó tiempos de respuesta en segundo nivel.' },
+      { dueOn: addDays(due3, -7), climate: 'good' as const, topics: ['client'], support: 'Correo del cliente confirmando que los tiempos volvieron al nivel acordado.' },
+    ];
+    for (const cut of past) {
+      const at = `${cut.dueOn}T18:00:00Z`;
+      const cycle = (await pool.query<{ id: string }>(
+        'INSERT INTO phs.review_cycle(project_id, starts_on, due_on, policy_snapshot) VALUES($1, $2, $3, $4) RETURNING id',
+        [steady.id, addDays(cut.dueOn, -6), cut.dueOn, snapshot])).rows[0]!.id;
+      const review = (await pool.query<{ id: string }>(
+        `INSERT INTO phs.health_review(project_id, cycle_id, revision_no, author_id, submitted_at, effective_on, nothing_changed, topics, client_climate,
+                                       support_text, duration_seconds, submitted_data, expectations_snapshot)
+         VALUES($1, $2, 1, $3, $4, $5, false, $6, $7, $8, 180, $9, '[]') RETURNING id`,
+        [steady.id, cycle, steady.pm_id, at, cut.dueOn, cut.topics, cut.climate, cut.support,
+          JSON.stringify({ notes: {}, projectRevision: loaded.revision, declaredConfidence: 'high', finance: null })])).rows[0]!.id;
+      await pool.query(
+        `INSERT INTO phs.review_validation(review_id, decision, validator_id, decided_at, comment) VALUES($1, 'validated', $2, $3::timestamptz + interval '1 day', 'Revisión completa.')`,
+        [review, steady.lead_id, at]);
+      const input = { ...loaded.input, today: cut.dueOn, client: { ...loaded.input.client, climate: cut.climate } };
+      const result = assess(input);
+      await pool.query(
+        `INSERT INTO phs.health_assessment(project_id, baseline_id, rule_set_id, effective_on, calculated_at, project_revision, assessment_kind, publication,
+                                           score, weighted_score, gate_cap, confidence, dimension_results, gate_results, input_snapshot, forecast,
+                                           idempotency_key, cycle_id, review_id)
+         SELECT $1, $2, rs.id, $3, $4, $5, 'cycle', 'official', $6, $7, $8, $9, $10, $11, $12, '{}', $13, $14, $15 FROM phs.rule_set rs WHERE rs.version = $16`,
+        [steady.id, loaded.baselineId, cut.dueOn, at, loaded.revision, result.score, result.weightedScore, result.gateCap, result.confidence.value,
+          JSON.stringify({ dimensions: result.dimensions, band: result.band, confidenceLevel: result.confidence.level, confidenceDeductions: result.confidence.deductions, metrics: result.metrics }),
+          JSON.stringify(result.gates), JSON.stringify(input), `cycle:${review}`, cycle, review, RULE_SET_VERSION]);
+      await pool.query(
+        `INSERT INTO phs.audit_entry(actor_id, request_id, action, entity_type, entity_id, after_data, project_id, occurred_at)
+         VALUES($1, $2, 'review.submitted', 'health_review', $3, $4, $5, $6)`,
+        [steady.pm_id, randomUUID(), review, JSON.stringify({ cycleId: cycle, revisionNo: 1, nothingChanged: false, topics: cut.topics }), steady.id, at]);
     }
+    // The cycle in progress, waiting for this week's review.
+    await pool.query('INSERT INTO phs.review_cycle(project_id, starts_on, due_on, policy_snapshot) VALUES($1, $2, $3, $4)', [steady.id, addDays(due3, -6), due3, snapshot]);
+    await governance.sync(steady.id);
+    console.log('DEMO-006: dos ciclos anteriores cargados con fecha pasada; la tendencia compara dos cortes');
   }
   console.log('Alertas, acciones y revisiones de demostración listas');
 } finally {

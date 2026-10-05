@@ -395,9 +395,10 @@ export function CycleCard({ cycle, showProject, context, onDone }: { cycle: Revi
           <p className="font-medium text-ink">{showProject && `${cycle.projectName} · `}Ciclo del {cycle.startsOn} al {cycle.dueOn}</p>
           <p className="text-xs text-muted">{CADENCE[cycle.policy.cadence]} · vence el {cycle.dueOn}</p>
         </div>
-        <Badge tone={STATUS[cycle.status].tone}>{STATUS[cycle.status].label}</Badge>
+        {cycle.started ? <Badge tone={STATUS[cycle.status].tone}>{STATUS[cycle.status].label}</Badge> : <Badge>Próximo ciclo</Badge>}
       </div>
-      {pending && (
+      {!cycle.started && <p className="mt-3 text-sm text-muted">Se podrá revisar a partir del {cycle.startsOn}.</p>}
+      {pending && cycle.started && (
         <div className="mt-4">
           <p className="mb-2 text-sm text-ink-soft">Qué se espera en esta revisión</p>
           <Expectations items={cycle.expectations} onAttend={context?.onNavigate} />

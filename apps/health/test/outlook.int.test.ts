@@ -70,12 +70,24 @@ describe.skipIf(!ready)('confidence, trend, forecast and the scheduled process (
     await assessments.current(pm, 'pm', p);
     expect((await assessments.outlook('pm', p))?.trend.reason).toBe('insufficient_history');
 
+    // The next cycle exists but has not started: it cannot be reviewed ahead of time (E2E-H01).
+    const ahead = (await reviews.schedule(actor(), p)).cycles[0]!;
+    expect(ahead).toMatchObject({ status: 'open', started: false, canSubmit: false });
+    await expect(reviews.submit(actor(), ahead.id, review(ahead.projectRevision, 'critical'), randomUUID())).rejects.toMatchObject({ code: 'cycle_not_started' });
+    await expect(reviews.saveDraft(actor(), ahead.id, { expectedRevision: 0, payload: {
+      nothingChanged: true, topics: [], notes: {}, clientClimate: null, supportText: '', activeSeconds: 0, declaredConfidence: null, finance: null,
+    } })).rejects.toMatchObject({ code: 'cycle_not_started' });
+    expect((await owner!.query('SELECT count(*)::int AS n FROM phs.health_review WHERE cycle_id = $1', [ahead.id])).rows[0].n).toBe(0);
+    // A week goes by: the first cycle is now in the past and the second one is under way.
+    await owner!.query('UPDATE phs.review_cycle SET starts_on = $2, due_on = $3 WHERE id = $1', [first.id, addDays(today, -10), addDays(today, -4)]);
+    await owner!.query('UPDATE phs.review_cycle SET starts_on = $2, due_on = $3 WHERE id = $1', [ahead.id, addDays(today, -3), addDays(today, 3)]);
     // Second cycle: the client turns critical, which caps the score at 45.
     const second = (await reviews.schedule(actor(), p)).cycles[0]!;
+    expect(second).toMatchObject({ id: ahead.id, started: true, canSubmit: true });
     await reviews.submit(actor(), second.id, review(second.projectRevision, 'critical'), randomUUID());
     const two = await assessments.outlook('pm', p);
     expect(() => outlookSchema.strict().parse(two)).not.toThrow();
-    expect(two?.trend).toMatchObject({ direction: 'down', reason: null, current: { score: '45.00', cycleDueOn: second.dueOn }, previous: { cycleDueOn: first.dueOn } });
+    expect(two?.trend).toMatchObject({ direction: 'down', reason: null, current: { score: '45.00', cycleDueOn: second.dueOn }, previous: { cycleDueOn: addDays(today, -4) } });
     expect(two!.trend.delta).toBe((45 - Number(one!.trend.current!.score)).toFixed(2));
     // The decline itself adds pressure to the forecast.
     expect(two?.forecast.factors.find((f) => f.code === 'declining_trend')?.points).toBe((Math.abs(Number(two!.trend.delta)) * 1.2).toFixed(2));

@@ -15,16 +15,16 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **R4 construido (en revisión, sin aceptar):** notificaciones y Health Center (BIT-0028); historial y línea de tiempo, modelo PHF y consulta de pausados y cerrados (BIT-0030); portafolio con las reglas de D10 (BIT-0031). Lo que falta de cada historia está en su estado en el backlog.
 - **R5 en curso:** PHS-040 tiene un runner E2E reproducible por gateway (BIT-0032): 8 de 10 escenarios aprobados y dos defectos abiertos; sigue en revisión. Todavía no implementados: usabilidad, accesibilidad y rendimiento (PHS-041) y operación del piloto (PHS-042).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
-- **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
+- **Stack:** TypeScript 6, React 19 con Vite, NestJS 12 en cada servicio, PostgreSQL 17 con `pg` y SQL parametrizado, migraciones SQL con dbmate, Vitest; instalado y con versiones fijadas en `pnpm-lock.yaml`. Desarrollo local sin Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md). Faltan la infraestructura y el volumen del piloto.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
 - **Backlog:** 46 elementos, 43 para el MVP y 3 posteriores (PHS-046, consulta de proyectos pausados y cerrados, añadida en BIT-0025). Ninguna historia se considera implementada por la existencia de estos documentos.
 - **Decisiones abiertas:** D07 (retención y respaldos). Confirmadas: D01, D05, D09 (salvo expiración y restricción adicional de acceso) y D10; D06 parcialmente. D02, D03, D04 y D08 definidas por el usuario, con interpretaciones de implementación marcadas "por confirmar" en [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
-- **Datos de demostración:** `seed:demo` carga seis usuarios y cinco proyectos (DEMO-001 a DEMO-005); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021).
+- **Datos de demostración:** `seed:demo` carga seis usuarios y seis proyectos (DEMO-001 a DEMO-006); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021). Única excepción a cargarlos mediante los servicios: los dos ciclos pasados de DEMO-006 (BIT-0033).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** corregir E2E-H01 (envío anticipado de ciclos) y E2E-H02 (fixture saludable), repetir PHS-040 y completar sus casos parciales o pendientes. R1 a R4 siguen sin aceptación del usuario; PHS-041/042 necesitan D07 y la definición del entorno del piloto. Por confirmar: las interpretaciones marcadas en DECISIONES y los supuestos de BIT-0024, BIT-0026, BIT-0028 y BIT-0031.
+- **Siguiente paso funcional:** E2E-H01 y E2E-H02 están corregidos (BIT-0033) pero falta repetir `pnpm test:e2e` completo: hay trabajo de otra sesión sin confirmar sobre la suite e2e (Playwright, matriz y escenarios E2E-11 a E2E-13) que debe terminar primero. Pendientes de decisión: el código HTTP de "nada cambió" bloqueado (el contrato dice 409, el escenario E2E-07 nuevo espera 400) y si un proyecto casi sin datos debe mostrar score (E2E-11). R1 a R4 siguen sin aceptación del usuario; PHS-041/042 necesitan D07 y la definición del entorno del piloto.
 
 ## Cómo se mantiene
 
@@ -1249,6 +1249,43 @@ Prueba del usuario de R1 a R4. Después R5. Siguiente entrada: BIT-0032.
 ### Siguiente paso
 
 Corregir primero la prohibición de envío anticipado y separar el fixture de tendencia del fixture saludable. Después completar la cobertura pendiente de PHS-040. Siguiente entrada: BIT-0033.
+
+## BIT-0033 — Corrección de E2E-H01, E2E-H02 y E2E-H05
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** corregir los dos defectos que bloquean PHS-040 según el [informe e2e](pruebas/INFORME-E2E-2026-10-05.md) y la documentación de arranque desactualizada.
+
+**Relación:** PHS-020, PHS-022, PHS-023, PHS-028, PHS-040; hallazgos E2E-H01, E2E-H02 y E2E-H05. Los defectos se introdujeron en BIT-0025 y BIT-0026.
+
+**Identificación:** commit con prefijo `BIT-0033`.
+
+### Decisión del usuario
+
+Para E2E-H02 eligió un proyecto de demostración aparte con dos cortes en el pasado, cargados con su fecha real. Es una excepción aprobada a la regla de crear los datos de prueba mediante los servicios, porque estos no admiten revisiones con fecha pasada ni de ciclos que no han comenzado.
+
+### Trabajo realizado
+
+- **E2E-H01.** `review.service.ts`: un ciclo cuyo periodo no ha comenzado se expone con `started: false` y `canSubmit: false`; guardar borrador y enviar revisión responden 409 `cycle_not_started` aunque se invoquen directamente. El Health Center no lo presenta como revisión por atender. La pantalla lo muestra como "Próximo ciclo" con la fecha desde la que se podrá revisar.
+- **E2E-H02.** El seed de Salud ya no envía un segundo ciclo en DEMO-002. El seed de Proyectos crea DEMO-006 "Mesa de ayuda corporativa", saludable, y el de Salud le carga dos ciclos semanales pasados con revisión validada y evaluación oficial (cliente tenso hace dos semanas, normal la semana pasada), más el ciclo en curso.
+- **E2E-H05.** README: describe la aplicación real, los seis proyectos de demostración y lo que funciona; ya no anota scores, que cambian con la fecha. El resumen de estado de esta bitácora corrige la línea del stack.
+- **Suite e2e.** `gateway-flow.mjs`: seis fixtures, la tendencia de DEMO-006 con dos cortes pasados, y en E2E-10 el rechazo del servidor a borrador y envío anticipados.
+
+### Archivos
+
+`apps/health/src/{review.service,center.service}.ts`, `apps/health/src/cli/seed-demo.ts`, `apps/health/test/outlook.int.test.ts`, `apps/projects/src/cli/seed-demo.ts`, `packages/contracts/src/health.ts`, `docs/api/{health,gateway}.openapi.json`, `apps/web/src/{Reviews.tsx,api.ts}`, `tests/e2e/gateway-flow.mjs`, `README.md` y esta bitácora.
+
+### Validación y límites
+
+- `pnpm typecheck` sin errores; `pnpm test`: 165 pruebas aprobadas; `pnpm db:test`: 15 de 15. La prueba de tendencia comprueba ahora que el ciclo siguiente no admite borrador ni envío antes de comenzar.
+- `pnpm seed:demo` sobre la base local creó DEMO-006 con sus dos cortes.
+- **No hay una corrida e2e limpia de esta corrección.** Mientras se hacía este trabajo otra sesión modificaba la misma carpeta (Playwright, matriz de pruebas, `scripts/e2e.sh`, `package.json` y escenarios E2E-11 a E2E-13 en `gateway-flow.mjs`), sin confirmar. La única corrida, hecha con esos archivos a medio escribir, dio 9 de 13: E2E-01 y E2E-02 aprobaron con las comprobaciones nuevas; E2E-07 falló en una aserción de esa otra sesión (espera 400 para `nothing_changed_blocked`; el contrato y el servicio responden 409), y E2E-09 y E2E-10 fallaron como consecuencia, sin llegar a ejercer la corrección de H01; E2E-11 falló por un hallazgo nuevo (un proyecto casi sin datos obtiene score 89).
+- Este commit incluye de `gateway-flow.mjs` solo las líneas de esta corrección, aplicadas sobre la versión de BIT-0032; los cambios de la otra sesión siguen en el árbol de trabajo sin confirmar, igual que sus demás archivos.
+- En una base ya sembrada antes de este cambio, DEMO-002 conserva la revisión anticipada que lo dejó en riesgo: las revisiones no se borran. En una base nueva queda saludable.
+
+### Pendientes y siguiente paso
+
+Cuando la otra sesión confirme su trabajo, repetir `pnpm test:e2e` y resolver E2E-07 (400 o 409) y E2E-11 (score con pocos datos). Siguiente entrada: BIT-0034.
 
 ## Plantilla para próximas entradas
 

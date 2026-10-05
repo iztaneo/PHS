@@ -4820,7 +4820,11 @@
                               "validated",
                               "closed"
                             ],
-                            "description": "open/overdue: sin envío. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                            "description": "open: sin envío (ver `started`). overdue: sin envío y vencido. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                          },
+                          "started": {
+                            "type": "boolean",
+                            "description": "false: el ciclo está programado pero su periodo aún no comienza; no admite borrador ni envío."
                           },
                           "policy": {
                             "type": "object",
@@ -5459,6 +5463,7 @@
                           "startsOn",
                           "dueOn",
                           "status",
+                          "started",
                           "policy",
                           "expectations",
                           "draft",
@@ -5725,7 +5730,11 @@
                               "validated",
                               "closed"
                             ],
-                            "description": "open/overdue: sin envío. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                            "description": "open: sin envío (ver `started`). overdue: sin envío y vencido. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                          },
+                          "started": {
+                            "type": "boolean",
+                            "description": "false: el ciclo está programado pero su periodo aún no comienza; no admite borrador ni envío."
                           },
                           "policy": {
                             "type": "object",
@@ -6364,6 +6373,7 @@
                           "startsOn",
                           "dueOn",
                           "status",
+                          "started",
                           "policy",
                           "expectations",
                           "draft",
@@ -6594,7 +6604,11 @@
                         "validated",
                         "closed"
                       ],
-                      "description": "open/overdue: sin envío. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                      "description": "open: sin envío (ver `started`). overdue: sin envío y vencido. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                    },
+                    "started": {
+                      "type": "boolean",
+                      "description": "false: el ciclo está programado pero su periodo aún no comienza; no admite borrador ni envío."
                     },
                     "policy": {
                       "type": "object",
@@ -7233,6 +7247,7 @@
                     "startsOn",
                     "dueOn",
                     "status",
+                    "started",
                     "policy",
                     "expectations",
                     "draft",
@@ -7499,7 +7514,11 @@
                         "validated",
                         "closed"
                       ],
-                      "description": "open/overdue: sin envío. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                      "description": "open: sin envío (ver `started`). overdue: sin envío y vencido. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                    },
+                    "started": {
+                      "type": "boolean",
+                      "description": "false: el ciclo está programado pero su periodo aún no comienza; no admite borrador ni envío."
                     },
                     "policy": {
                       "type": "object",
@@ -8138,6 +8157,7 @@
                     "startsOn",
                     "dueOn",
                     "status",
+                    "started",
                     "policy",
                     "expectations",
                     "draft",
@@ -8233,7 +8253,7 @@
             }
           },
           "409": {
-            "description": "El borrador cambió en otra pestaña o sesión (`revision_conflict`), o el ciclo ya no admite envío (`review_already_submitted`).",
+            "description": "El borrador cambió en otra pestaña o sesión (`revision_conflict`), el ciclo ya no admite envío (`review_already_submitted`) o aún no comienza (`cycle_not_started`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -8514,7 +8534,11 @@
                         "validated",
                         "closed"
                       ],
-                      "description": "open/overdue: sin envío. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                      "description": "open: sin envío (ver `started`). overdue: sin envío y vencido. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                    },
+                    "started": {
+                      "type": "boolean",
+                      "description": "false: el ciclo está programado pero su periodo aún no comienza; no admite borrador ni envío."
                     },
                     "policy": {
                       "type": "object",
@@ -9153,6 +9177,7 @@
                     "startsOn",
                     "dueOn",
                     "status",
+                    "started",
                     "policy",
                     "expectations",
                     "draft",
@@ -9248,7 +9273,7 @@
             }
           },
           "409": {
-            "description": "Los datos del proyecto cambiaron (`revision_conflict`); hay alertas críticas sin causa y plan y se envió \"nada cambió\" (`nothing_changed_blocked`); el ciclo ya tiene un envío vigente (`review_already_submitted`); el proyecto está pausado o cerrado (`project_not_active`); o `idempotency_key_reused`.",
+            "description": "Los datos del proyecto cambiaron (`revision_conflict`); hay alertas críticas sin causa y plan y se envió \"nada cambió\" (`nothing_changed_blocked`); el ciclo ya tiene un envío vigente (`review_already_submitted`); el periodo del ciclo aún no comienza (`cycle_not_started`); el proyecto está pausado o cerrado (`project_not_active`); o `idempotency_key_reused`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9400,7 +9425,11 @@
                         "validated",
                         "closed"
                       ],
-                      "description": "open/overdue: sin envío. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                      "description": "open: sin envío (ver `started`). overdue: sin envío y vencido. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                    },
+                    "started": {
+                      "type": "boolean",
+                      "description": "false: el ciclo está programado pero su periodo aún no comienza; no admite borrador ni envío."
                     },
                     "policy": {
                       "type": "object",
@@ -10039,6 +10068,7 @@
                     "startsOn",
                     "dueOn",
                     "status",
+                    "started",
                     "policy",
                     "expectations",
                     "draft",
@@ -10210,7 +10240,11 @@
                           "validated",
                           "closed"
                         ],
-                        "description": "open/overdue: sin envío. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                        "description": "open: sin envío (ver `started`). overdue: sin envío y vencido. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación."
+                      },
+                      "started": {
+                        "type": "boolean",
+                        "description": "false: el ciclo está programado pero su periodo aún no comienza; no admite borrador ni envío."
                       },
                       "policy": {
                         "type": "object",
@@ -10849,6 +10883,7 @@
                       "startsOn",
                       "dueOn",
                       "status",
+                      "started",
                       "policy",
                       "expectations",
                       "draft",

@@ -87,6 +87,7 @@ const [ana, luis, pablo, carla, diego] = await Promise.all([
 ]);
 
 let demo001;
+let demo006;
 let demo002;
 let demo004;
 await check('E2E-01', 'Autenticación, salud de servicios y alcance por práctica', async () => {
@@ -98,26 +99,31 @@ await check('E2E-01', 'Autenticación, salud de servicios y alcance por práctic
   demo001 = anaProjects.items.find((project) => project.code === 'DEMO-001');
   demo002 = anaProjects.items.find((project) => project.code === 'DEMO-002');
   demo004 = pabloProjects.items.find((project) => project.code === 'DEMO-004');
-  assert.ok(demo001 && demo002 && demo004);
+  demo006 = anaProjects.items.find((project) => project.code === 'DEMO-006');
+  assert.ok(demo001 && demo002 && demo004 && demo006);
   assert.ok(!anaProjects.items.some((project) => project.code === 'DEMO-004'));
   assert.deepEqual(pabloProjects.items.map((project) => project.code), ['DEMO-004']);
-  assert.equal(carlaProjects.items.filter((project) => project.code.startsWith('DEMO-')).length, 5);
+  assert.equal(carlaProjects.items.filter((project) => project.code.startsWith('DEMO-')).length, 6);
   await expectFailure(() => request(pablo, 'GET', `/api/v1/projects/${demo001.id}`), 404, 'not_found');
-  return `${anaProjects.total} proyectos PM; ${pabloProjects.total} de otra práctica; 5 fixtures DEMO visibles para Dirección`;
+  return `${anaProjects.total} proyectos PM; ${pabloProjects.total} de otra práctica; 6 fixtures DEMO visibles para Dirección`;
 });
 
-await check('E2E-02', 'Fixtures repetibles: riesgo, saludable con renovación y sin revisión', async () => {
-  const [risk, healthy, renewals, noReview] = await Promise.all([
+await check('E2E-02', 'Fixtures repetibles: riesgo, saludable con renovación, sin revisión y con tendencia', async () => {
+  const [risk, healthy, renewals, noReview, trending] = await Promise.all([
     request(ana, 'GET', `/api/v1/assessments/${demo001.id}`),
     request(ana, 'GET', `/api/v1/assessments/${demo002.id}`),
     request(ana, 'GET', `/api/v1/projects/${demo002.id}/renewals`),
     request(pablo, 'GET', `/api/v1/governance/projects/${demo004.id}/review-schedule`),
+    request(ana, 'GET', `/api/v1/assessments/${demo006.id}/outlook`),
   ]);
   assert.equal(risk.band, 'risk');
   assert.equal(healthy.band, 'healthy', `DEMO-002 expected healthy, got ${healthy.band} (${healthy.score})`);
   assert.ok(renewals.some((renewal) => renewal.status === 'pending'));
   assert.equal(noReview.policy, null);
   assert.equal(noReview.cycles.length, 0);
+  // The trend fixture has two official cuts, both in the past, and DEMO-002 is not used for it.
+  assert.ok(trending.trend.direction, `DEMO-006 has no comparable trend: ${trending.trend.reason}`);
+  assert.ok(trending.trend.current.cycleDueOn < trending.today && trending.trend.previous.cycleDueOn < trending.trend.current.cycleDueOn);
 });
 
 const practiceId = ana.user.memberships.find((membership) => membership.role === 'pm')?.practiceId;
@@ -322,6 +328,14 @@ await check('E2E-10', 'Un ciclo futuro no puede enviarse antes de comenzar', asy
   const future = schedule.cycles.find((cycle) => cycle.startsOn > today && cycle.status === 'open');
   assert.ok(future, 'no future open cycle was generated');
   assert.equal(future.canSubmit, false, `future cycle ${future.startsOn}..${future.dueOn} is marked submittable`);
+  assert.equal(future.started, false);
+  // The server refuses it too when the command is called directly, and nothing is stored.
+  const early = { nothingChanged: true, topics: [], notes: {}, clientClimate: null, supportText: '', activeSeconds: 5, declaredConfidence: null, finance: null };
+  await expectFailure(() => request(ana, 'POST', `/api/v1/governance/cycles/${future.id}/reviews`, { ...early, expectedProjectRevision: future.projectRevision }, randomUUID()), 409, 'cycle_not_started');
+  await expectFailure(() => request(ana, 'PUT', `/api/v1/governance/cycles/${future.id}/draft`, { expectedRevision: 0, payload: early }), 409, 'cycle_not_started');
+  const after = await request(ana, 'GET', `/api/v1/governance/cycles/${future.id}`);
+  assert.equal(after.reviews.length, 0);
+  assert.equal(after.draft, null);
 });
 
 for (const session of [ana, luis, pablo, carla, diego]) {
