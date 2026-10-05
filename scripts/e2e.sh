@@ -22,7 +22,7 @@ export EVIDENCE_DIR="$E2E_EVIDENCE_DIR"
 export HEALTH_SCHEDULER_SECONDS=2 PLATFORM_DISPATCH_SECONDS=2
 
 export PGPASSWORD="$POSTGRES_PASSWORD"
-dropdb --if-exists -h 127.0.0.1 -p "$POSTGRES_PORT" -U "$POSTGRES_USER" "$E2E_DB"
+dropdb --if-exists --force -h 127.0.0.1 -p "$POSTGRES_PORT" -U "$POSTGRES_USER" "$E2E_DB"
 createdb -h 127.0.0.1 -p "$POSTGRES_PORT" -U "$POSTGRES_USER" "$E2E_DB"
 DATABASE_URL="$OWNER_E2E_URL" ./node_modules/.bin/dbmate --migrations-dir db/migrations --no-dump-schema up
 psql -X -v ON_ERROR_STOP=1 -q -h 127.0.0.1 -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$E2E_DB" \
@@ -36,12 +36,19 @@ node apps/projects/dist/cli/seed-demo.js
 node apps/platform/dist/cli/seed-demo.js
 node apps/health/dist/cli/seed-demo.js
 
+node tests/e2e/validate-matrix.mjs
+
 log_file="${TMPDIR:-/tmp}/phs-e2e-services.log"
 npx --yes pnpm@12.9.1 -r --parallel start >"$log_file" 2>&1 &
 services_pid=$!
+web_log_file="${TMPDIR:-/tmp}/phs-e2e-web.log"
+npx --yes pnpm@12.9.1 --filter @phs/web dev >"$web_log_file" 2>&1 &
+web_pid=$!
 cleanup() {
   kill -INT "$services_pid" 2>/dev/null || true
+  kill -INT "$web_pid" 2>/dev/null || true
   wait "$services_pid" 2>/dev/null || true
+  wait "$web_pid" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -55,4 +62,23 @@ until curl -fsS http://127.0.0.1:3000/api/v1/status >/dev/null 2>&1; do
   sleep 1
 done
 
+attempt=0
+until curl -fsS http://127.0.0.1:5173 >/dev/null 2>&1; do
+  attempt=$((attempt + 1))
+  if [ "$attempt" -ge 30 ]; then
+    echo "La web no inició; consultar $web_log_file" >&2
+    exit 1
+  fi
+  sleep 1
+done
+
+set +e
 node tests/e2e/gateway-flow.mjs
+api_status=$?
+./node_modules/.bin/playwright test
+web_status=$?
+set -e
+
+if [ "$api_status" -ne 0 ] || [ "$web_status" -ne 0 ]; then
+  exit 1
+fi

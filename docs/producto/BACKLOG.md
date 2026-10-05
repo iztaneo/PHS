@@ -937,7 +937,7 @@ Como **equipo de calidad**, quiero probar el flujo completo y sus excepciones, p
 
 **Datos / artefactos:** Fixtures sintéticos y pruebas E2E
 
-**Estado (BIT-0032): en revisión, no aceptada.** Existe un recorrido reproducible por el gateway sobre `phs_e2e`; aprobó 8 de 10 escenarios y documentó reinicio, scheduler y outbox. Bloquean la aceptación: un ciclo futuro queda habilitado para envío y DEMO-002 ya no representa el fixture saludable. Faltan además los casos E2E y pruebas de piloto detallados en [el informe del 2026-10-05](../pruebas/INFORME-E2E-2026-10-05.md).
+**Estado (BIT-0034): en revisión, no aceptada.** El recorrido reproducible sobre `phs_e2e` aprueba 13 de 13 escenarios por gateway y 3 de 3 recorridos Playwright. E2E-H01 y E2E-H02 quedaron corregidos y verificados. La [matriz automatizada](../pruebas/MATRIZ-PRUEBAS.md) registra 12 AT completos, dos en integración, tres parciales y uno humano. Falta cerrar AT-16: se comprobó reinicio limpio y recuperación del outbox, pero no una caída inyectada entre transacción/acuse ni la restauración de un respaldo. Detalle en [el informe del 2026-10-05](../pruebas/INFORME-E2E-2026-10-05.md).
 
 Criterios de aceptación:
 
@@ -957,6 +957,8 @@ Como **dueño de producto**, quiero medir calidad con usuarios y carga represent
 **Trazabilidad:** F1: oneMinute; ESPECIFICACION.md: NF · NF-01, NF-02, NF-03, NF-06
 
 **Datos / artefactos:** Resultados de piloto y métricas
+
+**Estado (BIT-0034): en curso.** Playwright cubre login con teclado y error anunciado, recorrido principal de escritorio y navegación a 375 px sin desbordamiento global. Esta evidencia inicia el criterio 3; aún faltan alta/review/tareas completos, auditoría de accesibilidad y tecnologías de asistencia. Los criterios 1, 2 y 4 requieren carga, métricas y usuarios representativos del piloto.
 
 Criterios de aceptación:
 

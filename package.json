@@ -10,6 +10,9 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "test:e2e": "sh scripts/e2e.sh",
+    "test:e2e:api": "node tests/e2e/gateway-flow.mjs",
+    "test:e2e:web": "playwright test",
+    "test:matrix": "node tests/e2e/validate-matrix.mjs",
     "typecheck": "pnpm -r typecheck",
     "dev": "pnpm -r --parallel dev",
     "db:up": "docker compose up -d postgres",
@@ -29,6 +32,7 @@
     "db:dictionary": "sh scripts/local-db.sh dictionary"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "dbmate": "2.36.0"
   }
 }

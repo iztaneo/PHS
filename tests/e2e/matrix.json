@@ -1,0 +1,23 @@
+[
+  { "id": "AT-01", "coverage": "complete", "automated": ["E2E-01", "E2E-03", "UI-02"], "files": ["tests/e2e/gateway-flow.mjs", "tests/e2e/web/application.spec.mjs"] },
+  { "id": "AT-02", "coverage": "partial", "automated": ["E2E-08", "outlook.int.test.ts"], "files": ["tests/e2e/gateway-flow.mjs", "apps/health/test/outlook.int.test.ts"] },
+  { "id": "AT-03", "coverage": "complete", "automated": ["E2E-07"], "files": ["tests/e2e/gateway-flow.mjs"] },
+  { "id": "AT-04", "coverage": "integration", "automated": ["review.int.test.ts"], "files": ["apps/health/test/review.int.test.ts"] },
+  { "id": "AT-05", "coverage": "complete", "automated": ["E2E-04", "E2E-07"], "files": ["tests/e2e/gateway-flow.mjs"] },
+  { "id": "AT-06", "coverage": "complete", "automated": ["E2E-07"], "files": ["tests/e2e/gateway-flow.mjs"] },
+  { "id": "AT-07", "coverage": "complete", "automated": ["E2E-05"], "files": ["tests/e2e/gateway-flow.mjs"] },
+  { "id": "AT-08", "coverage": "complete", "automated": ["E2E-06"], "files": ["tests/e2e/gateway-flow.mjs"] },
+  { "id": "AT-09", "coverage": "complete", "automated": ["E2E-04"], "files": ["tests/e2e/gateway-flow.mjs"] },
+  { "id": "AT-10", "coverage": "complete", "automated": ["E2E-11"], "files": ["tests/e2e/gateway-flow.mjs"] },
+  { "id": "AT-11", "coverage": "complete", "automated": ["E2E-08"], "files": ["tests/e2e/gateway-flow.mjs"] },
+  { "id": "AT-12", "coverage": "complete", "automated": ["E2E-08"], "files": ["tests/e2e/gateway-flow.mjs"] },
+  { "id": "AT-13", "coverage": "partial", "automated": ["assessments.int.test.ts", "history.test.ts"], "files": ["apps/health/test/assessments.int.test.ts", "apps/platform/test/history.test.ts"] },
+  { "id": "AT-14", "coverage": "integration", "automated": ["cadence.test.ts", "review.int.test.ts"], "files": ["apps/health/test/cadence.test.ts", "apps/health/test/review.int.test.ts"] },
+  { "id": "AT-15", "coverage": "complete", "automated": ["E2E-01", "E2E-12"], "files": ["tests/e2e/gateway-flow.mjs"] },
+  { "id": "AT-16", "coverage": "partial", "automated": ["E2E restart audit", "notifications.test.ts"], "files": ["docs/pruebas/INFORME-E2E-2026-10-05.md", "apps/platform/test/notifications.test.ts"] },
+  { "id": "AT-17", "coverage": "manual", "automated": [], "files": ["docs/producto/PLAN-ENTREGAS.md"] },
+  { "id": "AT-18", "coverage": "complete", "automated": ["E2E-13"], "files": ["tests/e2e/gateway-flow.mjs"] },
+  { "id": "UI-01", "coverage": "complete", "automated": ["Playwright UI-01"], "files": ["tests/e2e/web/application.spec.mjs"] },
+  { "id": "UI-02", "coverage": "complete", "automated": ["Playwright UI-02"], "files": ["tests/e2e/web/application.spec.mjs"] },
+  { "id": "UI-03", "coverage": "complete", "automated": ["Playwright UI-03"], "files": ["tests/e2e/web/application.spec.mjs"] }
+]

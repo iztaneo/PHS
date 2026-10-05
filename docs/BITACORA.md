@@ -13,7 +13,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
 - **R3 construido (en revisión, sin aceptar):** alertas, acciones y causa y plan (BIT-0024); ciclo de revisión, Health Review, validación y festivos (BIT-0025); confianza explicada, tendencia, proyección y proceso programado (BIT-0026). Lo que falta de cada historia está en su estado en el backlog.
 - **R4 construido (en revisión, sin aceptar):** notificaciones y Health Center (BIT-0028); historial y línea de tiempo, modelo PHF y consulta de pausados y cerrados (BIT-0030); portafolio con las reglas de D10 (BIT-0031). Lo que falta de cada historia está en su estado en el backlog.
-- **R5 en curso:** PHS-040 tiene un runner E2E reproducible por gateway (BIT-0032): 8 de 10 escenarios aprobados y dos defectos abiertos; sigue en revisión. Todavía no implementados: usabilidad, accesibilidad y rendimiento (PHS-041) y operación del piloto (PHS-042).
+- **R5 en curso:** PHS-040 tiene un runner reproducible por gateway y navegador (BIT-0034): 13 de 13 escenarios API y 3 de 3 Playwright aprobados. La matriz registra 12 AT completos, dos en integración, tres parciales y uno humano; PHS-040 sigue en revisión por AT-16. PHS-041 inició con teclado y vista móvil, pero faltan accesibilidad completa, carga y usuarios; PHS-042 no ha iniciado.
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript 6, React 19 con Vite, NestJS 12 en cada servicio, PostgreSQL 17 con `pg` y SQL parametrizado, migraciones SQL con dbmate, Vitest; instalado y con versiones fijadas en `pnpm-lock.yaml`. Desarrollo local sin Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md). Faltan la infraestructura y el volumen del piloto.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
@@ -24,7 +24,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Datos de demostración:** `seed:demo` carga seis usuarios y seis proyectos (DEMO-001 a DEMO-006); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021). Única excepción a cargarlos mediante los servicios: los dos ciclos pasados de DEMO-006 (BIT-0033).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** E2E-H01 y E2E-H02 están corregidos (BIT-0033) pero falta repetir `pnpm test:e2e` completo: hay trabajo de otra sesión sin confirmar sobre la suite e2e (Playwright, matriz y escenarios E2E-11 a E2E-13) que debe terminar primero. Pendientes de decisión: el código HTTP de "nada cambió" bloqueado (el contrato dice 409, el escenario E2E-07 nuevo espera 400) y si un proyecto casi sin datos debe mostrar score (E2E-11). R1 a R4 siguen sin aceptación del usuario; PHS-041/042 necesitan D07 y la definición del entorno del piloto.
+- **Siguiente paso funcional:** completar AT-16 con inyección de caída y restauración de respaldo para cerrar PHS-040; después ejecutar PHS-041 con carga, auditoría de accesibilidad y al menos diez revisiones humanas. E2E-07 quedó alineado al contrato 409; E2E-11 verifica la política existente: cinco dimensiones sin dato, equipo 75, banda atención y confianza baja. R1 a R4 siguen sin aceptación del usuario; PHS-041/042 necesitan D07 y la definición del entorno del piloto.
 
 ## Cómo se mantiene
 
@@ -1286,6 +1286,49 @@ Para E2E-H02 eligió un proyecto de demostración aparte con dos cortes en el pa
 ### Pendientes y siguiente paso
 
 Cuando la otra sesión confirme su trabajo, repetir `pnpm test:e2e` y resolver E2E-07 (400 o 409) y E2E-11 (score con pocos datos). Siguiente entrada: BIT-0034.
+
+## BIT-0034 — Suite automatizada y matriz de pruebas
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** ampliar y automatizar la validación integral de PHS, incorporar pruebas reales de navegador y mantener una matriz verificable de AT-01 a AT-18.
+
+**Relación:** PHS-040 y PHS-041; AT-01 a AT-18; seguimiento de E2E-H01 a E2E-H06.
+
+**Identificación:** commit con prefijo `BIT-0034`.
+
+### Trabajo realizado
+
+- Se amplió el runner del gateway de 10 a 13 escenarios. Los casos nuevos comprueban proyecto sin datos operativos (AT-10), separación de exposición MXN/USD (AT-15) y pausa/cierre/reapertura con pendientes (AT-18).
+- E2E-07 ahora cubre el rechazo 409 `nothing_changed_blocked`; E2E-08 separa el cierre de tarea del cierre del evento y comprueba la recurrencia como episodio 2; E2E-09 espera la propagación asíncrona del outbox antes de afirmar el historial.
+- Se añadió Playwright con tres recorridos: login por teclado y error anunciado, navegación principal a 1280 px y navegación a 375 px sin desbordamiento global.
+- `scripts/e2e.sh` valida la matriz, inicia también la web, ejecuta API y navegador aunque una de las dos falle, devuelve un estado conjunto y fuerza el cierre de conexiones de la base desechable antes de recrearla.
+- Se creó `tests/e2e/matrix.json` como fuente estructurada de 21 filas y un validador que exige IDs únicos, AT-01 a AT-18, UI-01 a UI-03, niveles válidos y archivos existentes. La matriz legible explica cobertura y pendientes reales.
+- El informe E2E y el backlog se actualizaron con la corrida definitiva. E2E-H01, H02 y H05 quedan resueltos; H03 está mitigado parcialmente; H04 se redujo; H06 sigue abierto.
+
+### Archivos relevantes
+
+`tests/e2e/gateway-flow.mjs`, `tests/e2e/web/application.spec.mjs`, `tests/e2e/{matrix.json,validate-matrix.mjs}`, `playwright.config.mjs`, `scripts/e2e.sh`, `package.json`, `pnpm-lock.yaml`, `.gitignore`, `docs/pruebas/{MATRIZ-PRUEBAS.md,INFORME-E2E-2026-10-05.md}`, `docs/producto/BACKLOG.md` y esta bitácora.
+
+### Decisiones y validación
+
+- Se conservó el 409 de `nothing_changed_blocked`, coherente con el contrato y el servicio.
+- Un proyecto con PM/líder/responsable técnico, pero sin baseline ni datos operativos, no tiene “cero datos” en sentido estricto: la dimensión de equipo vale 75. E2E-11 comprueba cinco dimensiones nulas, banda atención, confianza baja y resultado provisional no almacenado; no lo presenta como saludable.
+- `pnpm test:e2e`: 13/13 escenarios de API y 3/3 de navegador aprobados, código 0. La base `phs_e2e` se recreó; la base `phs` no se modificó.
+- `pnpm test:matrix`: 21 filas válidas y 15 con cobertura completa contando las tres UI.
+- `pnpm typecheck` aprobado; `pnpm test`: 165 pruebas aprobadas; `pnpm db:test`: 15/15; `pnpm db:dictionary -- --check`: 38 tablas y 349 columnas al día.
+- No hubo cambio funcional ni de esquema. Los escenarios crean sus datos aislados mediante API sobre `phs_e2e`; no fue necesario ampliar el seed persistente ni regenerar el diccionario.
+
+### Límites y pendientes
+
+- PHS-040 sigue en revisión por AT-16: hay evidencia de reinicio y recuperación limpia del outbox, pero no de una caída inyectada entre commit y acuse ni de restauración de respaldo.
+- AT-02 y AT-13 siguen parciales; AT-04 y AT-14 solo están automatizados en integración; AT-17 necesita diez revisiones humanas.
+- Las tres pruebas Playwright son una base de PHS-041. Faltan los formularios completos de alta/review/tareas, auditoría WCAG, tecnologías de asistencia, carga, p95 y p90 de captura.
+- Playwright usa Google Chrome local; otro entorno debe proveer un navegador compatible o indicar el canal mediante `PHS_E2E_BROWSER_CHANNEL`.
+
+### Siguiente paso
+
+Implementar una prueba controlada de fallo/recuperación y restauración de respaldo para AT-16. Luego definir el entorno y volumen del piloto para PHS-041 y cerrar D07 antes de PHS-042. Siguiente entrada: BIT-0035.
 
 ## Plantilla para próximas entradas
 

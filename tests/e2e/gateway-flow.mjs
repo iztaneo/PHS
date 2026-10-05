@@ -79,6 +79,17 @@ async function check(id, title, action) {
   }
 }
 
+async function eventually(action, predicate, description, timeoutMs = 6_000) {
+  const deadline = Date.now() + timeoutMs;
+  let value;
+  do {
+    value = await action();
+    if (predicate(value)) return value;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  } while (Date.now() < deadline);
+  assert.fail(`${description} did not become visible within ${timeoutMs} ms`);
+}
+
 const status = await request(null, 'GET', '/api/v1/status');
 assert.ok(status.services.every((service) => service.status === 'ok' && service.database === 'ok'));
 
@@ -124,6 +135,27 @@ await check('E2E-02', 'Fixtures repetibles: riesgo, saludable con renovación, s
   // The trend fixture has two official cuts, both in the past, and DEMO-002 is not used for it.
   assert.ok(trending.trend.direction, `DEMO-006 has no comparable trend: ${trending.trend.reason}`);
   assert.ok(trending.trend.current.cycleDueOn < trending.today && trending.trend.previous.cycleDueOn < trending.trend.current.cycleDueOn);
+});
+
+await check('E2E-11', 'Un proyecto sin datos operativos no se presenta como saludable', async () => {
+  const practiceId = pablo.user.memberships.find((membership) => membership.role === 'pm')?.practiceId;
+  assert.ok(practiceId);
+  const empty = await request(pablo, 'POST', '/api/v1/projects', {
+    practiceId, code: `EMPTY-${runId}`, name: `Proyecto sin datos ${runId}`, description: '',
+    clientName: `Cliente sin datos ${runId}`, serviceTypeCode: 'data_ai', pmId: pablo.user.id,
+    leadId: pablo.user.id, technicalOwnerId: pablo.user.id, sponsorId: null,
+    clientContact: '', escalationNotes: '', startsOn: day(-1), endsOn: day(90), currency: 'MXN',
+  }, randomUUID());
+  const assessment = await request(pablo, 'GET', `/api/v1/assessments/${empty.id}`);
+  assert.equal(assessment.score, '75.00');
+  assert.equal(assessment.band, 'attention');
+  assert.equal(assessment.stored, false);
+  assert.equal(assessment.confidence.level, 'low');
+  const dimensions = new Map(assessment.dimensions.map((dimension) => [dimension.key, dimension.score]));
+  assert.deepEqual([...dimensions.entries()], [
+    ['performance', null], ['financial', null], ['risks', null], ['client', null], ['governance', null], ['team', '75.00'],
+  ]);
+  assert.ok(assessment.confidence.deductions.some((deduction) => deduction.code === 'dimension_without_data' && deduction.count === 5));
 });
 
 const practiceId = ana.user.memberships.find((membership) => membership.role === 'pm')?.practiceId;
@@ -269,6 +301,10 @@ await check('E2E-07', 'Review: falta de soporte, envío idempotente, devolución
     clientClimate: null, supportText: '', activeSeconds: 45, declaredConfidence: 'high', finance: null,
     expectedProjectRevision: cycle.projectRevision,
   };
+  await expectFailure(() => request(ana, 'POST', `/api/v1/governance/cycles/${cycle.id}/reviews`, {
+    nothingChanged: true, topics: [], notes: {}, clientClimate: null, supportText: '', activeSeconds: 15,
+    declaredConfidence: 'high', finance: null, expectedProjectRevision: cycle.projectRevision,
+  }, randomUUID()), 409, 'nothing_changed_blocked');
   await expectFailure(() => request(ana, 'POST', `/api/v1/governance/cycles/${cycle.id}/reviews`, payload, randomUUID()), 400, 'support_required');
   const key = randomUUID();
   const sent = await request(ana, 'POST', `/api/v1/governance/cycles/${cycle.id}/reviews`, { ...payload, supportText: 'Minuta E2E.' }, key);
@@ -298,6 +334,14 @@ await check('E2E-08', 'Evento, acción automática, causa y plan con validación
   const overdue = events.find((event) => event.ruleKey === 'milestone_overdue');
   assert.ok(overdue?.task);
   assert.equal(events.filter((event) => event.ruleKey === 'milestone_overdue' && !event.resolvedAt).length, 1);
+  const completedTask = await request(diego, 'POST', `/api/v1/governance/tasks/${overdue.task.id}/transition`, {
+    expectedRevision: overdue.task.revision, to: 'completed', note: 'Se escaló con el proveedor.',
+  });
+  assert.equal(completedTask.status, 'completed');
+  const eventStillOpen = (await request(ana, 'GET', `/api/v1/governance/projects/${project.id}/events`))
+    .find((event) => event.id === overdue.id);
+  assert.equal(eventStillOpen.resolvedAt, null);
+  assert.equal(eventStillOpen.task.status, 'completed');
   const responded = await request(ana, 'POST', `/api/v1/governance/events/${overdue.id}/responses`, {
     cause: 'El proveedor incumplió la fecha.', kind: 'remediation', plan: 'Escalar y entregar un simulador.', changeId: null,
   });
@@ -305,12 +349,33 @@ await check('E2E-08', 'Evento, acción automática, causa y plan con validación
     decision: 'validated', comment: 'Plan verificable.',
   });
   assert.equal(validated.responseStatus, 'validated');
+
+  const currentMilestone = (await request(ana, 'GET', `/api/v1/projects/${project.id}/milestones`))
+    .find((milestone) => milestone.title === 'Entrega vencida');
+  const movedForward = await request(ana, 'PATCH', `/api/v1/projects/${project.id}/milestones/${currentMilestone.id}`, {
+    expectedRevision: currentMilestone.revision, dueOn: day(10), reason: 'El proveedor confirmó una nueva fecha.',
+  });
+  const resolved = (await request(ana, 'GET', `/api/v1/governance/projects/${project.id}/events`))
+    .find((event) => event.id === overdue.id);
+  assert.ok(resolved.resolvedAt);
+  const movedBack = await request(ana, 'PATCH', `/api/v1/projects/${project.id}/milestones/${currentMilestone.id}`, {
+    expectedRevision: movedForward.revision, dueOn: day(-1), reason: 'La nueva fecha también se incumplió.',
+  });
+  assert.equal(movedBack.dueOn, day(-1));
+  const recurred = (await request(ana, 'GET', `/api/v1/governance/projects/${project.id}/events`))
+    .filter((event) => event.ruleKey === 'milestone_overdue');
+  assert.deepEqual(recurred.map((event) => [event.episode, event.resolvedAt === null]), [[2, true], [1, false]]);
+  assert.notEqual(recurred[0].task.id, overdue.task.id);
 });
 
 await check('E2E-09', 'Evaluación, gobierno e historial reflejan el recorrido', async () => {
-  const [assessment, history, timeline, center, portfolio] = await Promise.all([
+  const history = await eventually(
+    () => request(ana, 'GET', `/api/v1/history?projectId=${project.id}`),
+    (value) => value.items.some((item) => item.action === 'review.submitted'),
+    'review.submitted history',
+  );
+  const [assessment, timeline, center, portfolio] = await Promise.all([
     request(ana, 'GET', `/api/v1/assessments/${project.id}`),
-    request(ana, 'GET', `/api/v1/history?projectId=${project.id}`),
     request(ana, 'GET', `/api/v1/history/timeline?projectId=${project.id}`),
     request(ana, 'GET', '/api/v1/governance/center'),
     request(ana, 'GET', '/api/v1/governance/portfolio'),
@@ -336,6 +401,65 @@ await check('E2E-10', 'Un ciclo futuro no puede enviarse antes de comenzar', asy
   const after = await request(ana, 'GET', `/api/v1/governance/cycles/${future.id}`);
   assert.equal(after.reviews.length, 0);
   assert.equal(after.draft, null);
+});
+
+let usdProject;
+await check('E2E-12', 'El portafolio separa exposición por moneda', async () => {
+  usdProject = await request(ana, 'POST', '/api/v1/projects', {
+    practiceId, code: `USD-${runId}`, name: `Proyecto USD ${runId}`, description: 'Fixture multimoneda.',
+    clientName: `Cliente USD ${runId}`, serviceTypeCode: 'development', pmId: ana.user.id, leadId: lead.id,
+    technicalOwnerId: developer.id, sponsorId: null, clientContact: '', escalationNotes: '',
+    startsOn: day(-20), endsOn: day(120), currency: 'USD',
+  }, randomUUID());
+  const milestone = await request(ana, 'POST', `/api/v1/projects/${usdProject.id}/milestones`, {
+    title: 'Entrega USD', deliverable: 'Resultado completo', ownerId: developer.id, dueOn: day(-2), critical: false,
+  }, randomUUID());
+  usdProject = await request(ana, 'GET', `/api/v1/projects/${usdProject.id}`);
+  await request(ana, 'POST', `/api/v1/projects/${usdProject.id}/baselines`, {
+    expectedRevision: usdProject.revision, scope: 'Fixture USD', budget: '100000', effortHours: null,
+  }, randomUUID());
+  usdProject = await request(ana, 'GET', `/api/v1/projects/${usdProject.id}`);
+  usdProject = await request(ana, 'POST', `/api/v1/projects/${usdProject.id}/status`, {
+    expectedRevision: usdProject.revision, to: 'active', reason: 'Inicio del fixture USD.',
+  });
+  await request(ana, 'POST', `/api/v1/projects/${usdProject.id}/milestones/${milestone.id}/transition`, {
+    expectedRevision: milestone.revision, to: 'completed', note: 'Entrega completa.', completedOn: today,
+  });
+  await request(ana, 'POST', `/api/v1/projects/${usdProject.id}/finance`, {
+    effectiveOn: today, totalCost: '110000', totalEffortHours: null, source: 'Prueba AT-15', supersedesId: null,
+  }, randomUUID());
+  await request(ana, 'GET', `/api/v1/assessments/${usdProject.id}`);
+  const portfolio = await request(ana, 'GET', '/api/v1/governance/portfolio');
+  const exposure = new Map(portfolio.indicators.exposure.map((item) => [item.currency, item.amount]));
+  assert.equal(exposure.get('USD'), '10000.00');
+  assert.ok(exposure.has('MXN'));
+});
+
+await check('E2E-13', 'Pausa, cierre y reapertura conservan pendientes e historia', async () => {
+  let current = await request(ana, 'GET', `/api/v1/projects/${project.id}`);
+  current = await request(ana, 'POST', `/api/v1/projects/${project.id}/status`, {
+    expectedRevision: current.revision, to: 'paused', reason: 'Pausa controlada para AT-18.',
+  });
+  const paused = await request(ana, 'GET', `/api/v1/projects/${project.id}/status`);
+  assert.equal(paused.status, 'paused');
+  assert.ok(paused.open.tasks > 0 && paused.open.milestones > 0);
+  const pausedSchedule = await request(ana, 'GET', `/api/v1/governance/projects/${project.id}/review-schedule`);
+  assert.ok(pausedSchedule.cycles.every((cycle) => cycle.canSubmit === false));
+  current = await request(ana, 'POST', `/api/v1/projects/${project.id}/status`, {
+    expectedRevision: current.revision, to: 'active', reason: 'Fin de la pausa controlada.',
+  });
+  current = await request(luis, 'POST', `/api/v1/projects/${project.id}/status`, {
+    expectedRevision: current.revision, to: 'closed', reason: 'Cierre controlado para AT-18.',
+  });
+  const closed = await request(luis, 'GET', `/api/v1/projects/${project.id}/status`);
+  assert.equal(closed.status, 'closed');
+  assert.equal(closed.open.tasks, paused.open.tasks);
+  current = await request(luis, 'POST', `/api/v1/projects/${project.id}/status`, {
+    expectedRevision: current.revision, to: 'active', reason: 'Reapertura controlada para AT-18.',
+  });
+  const reopened = await request(ana, 'GET', `/api/v1/projects/${project.id}/status`);
+  assert.equal(reopened.status, 'active');
+  assert.deepEqual(reopened.history.slice(0, 4).map((entry) => entry.toStatus), ['active', 'closed', 'active', 'paused']);
 });
 
 for (const session of [ana, luis, pablo, carla, diego]) {
