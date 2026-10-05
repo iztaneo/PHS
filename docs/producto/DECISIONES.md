@@ -72,6 +72,19 @@ Aplicación de D02, D03 y D08 en BIT-0025. El usuario revisó estos puntos el 20
 
 Con esto D03 y D04 quedan definidas para construir. Interpretación de implementación aún sin confirmar: cuando la causa desaparece, el evento se resuelve y su acción automática se cierra sola con una nota del sistema.
 
+### D10 — Portafolio (confirmado el 2026-10-05, BIT-0031)
+
+El usuario eligió entre alternativas presentadas:
+
+| Tema | Decisión |
+| --- | --- |
+| Salud promedio | Promedio simple: cada proyecto con score pesa lo mismo, sin ponderar por presupuesto. |
+| Qué proyectos cuentan | Solo activos y en renovación. Planeados, pausados y cerrados se listan aparte y no afectan promedio ni conteos. Un proyecto sin datos cuenta como "sin evaluación", nunca como sano ni como cero. |
+| Exposición económica | Sobrecosto proyectado: presupuesto por desviación financiera, solo cuando la desviación es positiva. |
+| Monedas | Un total por moneda, sin convertir. No hay tipos de cambio. |
+
+Interpretaciones de implementación mías, sin confirmar: el score de cada proyecto es el de su evaluación vigente del día (no solo cortes oficiales de ciclo), y la cobertura se informa con cuántos tienen evaluación, su confianza y si su última revisión está dentro de la cadencia; la exposición excluye los proyectos cuya economía el usuario no puede ver y dice cuántos son.
+
 ### D09 — Evidencias (confirmado el 2026-10-04, BIT-0020)
 
 Elegido por el usuario entre las alternativas presentadas:

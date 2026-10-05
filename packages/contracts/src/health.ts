@@ -311,6 +311,48 @@ export const healthCenter = z.object({
   incomplete: z.boolean().describe('true: faltó incluir algo; los conteos no son el panorama completo.'),
 });
 
+// ---- Portfolio (PHS-037, D10)
+export const portfolioQuery = z.object({
+  clientId: z.uuid().optional(), serviceTypeCode: z.string().max(40).optional(), leadId: z.uuid().optional(),
+  status: z.enum(['planned', 'active', 'paused', 'renewing', 'closed']).optional(),
+  band: z.enum(['healthy', 'attention', 'risk', 'none']).optional().describe('none: sin evaluación.'),
+});
+const amountOrNull = z.string().nullable();
+export const portfolioRow = z.object({
+  id: z.uuid(), code: z.string(), name: z.string(), status: z.enum(['planned', 'active', 'paused', 'renewing', 'closed']),
+  counted: z.boolean().describe('Cuenta en los indicadores: solo activos y en renovación (D10).'),
+  practiceName: z.string(), clientId: z.uuid(), clientName: z.string(), serviceTypeCode: z.string(), serviceTypeName: z.string(),
+  pmName: z.string(), leadId: z.uuid(), leadName: z.string(),
+  assessed: z.boolean(), score, band: z.enum(['healthy', 'attention', 'risk']).nullable(), confidenceLevel: confidenceLevel.nullable(),
+  freshness: z.enum(['fresh', 'stale', 'never']).describe('Última revisión dentro de su cadencia, más antigua, o ninguna.'),
+  trend: z.enum(['up', 'down', 'flat']).nullable(),
+  lastReviewOn: z.iso.date().nullable(),
+  currency: z.string(),
+  budget: amountOrNull, financialDeviation: amountOrNull,
+  exposure: amountOrNull.describe('Sobrecosto proyectado: presupuesto por desviación financiera, solo si es positiva.'),
+  financialsVisible: z.boolean().describe('false: el usuario no puede ver la economía de este proyecto (D05).'),
+});
+export const portfolioView = z.object({
+  today: z.iso.date(),
+  options: z.object({
+    clients: z.array(z.object({ id: z.uuid(), name: z.string() })), serviceTypes: z.array(z.object({ code: z.string(), name: z.string() })),
+    leads: z.array(z.object({ id: z.uuid(), name: z.string() })),
+  }).describe('Valores para filtrar, tomados de todo el alcance del usuario.'),
+  indicators: z.object({
+    projects: z.number().int().describe('Activos y en renovación entre los proyectos mostrados.'),
+    excluded: z.number().int().describe('Planeados, pausados y cerrados: se listan, no cuentan.'),
+    assessed: z.number().int(), withoutAssessment: z.number().int(),
+    average: score.describe('Promedio simple de los proyectos con score; null si ninguno lo tiene.'),
+    distribution: z.object({ healthy: z.number().int(), attention: z.number().int(), risk: z.number().int() }),
+    confidence: z.object({ high: z.number().int(), medium: z.number().int(), low: z.number().int() }),
+    freshness: z.object({ fresh: z.number().int(), stale: z.number().int(), never: z.number().int() }),
+    exposure: z.array(z.object({ currency: z.string(), amount: z.string(), projects: z.number().int() })).describe('Un total por moneda; nunca se suman monedas distintas.'),
+    exposureHidden: z.number().int().describe('Proyectos contados cuya economía el usuario no puede ver.'),
+  }),
+  projects: z.array(portfolioRow).describe('Los mismos proyectos sobre los que se calcularon los indicadores.'),
+  incomplete: z.boolean(),
+});
+
 // Internal API of the Health service.
 export const healthRoutes: RouteContract[] = [
   { method: 'get', path: '/health', summary: 'Estado del servicio y de su base de datos', tag: 'Estado', auth: 'none',
@@ -328,6 +370,9 @@ export const healthRoutes: RouteContract[] = [
     responses: { 200: { description: 'Tendencia y presión de los compromisos que vencen en el horizonte configurado.', schema: outlook }, 401: errors.unauthenticated, 404: errors.notFound } },
   { method: 'get', path: '/center', summary: 'Health Center: qué atender hoy en mis proyectos', tag: 'Salud', auth: 'session',
     responses: { 200: { description: 'Según el papel del usuario en cada proyecto: lo que debe hacer como PM, lo que debe decidir como líder y dónde mirar como quien gobierna.', schema: healthCenter }, 401: errors.unauthenticated } },
+  { method: 'get', path: '/portfolio', summary: 'Portafolio: salud y exposición de los proyectos a mi alcance', tag: 'Salud', auth: 'session',
+    query: portfolioQuery.shape,
+    responses: { 200: { description: 'Indicadores y tabla sobre el mismo conjunto: los proyectos del alcance del usuario que cumplen los filtros.', schema: portfolioView }, 400: errors.invalidRequest, 401: errors.unauthenticated } },
   { method: 'get', path: '/scheduler', summary: 'Estado del proceso programado', tag: 'Estado', auth: 'session',
     responses: { 200: { description: 'Última pasada que actualizó alertas, acciones y evaluaciones sin intervención de usuarios.', schema: schedulerStatus }, 401: errors.unauthenticated } },
   { method: 'get', path: '/projects/:projectId/events', summary: 'Eventos de salud del proyecto', tag: 'Eventos y acciones', auth: 'session',

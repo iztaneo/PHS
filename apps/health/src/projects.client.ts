@@ -2,7 +2,8 @@ import { INTERNAL_AUTH_HEADER, type ProjectCapabilities } from '@phs/service-kit
 
 // What the Projects service lists for a user: only projects in their scope.
 export interface ListedProject {
-  id: string; code: string; name: string; status: string; practiceId: string; practiceName: string; clientName: string; pmName: string;
+  id: string; code: string; name: string; status: string; practiceId: string; practiceName: string; clientId: string; clientName: string;
+  serviceTypeCode: string; serviceTypeName: string; pmName: string;
   capabilities: ProjectCapabilities;
 }
 

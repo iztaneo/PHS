@@ -5712,6 +5712,612 @@
         }
       }
     },
+    "/api/v1/governance/portfolio": {
+      "get": {
+        "summary": "Portafolio: salud y exposición de los proyectos a mi alcance",
+        "tags": [
+          "Salud"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "serviceTypeCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          {
+            "name": "leadId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "planned",
+                "active",
+                "paused",
+                "renewing",
+                "closed"
+              ]
+            }
+          },
+          {
+            "name": "band",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "none: sin evaluación.",
+              "type": "string",
+              "enum": [
+                "healthy",
+                "attention",
+                "risk",
+                "none"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Indicadores y tabla sobre el mismo conjunto: los proyectos del alcance del usuario que cumplen los filtros.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "today": {
+                      "type": "string",
+                      "format": "date",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                    },
+                    "options": {
+                      "type": "object",
+                      "properties": {
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "serviceTypes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "code",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "leads": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "clients",
+                        "serviceTypes",
+                        "leads"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Valores para filtrar, tomados de todo el alcance del usuario."
+                    },
+                    "indicators": {
+                      "type": "object",
+                      "properties": {
+                        "projects": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Activos y en renovación entre los proyectos mostrados."
+                        },
+                        "excluded": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Planeados, pausados y cerrados: se listan, no cuentan."
+                        },
+                        "assessed": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "withoutAssessment": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "average": {
+                          "description": "Promedio simple de los proyectos con score; null si ninguno lo tiene.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "distribution": {
+                          "type": "object",
+                          "properties": {
+                            "healthy": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "attention": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "risk": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "healthy",
+                            "attention",
+                            "risk"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "confidence": {
+                          "type": "object",
+                          "properties": {
+                            "high": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "medium": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "low": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "high",
+                            "medium",
+                            "low"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "freshness": {
+                          "type": "object",
+                          "properties": {
+                            "fresh": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "stale": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "never": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "fresh",
+                            "stale",
+                            "never"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "exposure": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "currency": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "string"
+                              },
+                              "projects": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "currency",
+                              "amount",
+                              "projects"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Un total por moneda; nunca se suman monedas distintas."
+                        },
+                        "exposureHidden": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991,
+                          "description": "Proyectos contados cuya economía el usuario no puede ver."
+                        }
+                      },
+                      "required": [
+                        "projects",
+                        "excluded",
+                        "assessed",
+                        "withoutAssessment",
+                        "average",
+                        "distribution",
+                        "confidence",
+                        "freshness",
+                        "exposure",
+                        "exposureHidden"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "projects": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "planned",
+                              "active",
+                              "paused",
+                              "renewing",
+                              "closed"
+                            ]
+                          },
+                          "counted": {
+                            "type": "boolean",
+                            "description": "Cuenta en los indicadores: solo activos y en renovación (D10)."
+                          },
+                          "practiceName": {
+                            "type": "string"
+                          },
+                          "clientId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "clientName": {
+                            "type": "string"
+                          },
+                          "serviceTypeCode": {
+                            "type": "string"
+                          },
+                          "serviceTypeName": {
+                            "type": "string"
+                          },
+                          "pmName": {
+                            "type": "string"
+                          },
+                          "leadId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "leadName": {
+                            "type": "string"
+                          },
+                          "assessed": {
+                            "type": "boolean"
+                          },
+                          "score": {
+                            "description": "Decimal con dos decimales; null cuando no hay dato.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "band": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "healthy",
+                                  "attention",
+                                  "risk"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "confidenceLevel": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "freshness": {
+                            "type": "string",
+                            "enum": [
+                              "fresh",
+                              "stale",
+                              "never"
+                            ],
+                            "description": "Última revisión dentro de su cadencia, más antigua, o ninguna."
+                          },
+                          "trend": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "up",
+                                  "down",
+                                  "flat"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lastReviewOn": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "budget": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "financialDeviation": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "exposure": {
+                            "description": "Sobrecosto proyectado: presupuesto por desviación financiera, solo si es positiva.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "financialsVisible": {
+                            "type": "boolean",
+                            "description": "false: el usuario no puede ver la economía de este proyecto (D05)."
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "code",
+                          "name",
+                          "status",
+                          "counted",
+                          "practiceName",
+                          "clientId",
+                          "clientName",
+                          "serviceTypeCode",
+                          "serviceTypeName",
+                          "pmName",
+                          "leadId",
+                          "leadName",
+                          "assessed",
+                          "score",
+                          "band",
+                          "confidenceLevel",
+                          "freshness",
+                          "trend",
+                          "lastReviewOn",
+                          "currency",
+                          "budget",
+                          "financialDeviation",
+                          "exposure",
+                          "financialsVisible"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Los mismos proyectos sobre los que se calcularon los indicadores."
+                    },
+                    "incomplete": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "today",
+                    "options",
+                    "indicators",
+                    "projects",
+                    "incomplete"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (`invalid_request`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso (`forbidden`), contraseña temporal sin cambiar (`password_change_required`) u origen no permitido (`origin_not_allowed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "El servicio de identidad no respondió (`identity_unavailable`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/governance/scheduler": {
       "get": {
         "summary": "Estado del proceso programado",

@@ -296,6 +296,25 @@ export interface RuleSet {
   };
 }
 
+export interface PortfolioRow {
+  id: string; code: string; name: string; status: string; counted: boolean; practiceName: string; clientId: string; clientName: string;
+  serviceTypeCode: string; serviceTypeName: string; pmName: string; leadId: string; leadName: string; assessed: boolean; score: string | null;
+  band: 'healthy' | 'attention' | 'risk' | null; confidenceLevel: 'high' | 'medium' | 'low' | null; freshness: 'fresh' | 'stale' | 'never';
+  trend: 'up' | 'down' | 'flat' | null; lastReviewOn: string | null; currency: string; budget: string | null; financialDeviation: string | null;
+  exposure: string | null; financialsVisible: boolean;
+}
+export interface PortfolioFilters { clientId: string; serviceTypeCode: string; leadId: string; status: string; band: string }
+export interface Portfolio {
+  today: string;
+  options: { clients: { id: string; name: string }[]; serviceTypes: { code: string; name: string }[]; leads: { id: string; name: string }[] };
+  indicators: {
+    projects: number; excluded: number; assessed: number; withoutAssessment: number; average: string | null;
+    distribution: { healthy: number; attention: number; risk: number }; confidence: { high: number; medium: number; low: number };
+    freshness: { fresh: number; stale: number; never: number }; exposure: { currency: string; amount: string; projects: number }[]; exposureHidden: number;
+  };
+  projects: PortfolioRow[]; incomplete: boolean;
+}
+
 export interface Responsibilities4 { milestones: number; risks: number; renewals: number; tasks: number }
 
 export type ProjectChanges = Partial<Omit<ProjectInput, 'practiceId' | 'code' | 'clientName'>>;
@@ -453,6 +472,11 @@ export const api = {
   timeline: (projectId: string) => call<Timeline>('GET', `/api/v1/history/timeline?projectId=${projectId}`),
   inactiveProjects: () => call<InactiveProject[]>('GET', '/api/v1/reports/inactive-projects'),
   rules: () => call<RuleSet>('GET', '/api/v1/assessments/rules'),
+  portfolio: (filters: Partial<PortfolioFilters>) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) if (value) params.set(key, value);
+    return call<Portfolio>('GET', `/api/v1/governance/portfolio?${params}`);
+  },
   center: () => call<HealthCenter>('GET', '/api/v1/governance/center'),
   notifications: () => call<Inbox>('GET', '/api/v1/notifications'),
   readNotification: (id: string) => call<Inbox>('POST', `/api/v1/notifications/${id}/read`),

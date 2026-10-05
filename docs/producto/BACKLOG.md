@@ -858,6 +858,8 @@ Criterios de aceptación:
 3. Promedio/exposición aplican D10; no suman monedas distintas ni convierten score desconocido en cero.
 4. Cada agregado permite inspeccionar sus proyectos incluidos; evaluaciones provisionales y cerrados se tratan conforme política visible.
 
+**Estado (BIT-0031):** construida, en revisión, con las reglas de D10. Pantalla "Portafolio": filtros por cliente, tipo, líder, estado y salud que cambian a la vez tarjetas y tabla; salud promedio simple con cuántos proyectos entran, distribución por semáforo (cada tarjeta filtra la tabla a sus proyectos), confianza, actualidad de las revisiones y exposición por moneda; planeados, pausados y cerrados aparecen marcados como "no cuenta". Límites: las tarjetas de confianza, actualidad y exposición no filtran la tabla; no hay exportación; el rendimiento con muchos proyectos no se ha medido.
+
 ### PHS-038 — Consultar timeline e historial completo
 
 Como **usuario autorizado**, quiero reconstruir compromisos y decisiones, para entender cómo evolucionó un proyecto.

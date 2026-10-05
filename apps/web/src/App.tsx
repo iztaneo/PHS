@@ -1,10 +1,10 @@
-import { Bell, BookOpen, Briefcase, House, ListChecks, LogOut, Menu, PauseCircle, ShieldCheck, UserRound, X } from 'lucide-react';
+import { Bell, BookOpen, Briefcase, ChartPie, House, ListChecks, LogOut, Menu, PauseCircle, ShieldCheck, UserRound, X } from 'lucide-react';
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { Admin } from './Admin';
 import { ApiError, api, errorMessage, type Inbox, type SessionUser } from './api';
 import { MyTasks } from './Governance';
 import { Home, Notifications } from './Home';
-import { InactiveProjects, PhfModel } from './Insight';
+import { InactiveProjects, PhfModel, PortfolioPage } from './Insight';
 import { Projects } from './Projects';
 import { Badge, Button, Card, Empty, Field, Input, Loading, Notice, PageHeader } from './ui';
 
@@ -147,7 +147,7 @@ function PasswordForm({ onChanged, onSessionLost }: { onChanged: () => void; onS
 }
 
 const ROLE_TEXT = { pm: 'PM', lead: 'Líder', director: 'Dirección' } as const;
-type Section = 'home' | 'projects' | 'notifications' | 'tasks' | 'inactive' | 'model' | 'roles' | 'admin';
+type Section = 'home' | 'portfolio' | 'projects' | 'notifications' | 'tasks' | 'inactive' | 'model' | 'roles' | 'admin';
 
 function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?: string) => void }) {
   const [section, setSection] = useState<Section>('home');
@@ -167,6 +167,7 @@ function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?
 
   const items: { key: Section; label: string; icon: ReactNode }[] = [
     { key: 'home', label: 'Inicio', icon: <House size={18} aria-hidden /> },
+    { key: 'portfolio', label: 'Portafolio', icon: <ChartPie size={18} aria-hidden /> },
     { key: 'projects', label: 'Proyectos', icon: <Briefcase size={18} aria-hidden /> },
     { key: 'notifications', label: 'Notificaciones', icon: <Bell size={18} aria-hidden /> },
     { key: 'tasks', label: 'Mis acciones', icon: <ListChecks size={18} aria-hidden /> },
@@ -230,6 +231,7 @@ function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?
         {section === 'notifications' && <Notifications inbox={inbox} onChange={setInbox} onOpen={open} />}
         {section === 'projects' && <Projects user={user} target={target} />}
         {section === 'tasks' && <MyTasks />}
+        {section === 'portfolio' && <PortfolioPage onOpen={open} />}
         {section === 'inactive' && <InactiveProjects onOpen={open} />}
         {section === 'model' && <PhfModel />}
         {section === 'roles' && (

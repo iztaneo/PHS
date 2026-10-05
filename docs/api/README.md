@@ -6,7 +6,7 @@ Generados desde `packages/contracts`; no se editan a mano. Hay un contrato por s
 | --- | --- | --- |
 | [gateway.openapi.json](gateway.openapi.json) | Pública: la aplicación web | Sesión, estado y todo lo que el gateway reenvía a los servicios bajo `/api/v1`. Autenticación por cookie `phs_session`. |
 | [identity.openapi.json](identity.openapi.json) | Interna | Sesiones, contraseña y administración de usuarios, prácticas y roles. Solo el gateway puede llamarla, con su firma. |
-| [health.openapi.json](health.openapi.json) | Interna | Evaluación de salud vigente de un proyecto, con tendencia y proyección; estado del proceso programado; Health Center; conjunto de reglas vigente; alertas, causa y plan con validación, acciones, ciclo de revisión con Health Review y su validación, y días festivos (público en `/api/v1/governance`). |
+| [health.openapi.json](health.openapi.json) | Interna | Evaluación de salud vigente de un proyecto, con tendencia y proyección; estado del proceso programado; Health Center; portafolio; conjunto de reglas vigente; alertas, causa y plan con validación, acciones, ciclo de revisión con Health Review y su validación, y días festivos (público en `/api/v1/governance`). |
 | [platform.openapi.json](platform.openapi.json) | Interna | Evidencias de hitos, riesgos, cambios y revisiones: consulta, carga con archivo, descarga y retiro. Notificaciones del usuario (público en `/api/v1/notifications`). Historial y línea de tiempo del proyecto (público en `/api/v1/history`). |
 | [projects.openapi.json](projects.openapi.json) | Interna | Proyectos por alcance y catálogo de tipos de servicio. Recibe la identidad firmada del usuario. |
 

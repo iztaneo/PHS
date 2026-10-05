@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
-  api, errorMessage, type HistoryEntry, type InactiveProject, type ProjectDetail, type RuleSet, type Timeline, type TimelineItem,
+  api, errorMessage, type HistoryEntry, type InactiveProject, type Portfolio, type PortfolioFilters, type ProjectDetail, type RuleSet, type Timeline,
+  type TimelineItem,
 } from './api';
 import type { OpenProject } from './Home';
 import catalog from './phf-catalog.json';
@@ -287,6 +288,127 @@ export function PhfModel() {
               </details>
             ))}
           </div>
+        </Card>
+      </div>
+    </>
+  );
+}
+
+const BAND: Record<string, { label: string; tone: Tone }> = {
+  healthy: { label: 'Saludable', tone: 'green' }, attention: { label: 'En atención', tone: 'amber' }, risk: { label: 'En riesgo', tone: 'red' },
+};
+const STATUS: Record<string, string> = { planned: 'Planeado', active: 'Activo', paused: 'Pausado', renewing: 'En renovación', closed: 'Cerrado' };
+const TREND: Record<string, string> = { up: '↑ Mejorando', down: '↓ Deteriorándose', flat: '→ Estable' };
+const FRESH: Record<string, string> = { fresh: 'Al día', stale: 'Atrasada', never: 'Sin revisiones' };
+const money = (amount: string, currency: string) => `${Number(amount).toLocaleString('es-MX', { maximumFractionDigits: 0 })} ${currency}`;
+const NO_FILTERS: PortfolioFilters = { clientId: '', serviceTypeCode: '', leadId: '', status: '', band: '' };
+
+// Portfolio for those who govern (PHS-037). Cards and table always describe the same projects:
+// the ones in the user's scope that pass the filters. Rules of decision D10.
+export function PortfolioPage({ onOpen }: { onOpen: OpenProject }) {
+  const [data, setData] = useState<Portfolio>();
+  const [filters, setFilters] = useState<PortfolioFilters>(NO_FILTERS);
+  const [error, setError] = useState<string>();
+  useEffect(() => {
+    let current = true;
+    api.portfolio(filters).then((result) => { if (current) setData(result); }).catch((f) => { if (current) setError(errorMessage(f)); });
+    return () => { current = false; };
+  }, [filters.clientId, filters.serviceTypeCode, filters.leadId, filters.status, filters.band]);
+
+  if (error) return <><PageHeader title="Portafolio" /><Notice tone="red">{error}</Notice></>;
+  if (!data) return <><PageHeader title="Portafolio" /><Loading /></>;
+  const i = data.indicators;
+  const filtered = Object.values(filters).some(Boolean);
+  const set = (patch: Partial<PortfolioFilters>) => setFilters({ ...filters, ...patch });
+  // A card filters the table to the projects it counts.
+  const bandCard = (band: 'healthy' | 'attention' | 'risk', count: number) => (
+    <button type="button" aria-pressed={filters.band === band} onClick={() => set({ band: filters.band === band ? '' : band })}
+      className={`rounded-card border p-4 text-left ${filters.band === band ? 'border-brand bg-brand-soft' : 'border-line bg-surface hover:bg-subtle'}`}>
+      <span className="block text-xs font-medium uppercase tracking-wide text-muted">{BAND[band]?.label}</span>
+      <span className="mt-1 block text-3xl font-semibold text-ink">{count}</span>
+    </button>
+  );
+  return (
+    <>
+      <PageHeader title="Portafolio" subtitle="Salud y exposición de los proyectos a tu alcance. Cuentan los activos y en renovación; planeados, pausados y cerrados se listan sin contar." />
+      {data.incomplete && <div className="mb-4"><Notice tone="amber" role="status">No se pudo incluir toda la información: los indicadores son parciales.</Notice></div>}
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-3">
+          <Select aria-label="Cliente" value={filters.clientId} onChange={(e) => set({ clientId: e.target.value })} className="sm:w-48">
+            <option value="">Todos los clientes</option>{data.options.clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </Select>
+          <Select aria-label="Tipo de servicio" value={filters.serviceTypeCode} onChange={(e) => set({ serviceTypeCode: e.target.value })} className="sm:w-48">
+            <option value="">Todos los tipos</option>{data.options.serviceTypes.map((t) => <option key={t.code} value={t.code}>{t.name}</option>)}
+          </Select>
+          <Select aria-label="Líder" value={filters.leadId} onChange={(e) => set({ leadId: e.target.value })} className="sm:w-48">
+            <option value="">Todos los líderes</option>{data.options.leads.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </Select>
+          <Select aria-label="Estado" value={filters.status} onChange={(e) => set({ status: e.target.value })} className="sm:w-44">
+            <option value="">Todos los estados</option>{Object.entries(STATUS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </Select>
+          <Select aria-label="Salud" value={filters.band} onChange={(e) => set({ band: e.target.value })} className="sm:w-44">
+            <option value="">Toda la salud</option>{Object.entries(BAND).map(([key, b]) => <option key={key} value={key}>{b.label}</option>)}
+            <option value="none">Sin evaluación</option>
+          </Select>
+          {filtered && <Button variant="ghost" onClick={() => setFilters(NO_FILTERS)}>Quitar filtros</Button>}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <Card>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">Salud promedio</p>
+            <p className="mt-1 text-3xl font-semibold text-ink">{i.average === null ? '—' : Number(i.average).toFixed(0)}</p>
+            <p className="mt-1 text-xs text-muted">Promedio simple de {i.assessed} de {i.projects} proyecto(s){i.withoutAssessment > 0 && `; ${i.withoutAssessment} sin evaluación no entran`}.</p>
+          </Card>
+          {bandCard('risk', i.distribution.risk)}
+          {bandCard('attention', i.distribution.attention)}
+          {bandCard('healthy', i.distribution.healthy)}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Card title="Exposición económica">
+            {i.exposure.length === 0 ? <p className="text-sm text-muted">Sin sobrecosto proyectado en lo que puedes ver.</p>
+              : i.exposure.map((e) => <p key={e.currency} className="text-2xl font-semibold text-ink">{money(e.amount, e.currency)} <span className="text-xs font-normal text-muted">en {e.projects} proyecto(s)</span></p>)}
+            <p className="mt-2 text-xs text-muted">
+              Sobrecosto proyectado: presupuesto por desviación financiera, solo cuando es positiva. Un total por moneda, sin convertir.
+              {i.exposureHidden > 0 && ` No incluye ${i.exposureHidden} proyecto(s) cuya economía no puedes ver.`}
+            </p>
+          </Card>
+          <Card title="Confianza de la información">
+            <p className="text-sm text-ink">Alta {i.confidence.high} · Media {i.confidence.medium} · Baja {i.confidence.low}</p>
+            <p className="mt-2 text-xs text-muted">De los proyectos con evaluación. Un score alto con confianza baja se apoya en datos incompletos o atrasados.</p>
+          </Card>
+          <Card title="Actualidad de las revisiones">
+            <p className="text-sm text-ink">Al día {i.freshness.fresh} · Atrasadas {i.freshness.stale} · Sin revisiones {i.freshness.never}</p>
+            <p className="mt-2 text-xs text-muted">Al día: la última revisión está dentro de la cadencia del proyecto.</p>
+          </Card>
+        </div>
+
+        <Card title={`Proyectos (${data.projects.length})`}>
+          {data.projects.length === 0 ? <p className="text-sm text-muted">Ningún proyecto coincide con los filtros.</p> : (
+            <ul className="divide-y divide-line">
+              {data.projects.map((p) => (
+                <li key={p.id} className={`flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0 ${p.counted ? '' : 'opacity-70'}`}>
+                  <button type="button" className="min-w-0 text-left" onClick={() => onOpen(p.id, 'health')}>
+                    <span className="block text-sm font-medium text-brand-strong hover:underline">{p.name}</span>
+                    <span className="block text-xs text-muted">
+                      {p.code} · {p.clientName} · {p.serviceTypeName} · líder {p.leadName} · PM {p.pmName}
+                    </span>
+                    <span className="block text-xs text-muted">
+                      Revisión: {FRESH[p.freshness]}{p.lastReviewOn && ` (${p.lastReviewOn})`}{p.trend && ` · ${TREND[p.trend]}`}
+                      {p.exposure !== null && Number(p.exposure) > 0 && ` · exposición ${money(p.exposure, p.currency)}`}
+                      {!p.financialsVisible && ' · economía no visible'}
+                    </span>
+                  </button>
+                  <span className="flex flex-wrap items-center gap-2">
+                    {!p.counted && <Badge>{STATUS[p.status]} · no cuenta</Badge>}
+                    {p.counted && p.status === 'renewing' && <Badge tone="amber">En renovación</Badge>}
+                    {p.confidenceLevel === 'low' && p.score !== null && <Badge tone="amber">Confianza baja</Badge>}
+                    {!p.assessed ? <Badge tone="amber">Evaluación no disponible</Badge>
+                      : p.band ? <Badge tone={BAND[p.band]?.tone}>{Number(p.score).toFixed(0)} · {BAND[p.band]?.label}</Badge> : <Badge>Sin evaluación</Badge>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
       </div>
     </>

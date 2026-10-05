@@ -69,6 +69,8 @@ Tablas añadidas desde este mapa: `command_idempotency`, `evidence_withdrawal` (
 
 **BIT-0030:** construidas, pendientes de aceptación: Timeline e historial (consulta de Plataforma), Modelo PHF (web, con las reglas que publica Salud) y la consulta de pausados y cerrados (Proyectos). Sin tablas nuevas. De R4 solo falta el portafolio (PHS-037, requiere D10).
 
+**BIT-0031:** construido el Portafolio (consulta de Salud con las reglas de D10), pendiente de aceptación. Con esto todas las pantallas del mapa existen; falta R5.
+
 ## Brechas detectadas en el cruce
 
 | # | Brecha | Estado |

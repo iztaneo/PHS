@@ -12,19 +12,19 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
 - **R3 construido (en revisión, sin aceptar):** alertas, acciones y causa y plan (BIT-0024); ciclo de revisión, Health Review, validación y festivos (BIT-0025); confianza explicada, tendencia, proyección y proceso programado (BIT-0026). Lo que falta de cada historia está en su estado en el backlog.
-- **R4 construido salvo el portafolio (en revisión, sin aceptar):** notificaciones y Health Center (BIT-0028); historial y línea de tiempo, modelo PHF y consulta de pausados y cerrados (BIT-0030). Lo que falta de cada historia está en su estado en el backlog.
-- **Todavía no implementado:** portafolio de Dirección (PHS-037), que requiere la decisión D10; todo R5 (recorrido integral, usabilidad, accesibilidad y rendimiento, operación del piloto).
+- **R4 construido (en revisión, sin aceptar):** notificaciones y Health Center (BIT-0028); historial y línea de tiempo, modelo PHF y consulta de pausados y cerrados (BIT-0030); portafolio con las reglas de D10 (BIT-0031). Lo que falta de cada historia está en su estado en el backlog.
+- **Todavía no implementado:** R5: recorrido integral con escenarios (PHS-040), usabilidad, accesibilidad y rendimiento (PHS-041) y operación del piloto (PHS-042).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
 - **Backlog:** 46 elementos, 43 para el MVP y 3 posteriores (PHS-046, consulta de proyectos pausados y cerrados, añadida en BIT-0025). Ninguna historia se considera implementada por la existencia de estos documentos.
-- **Decisiones abiertas:** D07 y D10 completas. D03 y D04 definidas por el usuario el 2026-10-04 (BIT-0023). D02 y D08 indicadas por el usuario con una interpretación de implementación pendiente de que la confirme. D09 confirmada, incluidas sus consecuencias de diseño, salvo expiración y restricción adicional de acceso; D06 parcialmente confirmada; de D05 solo quedan la separación de funciones tras el piloto y los responsables externos. D01 confirmada como reglas versión 1 ([REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md)); faltan el peso del hito y la calibración. Ver [DECISIONES.md](producto/DECISIONES.md).
+- **Decisiones abiertas:** D07 (retención y respaldos). Confirmadas: D01, D05, D09 (salvo expiración y restricción adicional de acceso) y D10; D06 parcialmente. D02, D03, D04 y D08 definidas por el usuario, con interpretaciones de implementación marcadas "por confirmar" en [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Datos de demostración:** `seed:demo` carga seis usuarios y cinco proyectos (DEMO-001 a DEMO-005); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** que el usuario defina D10 para construir el portafolio (PHS-037), y pruebe y acepte R1 a R4; después R5. Por confirmar: las interpretaciones marcadas en la tabla de BIT-0025 de DECISIONES, D08 y los supuestos de BIT-0024, BIT-0026 y BIT-0028. Abiertas: D07 y D10.
+- **Siguiente paso funcional:** prueba y aceptación del usuario de R1 a R4, ninguna aceptada todavía; después R5, que necesita D07 y la definición del entorno del piloto. Por confirmar: las interpretaciones marcadas en DECISIONES y los supuestos de BIT-0024, BIT-0026, BIT-0028 y BIT-0031.
 
 ## Cómo se mantiene
 
@@ -1165,6 +1165,46 @@ Revisión del diccionario por el usuario. Después continuar R4 (PHS-038, PHS-03
 ### Pendientes y siguiente paso
 
 D10 para el portafolio. Prueba del usuario. Siguiente entrada: BIT-0031.
+
+## BIT-0031 — Portafolio y decisión D10
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** cerrar D10 con el usuario y construir el portafolio, última pantalla pendiente de R4.
+
+**Relación:** PHS-037; D10, D05; RN-01, RN-18.
+
+**Identificación:** commit con prefijo `BIT-0031`.
+
+### Decisión del usuario (D10)
+
+Eligió entre alternativas: promedio simple; cuentan solo activos y en renovación; exposición como sobrecosto proyectado; un total por moneda sin convertir. Detalle en [DECISIONES.md](producto/DECISIONES.md).
+
+### Trabajo realizado
+
+- **Motor.** [portfolio.ts](../packages/health-engine/src/portfolio.ts): reglas de D10 como funciones puras, con pruebas.
+- **Salud.** [portfolio.service.ts](../apps/health/src/portfolio.service.ts): `GET /portfolio` con filtros por cliente, tipo de servicio, líder, estado y salud. Indicadores y tabla se calculan sobre las mismas filas: los proyectos del alcance del usuario que pasan los filtros. Incluye tendencia, actualidad de la revisión y exposición por proyecto; oculta la economía a quien no puede verla e informa cuántos proyectos quedan fuera de la exposición.
+- **Web.** Pantalla "Portafolio" en el menú, con filtros, tarjetas y tabla que abre cada proyecto.
+
+### Archivos
+
+`packages/health-engine/src/{portfolio,portfolio.test,index}.ts`, `apps/health/src/{portfolio.service,projects.client,review.controller,app.module}.ts`, `apps/health/test/{portfolio.int.test,center.int.test}.ts`, `packages/contracts/src/health.ts`, `docs/api/{health,gateway}.openapi.json`, `docs/api/README.md`, `apps/web/src/{Insight,App}.tsx`, `apps/web/src/api.ts`, y documentación: decisiones, reglas, backlog, mapa y esta bitácora.
+
+### Supuestos sin confirmar
+
+- El score de cada proyecto en el portafolio es el de su evaluación vigente del día, no solo el de cortes oficiales de ciclo.
+- La desviación financiera es la del motor (costo frente al avance real, como porcentaje del presupuesto), por lo que la exposición equivale al sobrecosto acumulado a la fecha.
+
+### Validación y límites
+
+- `pnpm typecheck` y `pnpm build` sin errores. `pnpm test`: 165 pruebas en 8 paquetes (motor 30, tres nuevas; Salud 29, una nueva). `pnpm db:test`: 15 de 15.
+- Una expectativa de la prueba nueva estaba mal calculada (supuse desviación sobre el costo esperado y es sobre el presupuesto); se corrigió la prueba, no el motor.
+- **No comprobado:** ni la ruta por el gateway en ejecución ni la pantalla en el navegador; los servicios siguen detenidos desde BIT-0030.
+- Sin datos de demostración nuevos: los cinco proyectos de demostración están en MXN, así que el total por moneda solo se ve con una moneda.
+
+### Pendientes y siguiente paso
+
+Prueba del usuario de R1 a R4. Después R5. Siguiente entrada: BIT-0032.
 
 ## Plantilla para próximas entradas
 

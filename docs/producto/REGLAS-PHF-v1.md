@@ -88,6 +88,8 @@ Los umbrales son estrictos: 10 y 3 exactos no activan el tope.
 
 **Pronóstico.** Presión en el horizonte de ciclos configurado: 4 por hito próximo, 4 más si es crítico, 1.2 × severidad por riesgo con mitigación próxima, 2 por acción próxima, 6 por renovación próxima; más 1.2 por punto de caída si la tendencia baja, y 8 por cada tope de desviación activo. Es determinista y explicable, no una probabilidad.
 
+**Portafolio (D10, BIT-0031).** Cuentan los proyectos activos y en renovación. Salud promedio: media simple de los que tienen score. Exposición de un proyecto: presupuesto × desviación financiera ÷ 100 cuando la desviación es positiva; se suma por moneda, sin convertir.
+
 ## 7. Ejemplos con resultado esperado
 
 Sirven como casos de prueba del motor. Desde BIT-0022 todos están automatizados en `packages/health-engine`, incluido el 15 (tendencia) desde BIT-0026. "Expectativa sin resolver" se cuenta como alerta crítica abierta que exige causa y plan y no los tiene.

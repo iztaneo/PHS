@@ -3,7 +3,7 @@ import {
   Delete, NotFoundException, Param, Post, Put, Query, Req, UseGuards,
 } from '@nestjs/common';
 import {
-  IDEMPOTENCY_HEADER, addHolidayBody, holidayQuery, idempotencyKey, saveDraftBody, savePolicyBody, submitReviewBody, validateReviewBody,
+  IDEMPOTENCY_HEADER, addHolidayBody, holidayQuery, portfolioQuery, idempotencyKey, saveDraftBody, savePolicyBody, submitReviewBody, validateReviewBody,
 } from '@phs/contracts';
 import { INTERNAL_AUTH_HEADER } from '@phs/service-kit';
 import { z } from 'zod';
@@ -11,6 +11,7 @@ import { CenterService } from './center.service.js';
 import type { Actor } from './governance.service.js';
 import { HolidayService, type HolidayResult } from './holiday.service.js';
 import { InternalAuthGuard, type AuthenticatedRequest } from './internal-auth.guard.js';
+import { PortfolioService } from './portfolio.service.js';
 import { ReviewError, ReviewService } from './review.service.js';
 import { SchedulerService } from './scheduler.service.js';
 
@@ -48,6 +49,7 @@ export class ReviewController {
     @Inject(HolidayService) private readonly holidays: HolidayService,
     @Inject(SchedulerService) private readonly scheduler: SchedulerService,
     @Inject(CenterService) private readonly center: CenterService,
+    @Inject(PortfolioService) private readonly portfolioService: PortfolioService,
   ) {}
 
   private actor(request: AuthenticatedRequest, identity: string): Actor {
@@ -99,6 +101,11 @@ export class ReviewController {
   @Get('center')
   healthCenter(@Headers(INTERNAL_AUTH_HEADER) identity: string, @Req() request: AuthenticatedRequest) {
     return this.center.view(request.internal.userId, identity);
+  }
+
+  @Get('portfolio')
+  portfolio(@Query() query: unknown, @Headers(INTERNAL_AUTH_HEADER) identity: string) {
+    return this.portfolioService.view(identity, parse(portfolioQuery, query));
   }
 
   @Get('scheduler')

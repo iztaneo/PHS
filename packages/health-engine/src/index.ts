@@ -10,3 +10,5 @@ export type { Cut, Forecast, ForecastFactor, ForecastInput, Trend } from './outl
 export type {
   Assessment, AssessmentInput, AssessmentMilestone, AssessmentRisk, Deduction, DimensionResult, GateResult,
 } from './assessment.js';
+export { countsInPortfolio, exposure, portfolio } from './portfolio.js';
+export type { PortfolioIndicators, PortfolioProject } from './portfolio.js';

@@ -41,7 +41,8 @@ describe.skipIf(!ready)('Health Center (PHS-035, PHS-036)', () => {
     return p;
   };
   const listed = (projectId: string, name: string, capabilities: ProjectCapabilities, status = 'active'): ListedProject => ({
-    id: projectId, code: 'C', name, status, practiceId: practice, practiceName: 'Práctica', clientName: 'Cliente', pmName: 'pm', capabilities,
+    id: projectId, code: 'C', name, status, practiceId: practice, practiceName: 'Práctica', clientId: client, clientName: 'Cliente',
+    serviceTypeCode: 'development', serviceTypeName: 'Desarrollo', pmName: 'pm', capabilities,
   });
   const cycle = (projectId: string, dueOn: string) => id(
     `INSERT INTO phs.review_cycle(project_id, starts_on, due_on, policy_snapshot) VALUES($1, $2, $3, '{"cadence":"weekly","leadValidationRequired":true}') RETURNING id`,

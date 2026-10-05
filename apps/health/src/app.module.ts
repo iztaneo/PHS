@@ -10,6 +10,7 @@ import { HealthController } from './health.controller.js';
 import { HolidayService } from './holiday.service.js';
 import { InternalAuthGuard } from './internal-auth.guard.js';
 import { OpenApiController } from './openapi.controller.js';
+import { PortfolioService } from './portfolio.service.js';
 import { ProjectsClient } from './projects.client.js';
 import { ReviewController } from './review.controller.js';
 import { ReviewService } from './review.service.js';
@@ -41,6 +42,11 @@ import { SchedulerService } from './scheduler.service.js';
     {
       provide: CenterService,
       useFactory: (pool: pg.Pool, projects: ProjectsClient, assessments: AssessmentsService) => new CenterService(pool, projects, assessments),
+      inject: [PG_POOL, ProjectsClient, AssessmentsService],
+    },
+    {
+      provide: PortfolioService,
+      useFactory: (pool: pg.Pool, projects: ProjectsClient, assessments: AssessmentsService) => new PortfolioService(pool, projects, assessments),
       inject: [PG_POOL, ProjectsClient, AssessmentsService],
     },
     { provide: HolidayService, useFactory: (pool: pg.Pool) => new HolidayService(pool), inject: [PG_POOL] },
