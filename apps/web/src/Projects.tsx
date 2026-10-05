@@ -407,7 +407,7 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
       <Tabs items={TABS.filter(([key]) => key !== 'finance' || project.capabilities.seeFinancials)} value={tab} onChange={setTab} />
       {tab === 'team' && <Team project={project} people={known} onChanged={() => void load(true)} />}
       {tab === 'milestones' && <Milestones project={project} people={known} onChanged={() => void load(true)} />}
-      {tab === 'health' && <HealthView project={project} />}
+      {tab === 'health' && <HealthView project={project} onNavigate={(next) => setTab(next as Tab)} />}
       {tab === 'reviews' && <ReviewsTab project={project} people={known} onChanged={() => void load(true)} onNavigate={(next) => setTab(next as Tab)} />}
       {tab === 'alerts' && <Alerts project={project} people={known} />}
       {tab === 'changes' && <Changes project={project} onChanged={() => void load(true)} />}

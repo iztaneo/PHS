@@ -26,7 +26,7 @@ describe('assessment', () => {
     expect(result).toMatchObject({ score: null, band: null, weightedScore: null, gateCap: null, ruleSetVersion: 'phf-v1' });
     expect(result.dimensions.every((d) => d.score === null)).toBe(true);
     // 100 - 45 (no review) - 6 x 8 (dimensions without data) - 12 (no baseline) = -5 -> 0.
-    expect(result.confidence).toEqual({ value: '0.00', level: 'low' });
+    expect(result.confidence).toMatchObject({ value: '0.00', level: 'low' });
   });
 
   it('cases 9 and 10: weighted average of the dimensions with data, limited by the lowest active gate', () => {
@@ -174,10 +174,13 @@ describe('assessment', () => {
     expect(dim(result, 'financial').score).toBeNull();
     expect(result.score).not.toBeNull();
     // 100 - 8 (review older than 3/4 of the cadence) - 3 x 8 (financial, risks, client) - 9 - 24 (capped) = 35.
-    expect(result.confidence).toEqual({ value: '35.00', level: 'low' });
+    expect(result.confidence).toMatchObject({ value: '35.00', level: 'low' });
+    // Every point taken from 100 is explained.
+    expect(result.confidence.deductions.reduce((sum, d) => sum + Number(d.points), 0)).toBe(65);
+    expect(result.confidence.deductions.map((d) => d.code)).toContain('review_stale');
     const fresh = assess({ ...empty, hasBaseline: true, governance: { ...empty.governance, cadenceDays: 7, reviewCount: 1, daysSinceLastReview: 2 }, milestones: [milestone()],
       team: { memberCount: 1, hasTechnicalOwner: true, teamChangedInLastReview: false }, risks: [risk()], client: { climate: 'good', hasContact: true, hasEscalation: true }, budget: '10', cost: '0' });
-    expect(fresh.confidence).toEqual({ value: '100.00', level: 'high' });
+    expect(fresh.confidence).toEqual({ value: '100.00', level: 'high', deductions: [] });
   });
 
   it('is deterministic: the same input gives the same result', () => {

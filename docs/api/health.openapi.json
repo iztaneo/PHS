@@ -173,11 +173,39 @@
                             "medium",
                             "low"
                           ]
+                        },
+                        "deductions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "type": "string",
+                                "description": "Causa de la resta, por ejemplo `milestone_overdue`."
+                              },
+                              "count": {
+                                "type": "number",
+                                "description": "Cuántas veces ocurrió, o la magnitud medida."
+                              },
+                              "points": {
+                                "type": "string",
+                                "description": "Puntos restados a la dimensión."
+                              }
+                            },
+                            "required": [
+                              "code",
+                              "count",
+                              "points"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "Cada resta a partir de 100; vacío en evaluaciones guardadas antes de BIT-0026."
                         }
                       },
                       "required": [
                         "value",
-                        "level"
+                        "level",
+                        "deductions"
                       ],
                       "additionalProperties": false,
                       "description": "Calidad y actualidad de la información, separada de la salud."
@@ -379,6 +407,479 @@
           },
           "404": {
             "description": "No existe o está fuera del alcance del usuario (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assessments/{projectId}/outlook": {
+      "get": {
+        "summary": "Tendencia entre ciclos y proyección de los próximos",
+        "tags": [
+          "Salud"
+        ],
+        "security": [
+          {
+            "gatewaySignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tendencia y presión de los compromisos que vencen en el horizonte configurado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "projectId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "today": {
+                      "type": "string",
+                      "format": "date",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                    },
+                    "trend": {
+                      "type": "object",
+                      "properties": {
+                        "direction": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "up",
+                                "down",
+                                "flat"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "up: 3 puntos o más. down: −3 o menos. null: no comparable, ver `reason`."
+                        },
+                        "delta": {
+                          "description": "Decimal con dos decimales; null cuando no hay dato.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reason": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "insufficient_history",
+                                "rule_set_changed",
+                                "no_score"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "current": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "cycleDueOn": {
+                                  "type": "string",
+                                  "format": "date",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                                },
+                                "effectiveOn": {
+                                  "type": "string",
+                                  "format": "date",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                                },
+                                "score": {
+                                  "description": "Decimal con dos decimales; null cuando no hay dato.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "ruleSetVersion": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "cycleDueOn",
+                                "effectiveOn",
+                                "score",
+                                "ruleSetVersion"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Evaluación oficial de un ciclo de revisión."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "previous": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "cycleDueOn": {
+                                  "type": "string",
+                                  "format": "date",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                                },
+                                "effectiveOn": {
+                                  "type": "string",
+                                  "format": "date",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                                },
+                                "score": {
+                                  "description": "Decimal con dos decimales; null cuando no hay dato.",
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "ruleSetVersion": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "cycleDueOn",
+                                "effectiveOn",
+                                "score",
+                                "ruleSetVersion"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Evaluación oficial de un ciclo de revisión."
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "direction",
+                        "delta",
+                        "reason",
+                        "current",
+                        "previous"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Diferencia entre los cortes oficiales de los dos últimos ciclos."
+                    },
+                    "forecast": {
+                      "type": "object",
+                      "properties": {
+                        "pressure": {
+                          "type": "string",
+                          "description": "Suma de los factores."
+                        },
+                        "projectedScore": {
+                          "description": "Score actual menos la presión, sin bajar de 0. Escenario determinista si no se interviene; no es una probabilidad.",
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "level": {
+                          "type": "string",
+                          "enum": [
+                            "stable",
+                            "at_risk",
+                            "deteriorating"
+                          ],
+                          "description": "Menos de 8, de 8 a menos de 20, 20 o más."
+                        },
+                        "factors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "type": "string",
+                                "enum": [
+                                  "milestone_due",
+                                  "critical_milestone_due",
+                                  "risk_mitigation_due",
+                                  "task_due",
+                                  "renewal_due",
+                                  "declining_trend",
+                                  "project_deviation",
+                                  "financial_deviation"
+                                ]
+                              },
+                              "target": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "milestone",
+                                          "risk",
+                                          "task",
+                                          "renewal"
+                                        ]
+                                      },
+                                      "id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                      },
+                                      "title": {
+                                        "type": "string"
+                                      },
+                                      "dueOn": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "id",
+                                      "title",
+                                      "dueOn"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "points": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "code",
+                              "target",
+                              "points"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "horizon": {
+                          "type": "object",
+                          "properties": {
+                            "cadence": {
+                              "type": "string",
+                              "enum": [
+                                "weekly",
+                                "fortnightly",
+                                "monthly"
+                              ],
+                              "description": "weekly: 7 días. fortnightly: 14 días. monthly: mes calendario."
+                            },
+                            "cycles": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "until": {
+                              "type": "string",
+                              "format": "date",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                            },
+                            "assumed": {
+                              "type": "boolean",
+                              "description": "true: el proyecto no tiene ciclo configurado y se usó el horizonte por defecto."
+                            }
+                          },
+                          "required": [
+                            "cadence",
+                            "cycles",
+                            "until",
+                            "assumed"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "pressure",
+                        "projectedScore",
+                        "level",
+                        "factors",
+                        "horizon"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "projectId",
+                    "today",
+                    "trend",
+                    "forecast"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o está fuera del alcance del usuario (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/scheduler": {
+      "get": {
+        "summary": "Estado del proceso programado",
+        "tags": [
+          "Estado"
+        ],
+        "security": [
+          {
+            "gatewaySignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Última pasada que actualizó alertas, acciones y evaluaciones sin intervención de usuarios.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "intervalSeconds": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991,
+                      "description": "0: el proceso programado está desactivado."
+                    },
+                    "lastRun": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "startedAt": {
+                              "type": "string",
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                            },
+                            "finishedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "null: en curso o interrumpida."
+                            },
+                            "projects": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "failures": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991,
+                              "description": "Proyectos que fallaron; se reintentan en la siguiente pasada."
+                            }
+                          },
+                          "required": [
+                            "startedAt",
+                            "finishedAt",
+                            "projects",
+                            "failures"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "intervalSeconds",
+                    "lastRun"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
             "content": {
               "application/json": {
                 "schema": {

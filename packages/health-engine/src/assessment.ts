@@ -83,7 +83,8 @@ export interface Assessment {
   band: 'healthy' | 'attention' | 'risk' | null;
   weightedScore: string | null;
   gateCap: string | null;
-  confidence: { value: string; level: 'high' | 'medium' | 'low' };
+  // `deductions` explains every point taken from 100.
+  confidence: { value: string; level: 'high' | 'medium' | 'low'; deductions: Deduction[] };
   dimensions: DimensionResult[];
   gates: GateResult[];
   metrics: {
@@ -226,7 +227,10 @@ export function assess(input: AssessmentInput): Assessment {
 
   return {
     ruleSetVersion: RULE_SET_VERSION, score, band, weightedScore, gateCap,
-    confidence: { value: fixed(confidenceValue), level: confidenceValue.gte(75) ? 'high' : confidenceValue.gte(50) ? 'medium' : 'low' },
+    confidence: {
+      value: fixed(confidenceValue), level: confidenceValue.gte(75) ? 'high' : confidenceValue.gte(50) ? 'medium' : 'low',
+      deductions: confidence.deductions,
+    },
     dimensions, gates,
     metrics: {
       committedProgress: prog.committed, actualProgress: prog.actual, projectDeviation: prog.deviation,

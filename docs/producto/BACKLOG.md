@@ -645,6 +645,8 @@ Criterios de aceptación:
 3. Un proyecto con score alto y baja confianza aparece claramente marcado; ausencia de soporte o review produce el caso esperado.
 4. El cálculo histórico usa soportes/datos del corte y no cambia al agregar posteriormente una adenda.
 
+**Estado (BIT-0026):** construida, en revisión. La confianza se calcula con las reglas v1 y ahora explica cada resta; "expectativa sin resolver" quedó definida como alerta crítica sin causa y plan. La pantalla de salud lista las causas y avisa cuando hay salud alta con confianza baja. La confianza que declara el PM en la revisión se guarda pero no modifica la calculada. La marca en listados y portafolio llega con R4.
+
 ### PHS-028 — Comparar tendencia entre ciclos
 
 Como **líder**, quiero ver si la salud mejora o empeora, para detectar deterioro sostenido.
@@ -663,6 +665,8 @@ Criterios de aceptación:
 2. Ediciones intradía y recálculos retrospectivos no se cuentan como ciclos nuevos.
 3. Con menos de dos cortes se muestra histórico insuficiente; cambios de reglas quedan señalados y no se mezclan sin política definida.
 
+**Estado (BIT-0026):** construida, en revisión. Compara la evaluación oficial del último envío de los dos ciclos más recientes y muestra ambos scores y fechas; dos ciclos con reglas distintas no se comparan y se dice por qué.
+
 ### PHS-029 — Proyectar presión de próximos ciclos
 
 Como **PM**, quiero ver un forecast explicable, para anticipar compromisos que requieren intervención.
@@ -680,6 +684,8 @@ Criterios de aceptación:
 1. El horizonte deriva de ciclos y calendario acordados; el resultado identifica hitos, riesgos, acciones y renovaciones que aportan presión.
 2. La proyección aplica reglas versionadas aprobadas y se presenta como escenario determinista, no probabilidad de fracaso.
 3. Los límites de ventana, ausencia de historia y compromisos resueltos tienen pruebas; cada factor enlaza a su origen autorizado.
+
+**Estado (BIT-0026):** construida, en revisión. Presión con los coeficientes v1 sobre el horizonte del ciclo configurado (o dos quincenas, indicándolo, si no hay ciclo); cada factor se nombra y lleva a su pestaña. Límites: se calcula al consultar y no se guarda en `health_assessment.forecast`; el enlace lleva a la pestaña, no al elemento.
 
 
 ## E07 — Eventos y acciones
@@ -765,6 +771,8 @@ Criterios de aceptación:
 2. Worker procesa trabajos con exclusión, reintentos y recuperación tras caída; no pierde trabajo entre commit y procesamiento.
 3. Se miden plazos NF-03 con zona/calendario acordados; la UI puede conocer un cálculo pendiente o fallido.
 4. Cambios mientras se calcula invalidan publicación obsoleta; reconciliación recupera un trabajo omitido sin duplicar efectos.
+
+**Estado (BIT-0026):** construida en parte, en revisión. Salud recorre cada cinco minutos (configurable) los proyectos no cerrados: detecta alertas, crea o cierra acciones automáticas y guarda la evaluación, sin nadie conectado; una sola pasada a la vez aunque haya varias instancias; un proyecto que falla se registra y se reintenta en la siguiente; la pantalla de salud muestra la última pasada. Falta: despacho del outbox y notificaciones (Plataforma, PHS-034), medición de los plazos NF-03, depuración del registro de pasadas y una prueba con reloj simulado (la prueba cruza la fecha con datos, no con reloj).
 
 ### PHS-034 — Consultar alertas y notificaciones internas
 

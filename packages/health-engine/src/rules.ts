@@ -21,8 +21,20 @@ export type GateKey = keyof typeof GATE_CAPS;
 // D03: reviews are weekly unless the project configures another cadence.
 export const CONFIDENCE = { defaultCadenceDays: 7 } as const;
 
+// Trend between the official cuts of two consecutive cycles (RN-09).
+export const TREND = { improving: 3, deteriorating: -3 } as const;
+
+// Pressure on the coming cycles (RN-10). Deterministic and explainable: a scenario, not a probability.
+export const FORECAST = {
+  milestone: 4, criticalMilestone: 4, riskPerSeverityPoint: '1.2', task: 2, renewal: 6,
+  perPointOfDecline: '1.2', activeDeviationGate: 8,
+  levels: { atRisk: 8, deteriorating: 20 },
+  // Used only when the project has no review cycle configured.
+  defaultCadence: 'fortnightly', defaultCycles: 2,
+} as const;
+
 // Stored with every rule set row so an assessment can be traced to the exact values used.
 export const RULE_SET_DEFINITION = {
   version: RULE_SET_VERSION, gateThresholds: GATE_THRESHOLDS, dimensionWeights: DIMENSION_WEIGHTS, gateCaps: GATE_CAPS,
-  bands: { healthy: 80, attention: 60 }, confidence: CONFIDENCE,
+  bands: { healthy: 80, attention: 60 }, confidence: CONFIDENCE, trend: TREND, forecast: FORECAST,
 } as const;

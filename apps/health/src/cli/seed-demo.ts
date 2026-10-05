@@ -101,6 +101,20 @@ try {
     await reviews.validate(actor(returned.lead_id), sent.reviews[0]!.id, { decision: 'returned', comment: 'Falta indicar desde cuándo y con qué dedicación.' });
     console.log('DEMO-003: revisión devuelta por el líder, con acción de corrección');
   }
+  // A second cycle on DEMO-002 so the trend has two cuts to compare (PHS-028).
+  const trending = projects.rows.find((p) => p.code === 'DEMO-002');
+  if (trending) {
+    const { cycles } = await reviews.schedule(actor(trending.pm_id), trending.id);
+    const open = cycles.find((c) => c.canSubmit && c.status === 'open');
+    if (open && cycles.filter((c) => c.reviews.length > 0).length === 1) {
+      await reviews.submit(actor(trending.pm_id), open.id, {
+        nothingChanged: false, topics: ['client', 'risks'], notes: {}, clientClimate: 'critical',
+        supportText: 'Correo del cliente escalando el retraso del tercer ambiente.', activeSeconds: 200,
+        expectedProjectRevision: open.projectRevision, declaredConfidence: 'medium', finance: null,
+      }, randomUUID());
+      console.log('DEMO-002: segundo ciclo enviado; la tendencia compara dos cortes');
+    }
+  }
   console.log('Alertas, acciones y revisiones de demostración listas');
 } finally {
   await pool.end();

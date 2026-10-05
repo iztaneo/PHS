@@ -63,6 +63,8 @@ Tablas añadidas desde este mapa: `command_idempotency`, `evidence_withdrawal` (
 
 **BIT-0025:** Ciclo de revisión, Health Review y Validaciones están construidas (pestaña "Revisión" del proyecto y bandeja del líder en "Mis acciones"), pendientes de aceptación. La brecha 5 queda resuelta así: lo único que el envío cambia en Proyectos es la observación económica, que Salud pide a Proyectos con un comando idempotente antes de guardar la revisión; hitos, riesgos, equipo y cambios se editan desde el formulario con las operaciones de Proyectos. Salud añade `holiday` (36 tablas) y Plataforma admite evidencia en revisiones. La administración gana la pantalla de días festivos.
 
+**BIT-0026:** la pantalla Salud del proyecto incluye confianza explicada, tendencia y proyección (PHS-027 a PHS-029), y existe el proceso programado de Salud (PHS-033, en parte); `scheduler_run` lleva el esquema a 37 tablas. De R3 solo falta lo anotado en el backlog; siguen sin construir alertas y notificaciones, Health Center, portafolio, timeline e historial, modelo PHF y la consulta de pausados y cerrados.
+
 ## Brechas detectadas en el cruce
 
 | # | Brecha | Estado |

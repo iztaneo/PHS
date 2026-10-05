@@ -5,13 +5,13 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 ## Estado actual para retomar
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
-- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–013 (36 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
+- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–014 (37 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, los cuatro servicios (`identity`, `projects`, `health`, `platform`) y los paquetes `service-kit`, `contracts` y `health-engine`; ver README para arrancarlo.
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
-- **R3 en curso (en revisión, sin aceptar):** alertas con episodios, acciones automáticas y manuales, causa y plan con validación del líder (PHS-030 a PHS-032 en parte, BIT-0024); ciclo de revisión, expectativas, Health Review con borrador, envío y validación (PHS-020 a PHS-024, BIT-0025).
-- **Todavía no implementado:** de R3, confianza, tendencia y proyección (PHS-027 a PHS-029) y el proceso programado (PHS-033); todo R4 (notificaciones, Health Center, portafolio, timeline e historial, modelo PHF) y R5 (piloto).
+- **R3 construido (en revisión, sin aceptar):** alertas, acciones y causa y plan (BIT-0024); ciclo de revisión, Health Review, validación y festivos (BIT-0025); confianza explicada, tendencia, proyección y proceso programado (BIT-0026). Lo que falta de cada historia está en su estado en el backlog.
+- **Todavía no implementado:** todo R4 (alertas y notificaciones, despacho del outbox, Health Center, portafolio, timeline e historial, modelo PHF, consulta de pausados y cerrados) y R5 (piloto).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
@@ -22,7 +22,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Datos de demostración:** `seed:demo` carga seis usuarios y cinco proyectos (DEMO-001 a DEMO-005); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** que el usuario pruebe la pestaña "Revisión", la bandeja del líder y los días festivos en Administración; después PHS-027 a PHS-029 y PHS-033. Por confirmar: las interpretaciones marcadas en la tabla de BIT-0025 de DECISIONES, D08 y los supuestos de BIT-0024.
+- **Siguiente paso funcional:** prueba y aceptación del usuario de R1 a R3; después R4, empezando por alertas y notificaciones (PHS-034) y el Health Center del PM (PHS-035). Por confirmar: las interpretaciones marcadas en la tabla de BIT-0025 de DECISIONES, D08 y los supuestos de BIT-0024. Abiertas: D07 y D10 (D10 se necesita para el portafolio).
 
 ## Cómo se mantiene
 
@@ -966,6 +966,50 @@ Al revisar una primera versión de este trabajo el usuario indicó:
 ### Pendientes y siguiente paso
 
 Prueba del usuario. Después PHS-027 a PHS-029 y PHS-033. Siguiente entrada: BIT-0026.
+
+## BIT-0026 — Confianza, tendencia, proyección y proceso programado
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** cerrar R3: explicar la confianza, comparar ciclos, proyectar los próximos y mantener todo al día sin usuarios conectados.
+
+**Relación:** PHS-027, PHS-028, PHS-029, PHS-033; D01 (reglas v1), D03; RN-07 a RN-10, RN-16, RN-17.
+
+**Identificación:** commit con prefijo `BIT-0026`.
+
+### Trabajo realizado
+
+- **Motor.** [outlook.ts](../packages/health-engine/src/outlook.ts): tendencia entre los dos últimos cortes de ciclo y proyección por factores, con los coeficientes ya documentados en las reglas v1; la confianza devuelve cada resta. Los coeficientes de tendencia y proyección se añadieron a la definición del conjunto de reglas.
+- **Salud.**
+  - `GET /assessments/:projectId/outlook`: tendencia y proyección sobre el horizonte del ciclo configurado.
+  - La confianza cuenta las alertas críticas sin causa y plan como expectativas sin resolver, y la evaluación guarda sus restas.
+  - La clave de la evaluación operativa incluye revisiones y alertas sin tratar, que cambian el resultado sin cambiar la versión del proyecto.
+  - [scheduler.service.ts](../apps/health/src/scheduler.service.ts): cada `HEALTH_SCHEDULER_SECONDS` (300 por defecto, 0 lo apaga) recorre los proyectos no cerrados, sincroniza alertas y acciones y guarda la evaluación; candado para una sola pasada; fallos por proyecto registrados; `GET /scheduler` con la última pasada.
+- **Base.** Migración [014](../db/migrations/014_scheduler_run.sql) y su prueba; 37 tablas.
+- **Web.** La pestaña Salud muestra las causas de la confianza, el aviso de salud alta con confianza baja, la tendencia con ambos cortes, la proyección con sus factores y la última actualización automática.
+- **Datos de demostración.** Segundo ciclo enviado en DEMO-002 para que la tendencia tenga dos cortes.
+
+### Archivos
+
+`packages/health-engine/src/{outlook,outlook.test,rules,assessment,assessment.test,index}.ts`, `apps/health/src/{assessments.service,assessments.controller,scheduler.service,review.controller,app.module}.ts`, `apps/health/src/cli/seed-demo.ts`, `apps/health/test/outlook.int.test.ts`, `db/migrations/014_scheduler_run.sql`, `db/tests/014_scheduler_run.sql`, `packages/contracts/src/health.ts`, `docs/api/{health,gateway}.openapi.json`, `docs/api/README.md`, `apps/web/src/{HealthView,Projects}.tsx`, `apps/web/src/api.ts`, `.env.example`, y documentación: backlog, reglas, base de datos, mapa, ADR-002 y esta bitácora.
+
+### Decisiones y supuestos
+
+- El usuario pidió continuar; sin decisiones nuevas suyas.
+- Supuestos míos: "expectativa sin resolver" es una alerta crítica sin causa y plan; sin ciclo configurado el horizonte es de dos quincenas, como en el prototipo; el proceso programado vive dentro de Salud y corre cada cinco minutos.
+- La definición guardada del conjunto de reglas `phf-v1` en bases ya creadas no incluye los coeficientes de tendencia y proyección, porque esa fila no se reescribe; los valores no cambiaron.
+
+### Validación y límites
+
+- `pnpm typecheck` y `pnpm build` sin errores. `pnpm test`: 150 pruebas en 8 paquetes (motor 27, Salud 24). `pnpm db:test`: 14 de 14.
+- Por el gateway con datos de demostración: el proceso programado corrió solo y procesó 5 proyectos sin fallos; DEMO-002 muestra tendencia a la baja con sus dos cortes; DEMO-001 muestra proyección con sus factores y la confianza con sus causas.
+- La evaluación de hoy guardada antes de este cambio no traía las causas de la confianza; el cambio de clave hace que se recalcule una vez.
+- **No comprobado:** las pantallas no se revisaron en el navegador. No hay prueba con reloj simulado ni medición de los plazos NF-03.
+- Límites: la proyección no se guarda; no hay despacho del outbox ni notificaciones; el registro de pasadas crece sin depurarse (unas 288 filas por día).
+
+### Pendientes y siguiente paso
+
+Aceptación del usuario de R1 a R3. Después R4. Siguiente entrada: BIT-0027.
 
 ## Plantilla para próximas entradas
 

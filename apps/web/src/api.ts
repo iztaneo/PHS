@@ -233,11 +233,28 @@ export interface ChangeInput {
 export interface Assessment {
   stored: boolean; publication: 'provisional' | 'official'; effectiveOn: string; calculatedAt: string; projectRevision: number;
   ruleSetVersion: string; score: string | null; band: 'healthy' | 'attention' | 'risk' | null; weightedScore: string | null;
-  gateCap: string | null; confidence: { value: string; level: 'high' | 'medium' | 'low' };
+  gateCap: string | null; confidence: { value: string; level: 'high' | 'medium' | 'low'; deductions: { code: string; count: number; points: string }[] };
   dimensions: { key: string; weight: number; score: string | null; deductions: { code: string; count: number; points: string }[] }[];
   gates: { key: string; cap: number; active: boolean }[];
   metrics: { committedProgress: string | null; actualProgress: string | null; projectDeviation: string | null; financialDeviation: string | null; effortDeviation: string | null };
   financialsHidden: boolean;
+}
+
+export interface Cut { cycleDueOn: string; effectiveOn: string; score: string | null; ruleSetVersion: string }
+export interface Outlook {
+  today: string;
+  trend: {
+    direction: 'up' | 'down' | 'flat' | null; delta: string | null; reason: 'insufficient_history' | 'rule_set_changed' | 'no_score' | null;
+    current: Cut | null; previous: Cut | null;
+  };
+  forecast: {
+    pressure: string; projectedScore: string | null; level: 'stable' | 'at_risk' | 'deteriorating';
+    factors: { code: string; target: { kind: 'milestone' | 'risk' | 'task' | 'renewal'; id: string; title: string; dueOn: string } | null; points: string }[];
+    horizon: { cadence: Cadence; cycles: number; until: string; assumed: boolean };
+  };
+}
+export interface SchedulerStatus {
+  intervalSeconds: number; lastRun: { startedAt: string; finishedAt: string | null; projects: number; failures: number } | null;
 }
 
 export interface Responsibilities4 { milestones: number; risks: number; renewals: number; tasks: number }
@@ -388,6 +405,8 @@ export const api = {
   decideChange: (id: string, changeId: string, decision: 'approved' | 'rejected', comment: string, key: string) =>
     call<Change>('POST', `/api/v1/projects/${id}/changes/${changeId}/decision`, { decision, comment }, key),
   assessment: (id: string) => call<Assessment>('GET', `/api/v1/assessments/${id}`),
+  outlook: (id: string) => call<Outlook>('GET', `/api/v1/assessments/${id}/outlook`),
+  scheduler: () => call<SchedulerStatus>('GET', '/api/v1/governance/scheduler'),
   finance: (id: string) => call<FinanceSummary>('GET', `/api/v1/projects/${id}/finance`),
   recordObservation: (id: string, input: { effectiveOn: string; totalCost: string; totalEffortHours: string | null; source: string; supersedesId: string | null }, key: string) =>
     call<Observation>('POST', `/api/v1/projects/${id}/finance`, input, key),

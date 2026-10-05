@@ -11,6 +11,7 @@ import type { Actor } from './governance.service.js';
 import { HolidayService, type HolidayResult } from './holiday.service.js';
 import { InternalAuthGuard, type AuthenticatedRequest } from './internal-auth.guard.js';
 import { ReviewError, ReviewService } from './review.service.js';
+import { SchedulerService } from './scheduler.service.js';
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   const result = schema.safeParse(value);
@@ -44,6 +45,7 @@ export class ReviewController {
   constructor(
     @Inject(ReviewService) private readonly reviews: ReviewService,
     @Inject(HolidayService) private readonly holidays: HolidayService,
+    @Inject(SchedulerService) private readonly scheduler: SchedulerService,
   ) {}
 
   private actor(request: AuthenticatedRequest, identity: string): Actor {
@@ -90,6 +92,11 @@ export class ReviewController {
   @HttpCode(201)
   validate(@Param('reviewId') reviewId: string, @Body() body: unknown, @Headers(INTERNAL_AUTH_HEADER) identity: string, @Req() request: AuthenticatedRequest) {
     return run(this.reviews.validate(this.actor(request, identity), uuid(reviewId), parse(validateReviewBody, body)));
+  }
+
+  @Get('scheduler')
+  schedulerStatus() {
+    return this.scheduler.status();
   }
 
   @Get('holidays')

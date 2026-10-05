@@ -200,6 +200,8 @@ Con estas dos migraciones el esquema tiene 33 tablas. `evidence_withdrawal` la e
 
 `013_holiday.sql` añade `holiday` (día, nombre, quién lo registró): los días en que no vence ninguna revisión. La escribe Salud; se puede borrar un día capturado por error y la auditoría conserva quién lo hizo. Con ella el esquema tiene 36 tablas.
 
+`014_scheduler_run.sql` añade `scheduler_run`: una fila por pasada del proceso programado de Salud, con inicio, fin, proyectos procesados y fallos. Una fila sin fin es una pasada en curso o interrumpida. No se depura todavía. Con ella el esquema tiene 37 tablas.
+
 ## Instalación y validación
 
 Desde BIT-0010 las migraciones se aplican con [dbmate](https://github.com/amacneil/dbmate), que ejecuta cada archivo en una transacción y registra las aplicadas en `public.schema_migrations`. Los archivos ya no contienen `BEGIN/COMMIT` propios y no deben aplicarse con `psql -f`. No tienen reversión destructiva: el bloque `migrate:down` falla a propósito; se corrige con una migración nueva o restaurando un respaldo.
@@ -231,8 +233,9 @@ npx pnpm@12.9.1 db:local:stop
 | `011_event_response.sql` | Causa y plan de una alerta y su validación (D04). |
 | `012_review_schedule.sql` | Ancla y versión de la política de revisión (D03). |
 | `013_holiday.sql` | Calendario de días festivos (D03). |
+| `014_scheduler_run.sql` | Registro de pasadas del proceso programado (PHS-033). |
 
-Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso), `006_admin.sql` (3 rechazos), `007_idempotency.sql` (6 rechazos), `008_context.sql`, `009_evidence.sql` (6 rechazos) `010_status_and_renewals.sql` (8 rechazos) `011_event_response.sql` (9 rechazos) `012_review_schedule.sql` (5 rechazos) y `013_holiday.sql` (4 rechazos). Se ejecutan con el propietario del esquema.
+Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso), `006_admin.sql` (3 rechazos), `007_idempotency.sql` (6 rechazos), `008_context.sql`, `009_evidence.sql` (6 rechazos) `010_status_and_renewals.sql` (8 rechazos) `011_event_response.sql` (9 rechazos) `012_review_schedule.sql` (5 rechazos) `013_holiday.sql` (4 rechazos) y `014_scheduler_run.sql` (4 rechazos). Se ejecutan con el propietario del esquema.
 
 ## Evolución pendiente
 

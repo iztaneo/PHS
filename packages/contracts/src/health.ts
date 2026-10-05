@@ -31,7 +31,10 @@ export const assessment = z.object({
   band: z.enum(['healthy', 'attention', 'risk']).nullable().describe('Semáforo: 80 o más, 60 a menos de 80, menos de 60.'),
   weightedScore: score.describe('Promedio ponderado de las dimensiones con dato.'),
   gateCap: score.describe('Menor tope activo; 100.00 si no hay ninguno.'),
-  confidence: z.object({ value: z.string(), level: z.enum(['high', 'medium', 'low']) }).describe('Calidad y actualidad de la información, separada de la salud.'),
+  confidence: z.object({
+    value: z.string(), level: z.enum(['high', 'medium', 'low']),
+    deductions: z.array(deduction).describe('Cada resta a partir de 100; vacío en evaluaciones guardadas antes de BIT-0026.'),
+  }).describe('Calidad y actualidad de la información, separada de la salud.'),
   dimensions: z.array(dimensionResult),
   gates: z.array(gateResult),
   metrics: z.object({
@@ -222,6 +225,42 @@ export const holiday = z.object({ day: z.iso.date(), name: z.string() });
 export const holidayQuery = z.object({ year: z.coerce.number().int().min(2000).max(2100) });
 export const addHolidayBody = z.object({ day: z.iso.date(), name: text(120) });
 
+// ---- Trend and forecast (PHS-028, PHS-029)
+const cut = z.object({
+  cycleDueOn: z.iso.date(), effectiveOn: z.iso.date(), score, ruleSetVersion: z.string(),
+}).describe('Evaluación oficial de un ciclo de revisión.');
+export const outlook = z.object({
+  projectId: z.uuid(),
+  today: z.iso.date(),
+  trend: z.object({
+    direction: z.enum(['up', 'down', 'flat']).nullable().describe('up: 3 puntos o más. down: −3 o menos. null: no comparable, ver `reason`.'),
+    delta: score,
+    reason: z.enum(['insufficient_history', 'rule_set_changed', 'no_score']).nullable(),
+    current: cut.nullable(), previous: cut.nullable(),
+  }).describe('Diferencia entre los cortes oficiales de los dos últimos ciclos.'),
+  forecast: z.object({
+    pressure: z.string().describe('Suma de los factores.'),
+    projectedScore: score.describe('Score actual menos la presión, sin bajar de 0. Escenario determinista si no se interviene; no es una probabilidad.'),
+    level: z.enum(['stable', 'at_risk', 'deteriorating']).describe('Menos de 8, de 8 a menos de 20, 20 o más.'),
+    factors: z.array(z.object({
+      code: z.enum(['milestone_due', 'critical_milestone_due', 'risk_mitigation_due', 'task_due', 'renewal_due', 'declining_trend', 'project_deviation', 'financial_deviation']),
+      target: z.object({ kind: z.enum(['milestone', 'risk', 'task', 'renewal']), id: z.uuid(), title: z.string(), dueOn: z.iso.date() }).nullable(),
+      points: z.string(),
+    })),
+    horizon: z.object({
+      cadence, cycles: z.number().int(), until: z.iso.date(),
+      assumed: z.boolean().describe('true: el proyecto no tiene ciclo configurado y se usó el horizonte por defecto.'),
+    }),
+  }),
+});
+export const schedulerStatus = z.object({
+  intervalSeconds: z.number().int().describe('0: el proceso programado está desactivado.'),
+  lastRun: z.object({
+    startedAt: stamp, finishedAt: stamp.nullable().describe('null: en curso o interrumpida.'),
+    projects: z.number().int(), failures: z.number().int().describe('Proyectos que fallaron; se reintentan en la siguiente pasada.'),
+  }).nullable(),
+});
+
 // Internal API of the Health service.
 export const healthRoutes: RouteContract[] = [
   { method: 'get', path: '/health', summary: 'Estado del servicio y de su base de datos', tag: 'Estado', auth: 'none',
@@ -232,6 +271,11 @@ export const healthRoutes: RouteContract[] = [
       200: { description: 'Evaluación para la versión actual de los datos y la fecha de hoy en la zona del proyecto. Se calcula y guarda la primera vez que se pide.', schema: assessment },
       401: errors.unauthenticated, 404: errors.notFound,
     } },
+  { method: 'get', path: '/assessments/:projectId/outlook', summary: 'Tendencia entre ciclos y proyección de los próximos', tag: 'Salud', auth: 'session',
+    params: { projectId: z.uuid() },
+    responses: { 200: { description: 'Tendencia y presión de los compromisos que vencen en el horizonte configurado.', schema: outlook }, 401: errors.unauthenticated, 404: errors.notFound } },
+  { method: 'get', path: '/scheduler', summary: 'Estado del proceso programado', tag: 'Estado', auth: 'session',
+    responses: { 200: { description: 'Última pasada que actualizó alertas, acciones y evaluaciones sin intervención de usuarios.', schema: schedulerStatus }, 401: errors.unauthenticated } },
   { method: 'get', path: '/projects/:projectId/events', summary: 'Eventos de salud del proyecto', tag: 'Eventos y acciones', auth: 'session',
     params: { projectId: z.uuid() },
     responses: { 200: { description: 'Eventos abiertos y resueltos. Antes de responder se detectan las condiciones vigentes: se abren los eventos nuevos, con su acción automática, y se resuelven los que ya no aplican.', schema: z.array(healthEvent) }, 401: errors.unauthenticated, 404: errors.notFound } },

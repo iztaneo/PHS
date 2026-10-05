@@ -12,6 +12,7 @@ import { OpenApiController } from './openapi.controller.js';
 import { ProjectsClient } from './projects.client.js';
 import { ReviewController } from './review.controller.js';
 import { ReviewService } from './review.service.js';
+import { SchedulerService } from './scheduler.service.js';
 
 @Module({
   controllers: [HealthController, OpenApiController, AssessmentsController, GovernanceController, ReviewController],
@@ -28,6 +29,13 @@ import { ReviewService } from './review.service.js';
       provide: GovernanceService,
       useFactory: (pool: pg.Pool, projects: ProjectsClient, assessments: AssessmentsService) => new GovernanceService(pool, projects, assessments),
       inject: [PG_POOL, ProjectsClient, AssessmentsService],
+    },
+    {
+      provide: SchedulerService,
+      useFactory: (pool: pg.Pool, governance: GovernanceService, assessments: AssessmentsService) =>
+        // Every five minutes unless configured otherwise; 0 turns the timer off.
+        new SchedulerService(pool, governance, assessments, Number(process.env.HEALTH_SCHEDULER_SECONDS ?? 300) || 0),
+      inject: [PG_POOL, GovernanceService, AssessmentsService],
     },
     { provide: HolidayService, useFactory: (pool: pg.Pool) => new HolidayService(pool), inject: [PG_POOL] },
     {

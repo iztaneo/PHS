@@ -90,7 +90,7 @@ Los umbrales son estrictos: 10 y 3 exactos no activan el tope.
 
 ## 7. Ejemplos con resultado esperado
 
-Sirven como casos de prueba del motor. Desde BIT-0022 todos están automatizados en `packages/health-engine`, salvo el 15 (tendencia), que llega con los cortes de ciclo.
+Sirven como casos de prueba del motor. Desde BIT-0022 todos están automatizados en `packages/health-engine`, incluido el 15 (tendencia) desde BIT-0026. "Expectativa sin resolver" se cuenta como alerta crítica abierta que exige causa y plan y no los tiene.
 
 | # | Caso | Resultado |
 | --- | --- | --- |
