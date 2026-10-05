@@ -10,7 +10,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Diccionario de datos:** [DICCIONARIO-DATOS.md](DICCIONARIO-DATOS.md), con diagramas entidad-relación por módulo y el contenido de los catálogos, generado desde la base con `pnpm db:dictionary` (BIT-0029, BIT-0038).
 - **Integración continua:** GitHub Actions valida cada cambio en `main` y cada pull request con compilación, pruebas, documentos generados, el recorrido e2e y la construcción y arranque de las imágenes Docker (BIT-0035, BIT-0040).
-- **Docker para pruebas:** `docker compose -f docker-compose.app.yml up --build -d --wait` levanta base, servicios y web en `localhost:8080` con datos de demostración; guía en [DOCKER.md](DOCKER.md) (BIT-0040). No es el entorno del piloto.
+- **Docker para pruebas:** `sh scripts/docker-demo.sh` construye en la propia máquina y levanta base, servicios y web en `localhost:8080` con datos de demostración; se comparte dando el repositorio o un zip del código, sin publicar imágenes; guía en [DOCKER.md](DOCKER.md) (BIT-0040, BIT-0041). No es el entorno del piloto.
 - **Ambientación y prueba:** [MANUAL-AMBIENTACION-Y-PRUEBAS.md](MANUAL-AMBIENTACION-Y-PRUEBAS.md) describe el arranque limpio con un administrador, la configuración inicial, el primer proyecto, el recorrido por roles, la carga demo y las suites automatizadas (BIT-0039).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
@@ -1537,6 +1537,41 @@ Revisar el manual con el responsable que ambientará el primer entorno y adaptar
 ### Pendientes y siguiente paso
 
 Revisar la corrida de integración continua. Después AT-16 y D07. Siguiente entrada: BIT-0041.
+
+## BIT-0041 — Script para construir y probar la demo en Docker
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** que quien vaya a probar PHS construya el Docker por su cuenta desde el repositorio, sin que haya que publicar ni enviar imágenes.
+
+**Relación:** BIT-0040; PHS-040.
+
+**Identificación:** commit con prefijo `BIT-0041`.
+
+### Decisión del usuario
+
+Consideró un contenedor único para compartir y, tras ver lo que implicaba (imagen de cerca de 1 GB, una por tipo de procesador, publicarla o enviarla en cada versión), prefirió un script en el repositorio con el que cada persona construye la suya. No se sube nada adicional. El contenedor único no se construyó.
+
+### Trabajo realizado
+
+- [scripts/docker-demo.sh](../scripts/docker-demo.sh): comprueba que Docker y Compose existan y estén corriendo y que el puerto esté libre; construye y arranca; al terminar muestra la dirección y los usuarios de demostración con la contraseña que lee de `.env.example`. Órdenes `iniciar`, `detener`, `estado`, `registros` y `borrar`, con mensajes en español cuando algo falta.
+- [DOCKER.md](DOCKER.md): el script como forma principal, cómo compartirlo (acceso al repositorio o un zip generado con `git archive`) y cómo hacerlo en Windows.
+- README, y los comandos `docker:up`, `docker:down` y `docker:reset` ahora llaman al script.
+- Integración continua: el trabajo "Imágenes Docker" arranca con el mismo script.
+
+### Archivos
+
+`scripts/docker-demo.sh`, `docs/DOCKER.md`, `README.md`, `package.json`, `.github/workflows/ci.yml` y esta bitácora.
+
+### Validación y límites
+
+- En esta máquina: `iniciar` ejecutado desde otra carpeta (código 0, web en 200), `estado`, una orden inválida (muestra el uso), un segundo `iniciar` con la demo ya arriba (no lo confunde con puerto ocupado) y `detener`.
+- **No comprobado:** Windows (Git Bash, WSL o PowerShell), Linux fuera de la integración continua, ni el arranque desde un zip de `git archive`. Los mensajes de error por Docker ausente o apagado no se provocaron.
+- Quien pruebe necesita acceso al repositorio privado o que se le envíe el zip del código.
+
+### Pendientes y siguiente paso
+
+Revisar la corrida de integración continua. Después AT-16 y D07. Siguiente entrada: BIT-0042.
 
 ## Plantilla para próximas entradas
 

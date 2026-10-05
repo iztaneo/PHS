@@ -9,15 +9,34 @@ Levanta la aplicación completa —base de datos, gateway, los cuatro servicios 
 
 ## Arrancar
 
-Desde la raíz del repositorio:
+Desde la carpeta del repositorio:
+
+```sh
+sh scripts/docker-demo.sh
+```
+
+El script comprueba que Docker esté instalado y corriendo y que el puerto esté libre, construye las imágenes **en la propia máquina** a partir del código, arranca todo y, al terminar, muestra la dirección y los usuarios con su contraseña. La primera vez tarda varios minutos porque descarga las imágenes base (Node.js, PostgreSQL y nginx), instala dependencias y compila; las siguientes, segundos. Después, abrir **http://localhost:8080**.
+
+| Comando | Qué hace |
+| --- | --- |
+| `sh scripts/docker-demo.sh` | Construye y arranca |
+| `sh scripts/docker-demo.sh detener` | Detiene; los datos se conservan |
+| `sh scripts/docker-demo.sh estado` | Qué está corriendo |
+| `sh scripts/docker-demo.sh registros [servicio]` | Últimos mensajes de todos o de un servicio |
+| `sh scripts/docker-demo.sh borrar` | Detiene y borra todos los datos de la demo |
+
+En Windows, el script funciona desde Git Bash o WSL. Desde PowerShell se puede usar directamente el comando que el script ejecuta:
 
 ```sh
 docker compose -f docker-compose.app.yml up --build -d --wait
 ```
 
-La primera vez tarda unos minutos porque descarga las imágenes base, instala dependencias y compila. Cuando termina, abrir **http://localhost:8080**.
+## Compartirlo con quien lo va a probar
 
-Si se tiene pnpm instalado, el equivalente es `pnpm docker:up`.
+No se publica ni se envía ninguna imagen: cada persona construye la suya, para el procesador de su máquina. Lo único que necesita es Docker y una copia del repositorio, por cualquiera de estas vías:
+
+- **Acceso al repositorio** en GitHub: lo clona y ejecuta el script. Para actualizar, `git pull` y volver a ejecutarlo.
+- **Un archivo con el código**, si no va a tener acceso: `git archive --format=zip -o phs.zip HEAD` genera un zip solo con lo versionado (sin `.env`, datos locales ni dependencias). Lo descomprime y ejecuta el script.
 
 ## Entrar
 
@@ -47,18 +66,11 @@ Los datos viven en dos volúmenes de Docker: `phs_pgdata` (base de datos) y `phs
 
 ## Operación
 
-```sh
-docker compose -f docker-compose.app.yml ps            # estado de cada contenedor
-docker compose -f docker-compose.app.yml logs -f health # registros de un servicio
-docker compose -f docker-compose.app.yml down           # detener; los datos se conservan
-docker compose -f docker-compose.app.yml down --volumes # detener y borrar todos los datos
-```
-
-Volver a arrancar no duplica datos: las migraciones y las semillas solo agregan lo que falta. Después de cambiar el código hay que arrancar otra vez con `--build`.
+Los comandos del script cubren lo habitual. Volver a arrancar no duplica datos: las migraciones y las semillas solo agregan lo que falta. Después de cambiar o actualizar el código basta ejecutar el script de nuevo: reconstruye lo que cambió.
 
 ## Opciones
 
-Se definen como variables de entorno al arrancar, o en un archivo `.env` junto al compose.
+Se definen como variables de entorno delante del comando, por ejemplo `PHS_WEB_PORT=8090 sh scripts/docker-demo.sh`, o en un archivo `.env` en la carpeta del repositorio.
 
 | Variable | Por defecto | Para qué |
 | --- | --- | --- |
@@ -73,8 +85,7 @@ Se definen como variables de entorno al arrancar, o en un archivo `.env` junto a
 Por defecto solo responde en la propia máquina. Para que alguien más entre desde su equipo hay que publicar en la red e indicar la dirección que va a escribir en el navegador:
 
 ```sh
-PHS_WEB_BIND=0.0.0.0 PHS_WEB_ORIGIN=http://192.168.1.50:8080 \
-  docker compose -f docker-compose.app.yml up --build -d --wait
+PHS_WEB_BIND=0.0.0.0 PHS_WEB_ORIGIN=http://192.168.1.50:8080 sh scripts/docker-demo.sh
 ```
 
 Antes de hacerlo conviene saber que las contraseñas de demostración son públicas (están en el repositorio) y que el tráfico va sin cifrar: hacerlo solo en una red de confianza y con datos de prueba.
@@ -82,7 +93,7 @@ Antes de hacerlo conviene saber que las contraseñas de demostración son públi
 ### Empezar sin datos de demostración
 
 ```sh
-PHS_DEMO_DATA=false docker compose -f docker-compose.app.yml up --build -d --wait
+PHS_DEMO_DATA=false sh scripts/docker-demo.sh
 ```
 
 El recorrido para configurar prácticas, usuarios y el primer proyecto desde cero está en el [manual de ambientación y pruebas](MANUAL-AMBIENTACION-Y-PRUEBAS.md), a partir de la configuración inicial en la interfaz.
@@ -92,9 +103,9 @@ El recorrido para configurar prácticas, usuarios y el primer proyecto desde cer
 | Síntoma | Causa y solución |
 | --- | --- |
 | No deja iniciar sesión con ningún usuario | La dirección del navegador no es una de `PHS_WEB_ORIGIN`. Usar `http://localhost:8080`, o definir la variable con la dirección real. |
-| `port is already allocated` | El puerto 8080 está ocupado: arrancar con `PHS_WEB_PORT=8090` y abrir esa dirección. |
-| Un servicio queda `unhealthy` | `docker compose -f docker-compose.app.yml logs <servicio>`; lo habitual es que `seed` haya fallado antes. |
-| Se cambió `POSTGRES_PASSWORD` y la base rechaza la conexión | La contraseña se fija al crear el volumen: borrar los datos con `down --volumes` y arrancar de nuevo. |
+| El script dice que el puerto está ocupado | Otro programa usa el 8080: arrancar con `PHS_WEB_PORT=8090 sh scripts/docker-demo.sh` y abrir esa dirección. |
+| Algo no arrancó | `sh scripts/docker-demo.sh registros`; lo habitual es que el paso `seed` o `migrate` haya fallado antes que los servicios. |
+| Se cambió `POSTGRES_PASSWORD` y la base rechaza la conexión | La contraseña se fija al crear el volumen: borrar los datos con `sh scripts/docker-demo.sh borrar` y arrancar de nuevo. |
 
 ## Límites
 

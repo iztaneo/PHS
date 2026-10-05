@@ -30,9 +30,9 @@
     "api:docs": "pnpm --filter @phs/contracts build && pnpm --filter @phs/contracts generate",
     "seed:demo": "sh scripts/local-db.sh seed-demo",
     "db:dictionary": "sh scripts/local-db.sh dictionary",
-    "docker:up": "docker compose -f docker-compose.app.yml up --build -d --wait",
-    "docker:down": "docker compose -f docker-compose.app.yml down",
-    "docker:reset": "docker compose -f docker-compose.app.yml down --volumes"
+    "docker:up": "sh scripts/docker-demo.sh iniciar",
+    "docker:down": "sh scripts/docker-demo.sh detener",
+    "docker:reset": "sh scripts/docker-demo.sh borrar"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

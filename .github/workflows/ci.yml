@@ -88,8 +88,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      # Con el mismo script que usa quien lo prueba.
       - name: Construir y levantar el entorno completo
-        run: docker compose -f docker-compose.app.yml up --build -d --wait
+        run: sh scripts/docker-demo.sh
       # Lo mínimo que tiene que funcionar para quien lo pruebe: la web carga, los servicios y su
       # base responden, un usuario de demostración inicia sesión y ve sus proyectos.
       - name: Comprobar que se puede usar

@@ -71,10 +71,10 @@ Funciona: acceso y administración (usuarios, prácticas, tipos de servicio y d�
 Para probar la aplicación completa sin instalar Node.js ni PostgreSQL:
 
 ```sh
-docker compose -f docker-compose.app.yml up --build -d --wait
+sh scripts/docker-demo.sh
 ```
 
-Abrir [localhost:8080](http://localhost:8080) e iniciar sesión con los usuarios de demostración. Detalle, opciones y problemas frecuentes en [docs/DOCKER.md](docs/DOCKER.md). Es un entorno de prueba, no el del piloto.
+El script construye las imágenes en la propia máquina, arranca todo y muestra la dirección ([localhost:8080](http://localhost:8080)) y los usuarios de demostración. Para compartirlo basta dar acceso al repositorio o enviar un zip del código: no se publica ninguna imagen. Detalle, opciones y problemas frecuentes en [docs/DOCKER.md](docs/DOCKER.md). Es un entorno de prueba, no el del piloto.
 
 ## Integración continua
 
