@@ -10,6 +10,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Diccionario de datos:** [DICCIONARIO-DATOS.md](DICCIONARIO-DATOS.md), con diagramas entidad-relación por módulo y el contenido de los catálogos, generado desde la base con `pnpm db:dictionary` (BIT-0029, BIT-0038).
 - **Integración continua:** GitHub Actions valida cada cambio en `main` y cada pull request con compilación, pruebas, documentos generados y el recorrido e2e (BIT-0035).
+- **Ambientación y prueba:** [MANUAL-AMBIENTACION-Y-PRUEBAS.md](MANUAL-AMBIENTACION-Y-PRUEBAS.md) describe el arranque limpio con un administrador, la configuración inicial, el primer proyecto, el recorrido por roles, la carga demo y las suites automatizadas (BIT-0039).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
 - **R3 construido (en revisión, sin aceptar):** alertas, acciones y causa y plan (BIT-0024); ciclo de revisión, Health Review, validación y festivos (BIT-0025); confianza explicada, tendencia, proyección y proceso programado (BIT-0026). Lo que falta de cada historia está en su estado en el backlog.
@@ -1460,6 +1461,40 @@ Revisar la corrida. Después AT-16 y D07. Siguiente entrada: BIT-0038.
 ### Pendientes y siguiente paso
 
 Revisar la corrida. Después AT-16 y D07. Siguiente entrada: BIT-0039.
+
+## BIT-0039 — Manual de ambientación y pruebas
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** documentar un procedimiento ejecutable para instalar PHS desde una base vacía, crear el primer administrador, configurar la organización y probar el flujo de negocio.
+
+**Relación:** PHS-040, PHS-041 y PHS-042; D05, D07 y D09.
+
+**Identificación:** commit con prefijo `BIT-0039`.
+
+### Trabajo realizado
+
+- Se creó [MANUAL-AMBIENTACION-Y-PRUEBAS.md](MANUAL-AMBIENTACION-Y-PRUEBAS.md) y se vinculó desde el README. Esos dos archivos quedaron versionados en el commit compartido BIT-0038 mientras otra sesión confirmaba el diccionario; esta entrada registra su revisión y validación sin alterar ese historial.
+- El manual separa la instalación limpia de `db:setup` y `seed:demo`: para nacer solo con el administrador se ejecutan inicio de PostgreSQL, migraciones, roles técnicos y `seed:dev` de forma explícita.
+- Se documentaron variables de entorno, instalación, estado de los servicios, primer inicio y cambio obligatorio de contraseña.
+- Se estableció el orden de configuración en la interfaz: prácticas, tipos de servicio, usuarios, roles y festivos. Se aclara que Administrador es una capacidad global y no otorga acceso a proyectos.
+- Se describió el primer proyecto de principio a fin: alta, equipo, hitos, línea base, estado activo, ciclo, operación, revisión, devolución, validación, cambios, alertas e historial.
+- Se agregaron recorridos manuales por PM, Líder, Dirección y perfiles sin importes, comandos de prueba, diagnóstico, recuperación del único administrador y una lista de salida.
+
+### Archivos relevantes
+
+`docs/MANUAL-AMBIENTACION-Y-PRUEBAS.md`, `README.md` y esta bitácora.
+
+### Validación y límites
+
+- Se creó la base aislada `phs_manual_guide`, se aplicaron las migraciones 001–015, se cargaron los roles técnicos y se creó un administrador ficticio mediante el CLI real.
+- Los conteos iniciales comprobados fueron: un usuario, un administrador activo, cero prácticas, cero proyectos, cero festivos y ocho tipos de servicio. La base temporal fue eliminada al terminar; `phs` no se modificó.
+- Los comandos de compilación, pruebas y e2e ya estaban validados en BIT-0034 y en CI; en este cambio documental no se repitió la suite completa.
+- El manual cubre desarrollo y evaluación local. No afirma que exista un despliegue productivo: D07 y PHS-042 siguen pendientes para secretos, respaldos, restauración, monitoreo, aislamiento, RPO/RTO y liberación del piloto.
+
+### Pendientes y siguiente paso
+
+Revisar el manual con el responsable que ambientará el primer entorno y adaptar nombres, prácticas y responsables reales. Después completar AT-16/D07 y convertir las decisiones operativas en el procedimiento de despliegue de PHS-042. Siguiente entrada: BIT-0040.
 
 ## Plantilla para próximas entradas
 
