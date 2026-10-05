@@ -109,7 +109,7 @@ const moduleOf = (name) => texts.tablas[name].modulo;
 const columnCount = schema.tables.reduce((sum, t) => sum + t.columns.length, 0);
 out.push('# Diccionario de datos de PHS', '');
 out.push(`Describe el esquema \`phs\` de PostgreSQL tal como está en la base: ${schema.tables.length} tablas y ${columnCount} columnas, con ${schema.migrations} migraciones aplicadas (\`db/migrations\`).`, '');
-out.push('**Este archivo se genera; no se edita a mano.** La estructura (tipos, claves, reglas, índices y permisos) se lee del catálogo de la base y las descripciones están en [diccionario/descripciones.json](diccionario/descripciones.json). Para actualizarlo después de una migración: describir lo nuevo en ese archivo y ejecutar `pnpm db:dictionary`. El generador se niega a escribir si falta una descripción o sobra alguna.', '');
+out.push('**Este archivo se genera; no se edita a mano.** La estructura (tipos, claves, reglas, índices y permisos) y el contenido de los catálogos se leen de la base, y las descripciones están en [diccionario/descripciones.json](diccionario/descripciones.json). Para actualizarlo después de una migración: describir lo nuevo en ese archivo y ejecutar `pnpm db:dictionary`. El generador se niega a escribir si falta una descripción o sobra alguna.', '');
 out.push('## Cómo leerlo', '');
 out.push('- **Tipos.** Los de PostgreSQL. `uuid` identifica filas; `timestamptz` es un instante con zona; `date` es un día de calendario; `numeric(p,s)` es un decimal exacto; `jsonb` es un documento JSON; `text[]` es una lista de textos.');
 out.push('- **Nombres.** Una columna terminada en `_on` es una fecha de negocio (`date`); en `_at`, un instante (`timestamptz`); en `_id`, una referencia a otra tabla.');
@@ -128,6 +128,29 @@ for (const module of texts.modulos) {
   }
   out.push('');
 }
+
+// ---- Catalogues: what is in them right now, and the fixed lists the schema itself enforces.
+const WEEKDAY = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const weekday = (iso) => WEEKDAY[new Date(`${iso}T00:00:00Z`).getUTCDay()];
+const catalogs = schema.catalogs;
+out.push('## Contenido actual de los catálogos', '');
+out.push('Lo que contienen hoy las tablas de catálogo de la base desde la que se generó este documento: una instalación con las migraciones aplicadas y los datos de `pnpm seed:dev` y `pnpm seed:demo`. Los catálogos administrables cambian desde la pantalla Administración; después de cambiarlos hay que volver a generar el documento.', '');
+out.push('### Tipos de servicio', '', `Tabla [\`service_type\`](#service_type). Los carga la migración inicial; el administrador puede agregar tipos y activarlos o desactivarlos. ${catalogs.serviceTypes.length} registros.`, '');
+out.push('| Código | Nombre | Activo |', '| --- | --- | --- |', ...catalogs.serviceTypes.map((t) => `| \`${t.code}\` | ${cell(t.name)} | ${t.active ? 'Sí' : 'No'} |`), '');
+out.push('### Prácticas', '', `Tabla [\`practice\`](#practice). Las crea el administrador; estas son las de demostración. ${catalogs.practices.length} registros.`, '');
+out.push('| Código | Nombre | Zona horaria |', '| --- | --- | --- |', ...catalogs.practices.map((p) => `| \`${p.code}\` | ${cell(p.name)} | ${p.timezone} |`), '');
+out.push('### Días festivos', '', `Tabla [\`holiday\`](#holiday). Los mantiene el administrador porque cambian cada año. Junto con sábados y domingos son los días en que no vence ninguna revisión. ${catalogs.holidays.length} registros.`, '');
+if (catalogs.holidays.length) out.push('| Fecha | Día | Nombre |', '| --- | --- | --- |', ...catalogs.holidays.map((h) => `| ${h.day} | ${weekday(h.day)} | ${cell(h.name)} |`), '');
+out.push('### Conjuntos de reglas PHF', '', `Tabla [\`rule_set\`](#rule_set). Se registra una fila la primera vez que el motor guarda una evaluación con esa versión. Los valores de la versión vigente (pesos, topes, umbrales y coeficientes) están en [REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md) y en la pantalla "Modelo PHF". ${catalogs.ruleSets.length} registros.`, '');
+if (catalogs.ruleSets.length) out.push('| Versión | Versión del motor |', '| --- | --- |', ...catalogs.ruleSets.map((r) => `| \`${r.version}\` | \`${r.engineVersion}\` |`), '');
+out.push('### Catálogos de valores fijos', '', 'Listas cerradas que impone la base con una regla sobre la columna. No se administran desde la aplicación: cambiarlas requiere una migración.', '');
+out.push('| Tabla | Columna | Valor | Significado |', '| --- | --- | --- | --- |');
+for (const table of schema.tables) {
+  for (const [column, values] of Object.entries(table.allowed ?? {})) {
+    for (const value of values) out.push(`| [\`${table.name}\`](#${anchor(table.name)}) | \`${column}\` | \`${value}\` | ${cell(texts.tablas[table.name].valores[column][value])} |`);
+  }
+}
+out.push('');
 
 out.push('## Diagrama entidad-relación general', '');
 out.push('Todas las tablas y sus relaciones. Para que se pueda leer se omiten las columnas y las referencias a `app_user` (quién creó, decidió o es responsable de algo), que existen en casi todas las tablas y se detallan en cada una. La etiqueta de cada relación es la columna que la establece. `||--o{`: uno a muchos obligatorio; `|o--o{`: la referencia es opcional; `--o|`: como máximo una fila hija.', '');

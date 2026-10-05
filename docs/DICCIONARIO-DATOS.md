@@ -2,7 +2,7 @@
 
 Describe el esquema `phs` de PostgreSQL tal como está en la base: 38 tablas y 349 columnas, con 15 migraciones aplicadas (`db/migrations`).
 
-**Este archivo se genera; no se edita a mano.** La estructura (tipos, claves, reglas, índices y permisos) se lee del catálogo de la base y las descripciones están en [diccionario/descripciones.json](diccionario/descripciones.json). Para actualizarlo después de una migración: describir lo nuevo en ese archivo y ejecutar `pnpm db:dictionary`. El generador se niega a escribir si falta una descripción o sobra alguna.
+**Este archivo se genera; no se edita a mano.** La estructura (tipos, claves, reglas, índices y permisos) y el contenido de los catálogos se leen de la base, y las descripciones están en [diccionario/descripciones.json](diccionario/descripciones.json). Para actualizarlo después de una migración: describir lo nuevo en ese archivo y ejecutar `pnpm db:dictionary`. El generador se niega a escribir si falta una descripción o sobra alguna.
 
 ## Cómo leerlo
 
@@ -84,6 +84,156 @@ Describe el esquema `phs` de PostgreSQL tal como está en la base: 38 tablas y 3
 | [`evidence_withdrawal`](#evidence_withdrawal) | Retiro de una evidencia. La evidencia se conserva, pero su contenido deja de servirse. | Plataforma | 4 |
 | [`notification_delivery`](#notification_delivery) | Notificación entregada a un usuario por un canal, originada en un mensaje del outbox. | Plataforma | 8 |
 | [`outbox_message`](#outbox_message) | Mensaje que un servicio publica en la misma transacción que su cambio, para que Plataforma lo procese después (notificaciones). Entrega al menos una vez. | Identidad, Proyectos, Salud, Plataforma | 11 |
+
+## Contenido actual de los catálogos
+
+Lo que contienen hoy las tablas de catálogo de la base desde la que se generó este documento: una instalación con las migraciones aplicadas y los datos de `pnpm seed:dev` y `pnpm seed:demo`. Los catálogos administrables cambian desde la pantalla Administración; después de cambiarlos hay que volver a generar el documento.
+
+### Tipos de servicio
+
+Tabla [`service_type`](#service_type). Los carga la migración inicial; el administrador puede agregar tipos y activarlos o desactivarlos. 8 registros.
+
+| Código | Nombre | Activo |
+| --- | --- | --- |
+| `architecture` | Arquitectura | Sí |
+| `assessment` | Assessment | Sí |
+| `consulting` | Consultoría | Sí |
+| `data_ai` | Data & IA | Sí |
+| `development` | Desarrollo | Sí |
+| `devsecops` | DevSecOps | Sí |
+| `staffing` | Staffing / AT | Sí |
+| `support` | AMS / Soporte | Sí |
+
+### Prácticas
+
+Tabla [`practice`](#practice). Las crea el administrador; estas son las de demostración. 2 registros.
+
+| Código | Nombre | Zona horaria |
+| --- | --- | --- |
+| `CONS` | Consultoría y desarrollo | America/Mexico_City |
+| `DATA` | Datos e IA | America/Mexico_City |
+
+### Días festivos
+
+Tabla [`holiday`](#holiday). Los mantiene el administrador porque cambian cada año. Junto con sábados y domingos son los días en que no vence ninguna revisión. 14 registros.
+
+| Fecha | Día | Nombre |
+| --- | --- | --- |
+| 2026-01-01 | jueves | Año Nuevo |
+| 2026-02-02 | lunes | Día de la Constitución |
+| 2026-03-16 | lunes | Natalicio de Benito Juárez |
+| 2026-05-01 | viernes | Día del Trabajo |
+| 2026-09-16 | miércoles | Día de la Independencia |
+| 2026-11-16 | lunes | Día de la Revolución |
+| 2026-12-25 | viernes | Navidad |
+| 2027-01-01 | viernes | Año Nuevo |
+| 2027-02-01 | lunes | Día de la Constitución |
+| 2027-03-15 | lunes | Natalicio de Benito Juárez |
+| 2027-05-01 | sábado | Día del Trabajo |
+| 2027-09-16 | jueves | Día de la Independencia |
+| 2027-11-15 | lunes | Día de la Revolución |
+| 2027-12-25 | sábado | Navidad |
+
+### Conjuntos de reglas PHF
+
+Tabla [`rule_set`](#rule_set). Se registra una fila la primera vez que el motor guarda una evaluación con esa versión. Los valores de la versión vigente (pesos, topes, umbrales y coeficientes) están en [REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md) y en la pantalla "Modelo PHF". 1 registros.
+
+| Versión | Versión del motor |
+| --- | --- |
+| `phf-v1` | `phf-v1` |
+
+### Catálogos de valores fijos
+
+Listas cerradas que impone la base con una regla sobre la columna. No se administran desde la aplicación: cambiarlas requiere una migración.
+
+| Tabla | Columna | Valor | Significado |
+| --- | --- | --- | --- |
+| [`activity`](#activity) | `source` | `user` | Un usuario |
+| [`activity`](#activity) | `source` | `system` | El sistema, por ejemplo al cerrar una acción automática |
+| [`change_decision`](#change_decision) | `decision` | `approved` | Aprobado: se publica una nueva línea base |
+| [`change_decision`](#change_decision) | `decision` | `rejected` | Rechazado: la línea base no cambia |
+| [`command_idempotency`](#command_idempotency) | `service` | `identity` | Identidad |
+| [`command_idempotency`](#command_idempotency) | `service` | `projects` | Proyectos |
+| [`command_idempotency`](#command_idempotency) | `service` | `health` | Salud |
+| [`command_idempotency`](#command_idempotency) | `service` | `platform` | Plataforma |
+| [`event_response`](#event_response) | `kind` | `remediation` | Plan de remediación para cumplir la fecha |
+| [`event_response`](#event_response) | `kind` | `replan` | Replanificación mediante un cambio aprobado |
+| [`event_response_validation`](#event_response_validation) | `decision` | `validated` | Validada |
+| [`event_response_validation`](#event_response_validation) | `decision` | `returned` | Devuelta: el PM debe responder de nuevo |
+| [`health_assessment`](#health_assessment) | `assessment_kind` | `operational` | Del día: se calcula al consultar o por el proceso programado |
+| [`health_assessment`](#health_assessment) | `assessment_kind` | `cycle` | Corte de un ciclo: se calcula al enviar la revisión |
+| [`health_assessment`](#health_assessment) | `assessment_kind` | `retrospective` | Recalculo posterior; reservado |
+| [`health_assessment`](#health_assessment) | `publication` | `provisional` | Provisional |
+| [`health_assessment`](#health_assessment) | `publication` | `official` | Oficial: la de un envío de revisión |
+| [`health_event`](#health_event) | `severity` | `info` | Informativa |
+| [`health_event`](#health_event) | `severity` | `warning` | Advertencia |
+| [`health_event`](#health_event) | `severity` | `critical` | Crítica: exige causa y plan en las reglas que lo piden |
+| [`health_review`](#health_review) | `client_climate` | `good` | Bueno |
+| [`health_review`](#health_review) | `client_climate` | `tense` | Tenso |
+| [`health_review`](#health_review) | `client_climate` | `critical` | Crítico: activa un tope del score |
+| [`health_task`](#health_task) | `priority` | `high` | Alta |
+| [`health_task`](#health_task) | `priority` | `medium` | Media |
+| [`health_task`](#health_task) | `priority` | `low` | Baja |
+| [`health_task`](#health_task) | `status` | `pending` | Pendiente |
+| [`health_task`](#health_task) | `status` | `in_progress` | En curso |
+| [`health_task`](#health_task) | `status` | `blocked` | Bloqueada |
+| [`health_task`](#health_task) | `status` | `completed` | Completada |
+| [`health_task`](#health_task) | `status` | `cancelled` | Cancelada |
+| [`milestone`](#milestone) | `status` | `pending` | Pendiente |
+| [`milestone`](#milestone) | `status` | `in_progress` | En curso |
+| [`milestone`](#milestone) | `status` | `completed` | Completado |
+| [`milestone`](#milestone) | `status` | `rescheduled` | Reprogramado |
+| [`milestone`](#milestone) | `status` | `cancelled` | Cancelado |
+| [`notification_delivery`](#notification_delivery) | `channel` | `in_app` | Dentro de la aplicación |
+| [`notification_delivery`](#notification_delivery) | `channel` | `email` | Correo; aún no implementado |
+| [`notification_delivery`](#notification_delivery) | `status` | `pending` | Pendiente |
+| [`notification_delivery`](#notification_delivery) | `status` | `sent` | Entregada |
+| [`notification_delivery`](#notification_delivery) | `status` | `failed` | Falló |
+| [`practice_membership`](#practice_membership) | `role` | `pm` | Puede crear proyectos y gestiona los suyos |
+| [`practice_membership`](#practice_membership) | `role` | `lead` | Líder: ve y edita todos los proyectos de la práctica, valida y decide |
+| [`practice_membership`](#practice_membership) | `role` | `director` | Dirección: consulta todos los proyectos de la práctica, incluida la economía |
+| [`project`](#project) | `status` | `planned` | Planeado |
+| [`project`](#project) | `status` | `active` | Activo |
+| [`project`](#project) | `status` | `paused` | Pausado |
+| [`project`](#project) | `status` | `renewing` | En renovación |
+| [`project`](#project) | `status` | `closed` | Cerrado |
+| [`project_change`](#project_change) | `change_type` | `client` | Pedido por el cliente |
+| [`project_change`](#project_change) | `change_type` | `internal` | Interno |
+| [`project_change`](#project_change) | `change_type` | `regulatory` | Regulatorio |
+| [`project_change`](#project_change) | `change_type` | `technical` | Técnico |
+| [`project_member`](#project_member) | `role` | `contributor` | Participa en la ejecución |
+| [`project_member`](#project_member) | `role` | `viewer` | Solo consulta |
+| [`project_status_log`](#project_status_log) | `from_status` | `planned` | Planeado |
+| [`project_status_log`](#project_status_log) | `from_status` | `active` | Activo |
+| [`project_status_log`](#project_status_log) | `from_status` | `paused` | Pausado |
+| [`project_status_log`](#project_status_log) | `from_status` | `renewing` | En renovación |
+| [`project_status_log`](#project_status_log) | `from_status` | `closed` | Cerrado |
+| [`project_status_log`](#project_status_log) | `kind` | `transition` | Cambio de estado |
+| [`project_status_log`](#project_status_log) | `kind` | `justification` | Justificación tras 30 días pausado o cerrado |
+| [`project_status_log`](#project_status_log) | `to_status` | `planned` | Planeado |
+| [`project_status_log`](#project_status_log) | `to_status` | `active` | Activo |
+| [`project_status_log`](#project_status_log) | `to_status` | `paused` | Pausado |
+| [`project_status_log`](#project_status_log) | `to_status` | `renewing` | En renovación |
+| [`project_status_log`](#project_status_log) | `to_status` | `closed` | Cerrado |
+| [`renewal`](#renewal) | `status` | `pending` | Pendiente |
+| [`renewal`](#renewal) | `status` | `renewed` | Renovada |
+| [`renewal`](#renewal) | `status` | `cancelled` | Cancelada |
+| [`review_policy`](#review_policy) | `cadence` | `weekly` | Semanal, cada 7 días |
+| [`review_policy`](#review_policy) | `cadence` | `fortnightly` | Quincenal, cada 14 días |
+| [`review_policy`](#review_policy) | `cadence` | `monthly` | Mensual, por mes calendario |
+| [`review_validation`](#review_validation) | `decision` | `validated` | Validada |
+| [`review_validation`](#review_validation) | `decision` | `returned` | Devuelta: el PM debe corregir y reenviar |
+| [`risk`](#risk) | `risk_type` | `project` | Del proyecto |
+| [`risk`](#risk) | `risk_type` | `client` | Del cliente; alimenta la dimensión Cliente |
+| [`risk`](#risk) | `status` | `open` | Abierto |
+| [`risk`](#risk) | `status` | `mitigating` | En mitigación |
+| [`risk`](#risk) | `status` | `mitigated` | Mitigado |
+| [`risk`](#risk) | `status` | `materialized` | Materializado: ocurrió |
+| [`risk`](#risk) | `status` | `closed` | Cerrado |
+| [`user_session`](#user_session) | `revoke_reason` | `logout` | El usuario cerró sesión |
+| [`user_session`](#user_session) | `revoke_reason` | `password_change` | Cambió su contraseña |
+| [`user_session`](#user_session) | `revoke_reason` | `user_disabled` | El usuario fue desactivado |
+| [`user_session`](#user_session) | `revoke_reason` | `admin` | Un administrador la revocó |
 
 ## Diagrama entidad-relación general
 

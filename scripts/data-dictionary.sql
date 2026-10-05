@@ -1,6 +1,12 @@
 -- Reads the structure of schema phs from the catalog as one JSON document, for scripts/data-dictionary.mjs.
 SELECT jsonb_build_object(
  'migrations', (SELECT count(*) FROM schema_migrations),
+ -- Current rows of the catalogue tables: small reference data that people choose from.
+ 'catalogs', jsonb_build_object(
+   'serviceTypes', (SELECT coalesce(jsonb_agg(jsonb_build_object('code', code, 'name', name, 'active', active) ORDER BY code), '[]') FROM phs.service_type),
+   'practices', (SELECT coalesce(jsonb_agg(jsonb_build_object('code', code, 'name', name, 'timezone', timezone) ORDER BY code), '[]') FROM phs.practice),
+   'holidays', (SELECT coalesce(jsonb_agg(jsonb_build_object('day', day::text, 'name', name) ORDER BY day), '[]') FROM phs.holiday),
+   'ruleSets', (SELECT coalesce(jsonb_agg(jsonb_build_object('version', version, 'engineVersion', engine_version) ORDER BY version), '[]') FROM phs.rule_set)),
  'tables', (SELECT jsonb_agg(t ORDER BY t->>'name') FROM (
    SELECT jsonb_build_object(
      'name', c.relname,

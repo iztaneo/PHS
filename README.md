@@ -12,6 +12,7 @@ El repositorio contiene la aplicación (web, gateway y cuatro servicios: Identid
 - [Especificación funcional](docs/producto/ESPECIFICACION.md).
 - [Backlog priorizado](docs/producto/BACKLOG.md).
 - [Plan de entregas y aceptación](docs/producto/PLAN-ENTREGAS.md).
+- [Manual paso a paso de ambientación y pruebas](docs/MANUAL-AMBIENTACION-Y-PRUEBAS.md).
 - [Decisiones pendientes](docs/producto/DECISIONES.md).
 - [Diseño de interfaz](docs/producto/DISENO-UI.md).
 - [Reglas del motor PHF, versión 1](docs/producto/REGLAS-PHF-v1.md).

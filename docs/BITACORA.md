@@ -8,7 +8,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–015 (38 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, los cuatro servicios (`identity`, `projects`, `health`, `platform`) y los paquetes `service-kit`, `contracts` y `health-engine`; ver README para arrancarlo.
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
-- **Diccionario de datos:** [DICCIONARIO-DATOS.md](DICCIONARIO-DATOS.md), con diagramas entidad-relación por módulo, generado desde la base con `pnpm db:dictionary` (BIT-0029).
+- **Diccionario de datos:** [DICCIONARIO-DATOS.md](DICCIONARIO-DATOS.md), con diagramas entidad-relación por módulo y el contenido de los catálogos, generado desde la base con `pnpm db:dictionary` (BIT-0029, BIT-0038).
 - **Integración continua:** GitHub Actions valida cada cambio en `main` y cada pull request con compilación, pruebas, documentos generados y el recorrido e2e (BIT-0035).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
@@ -1424,6 +1424,42 @@ Revisar la corrida. Siguiente entrada: BIT-0037.
 ### Pendientes y siguiente paso
 
 Revisar la corrida. Después AT-16 y D07. Siguiente entrada: BIT-0038.
+
+## BIT-0038 — Contenido de los catálogos en el diccionario de datos
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** el usuario pidió que el diccionario de datos incluya el contenido actual de los catálogos.
+
+**Relación:** PHS-004; BIT-0029, BIT-0035.
+
+**Identificación:** commit con prefijo `BIT-0038`.
+
+### Trabajo realizado
+
+- [DICCIONARIO-DATOS.md](DICCIONARIO-DATOS.md) tiene una sección nueva, "Contenido actual de los catálogos", generada desde la base: tipos de servicio (8), prácticas (2), días festivos (14, con su día de la semana) y conjuntos de reglas PHF (1), más una tabla única con los 124 valores de las listas cerradas que impone el esquema y su significado.
+- `scripts/data-dictionary.sql` lee esas filas y `scripts/data-dictionary.mjs` las presenta.
+- Integración continua: carga las semillas antes de comprobar el diccionario, porque prácticas, festivos y reglas llegan con ellas.
+- [AGENTS.md](../AGENTS.md): el diccionario se regenera también cuando una migración o una semilla cambia un catálogo, y desde una base con solo migraciones y semillas.
+
+### Archivos
+
+`docs/DICCIONARIO-DATOS.md`, `scripts/data-dictionary.{sql,mjs}`, `.github/workflows/ci.yml`, `AGENTS.md` y esta bitácora.
+
+### Decisiones y supuestos
+
+- Decisiones mías: qué cuenta como catálogo (las cuatro tablas de referencia y las listas cerradas); de las reglas PHF se listan versión y motor, y sus valores se enlazan, porque la fila guardada en una base ya existente puede ser anterior a los coeficientes añadidos en BIT-0026 y el documento dejaría de ser reproducible.
+- No se listan usuarios, clientes ni proyectos: son datos, no catálogos.
+
+### Validación y límites
+
+- Generado desde la base local y comprobado con `--check` contra `phs_e2e`, recién creada con migraciones y semillas: idénticos.
+- "Contenido actual" es el de la base desde la que se genera. Si en la base local se agregan a mano prácticas, tipos de servicio o festivos y se regenera, el documento los incluirá y la integración continua fallará hasta que la semilla y el documento coincidan.
+- La comprobación con las semillas dentro de GitHub Actions se verifica con la corrida de este commit.
+
+### Pendientes y siguiente paso
+
+Revisar la corrida. Después AT-16 y D07. Siguiente entrada: BIT-0039.
 
 ## Plantilla para próximas entradas
 

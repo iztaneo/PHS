@@ -71,6 +71,11 @@ jobs:
         run: pnpm test
       - name: Pruebas SQL
         run: pnpm db:test
+      # El diccionario incluye el contenido de los catálogos, que cargan las migraciones y las semillas.
+      - name: Datos de desarrollo y de demostración
+        run: |
+          pnpm seed:dev
+          pnpm seed:demo
       - name: Diccionario de datos al día
         run: pnpm db:dictionary -- --check
       - name: Matriz de pruebas
