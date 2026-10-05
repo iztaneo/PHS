@@ -1,8 +1,9 @@
-import { Briefcase, ListChecks, LogOut, Menu, ShieldCheck, UserRound, X } from 'lucide-react';
+import { Bell, Briefcase, House, ListChecks, LogOut, Menu, ShieldCheck, UserRound, X } from 'lucide-react';
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { Admin } from './Admin';
-import { ApiError, api, errorMessage, type SessionUser } from './api';
+import { ApiError, api, errorMessage, type Inbox, type SessionUser } from './api';
 import { MyTasks } from './Governance';
+import { Home, Notifications } from './Home';
 import { Projects } from './Projects';
 import { Badge, Button, Card, Empty, Field, Input, Loading, Notice, PageHeader } from './ui';
 
@@ -145,15 +146,28 @@ function PasswordForm({ onChanged, onSessionLost }: { onChanged: () => void; onS
 }
 
 const ROLE_TEXT = { pm: 'PM', lead: 'Líder', director: 'Dirección' } as const;
-type Section = 'projects' | 'tasks' | 'roles' | 'admin';
+type Section = 'home' | 'projects' | 'notifications' | 'tasks' | 'roles' | 'admin';
 
 function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?: string) => void }) {
-  const [section, setSection] = useState<Section>('projects');
+  const [section, setSection] = useState<Section>('home');
+  // A project to open from elsewhere (home, notifications). The counter makes the same request open again.
+  const [target, setTarget] = useState<{ id: string; tab: string; n: number }>();
+  const [inbox, setInbox] = useState<Inbox>();
+  const open = (id: string, tab: string) => { setTarget((t) => ({ id, tab, n: (t?.n ?? 0) + 1 })); setSection('projects'); setMenuOpen(false); };
+  // The bell keeps itself up to date; a failure just leaves the last known count.
+  useEffect(() => {
+    const load = () => { api.notifications().then(setInbox).catch(() => undefined); };
+    load();
+    const timer = window.setInterval(load, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<string>();
 
   const items: { key: Section; label: string; icon: ReactNode }[] = [
+    { key: 'home', label: 'Inicio', icon: <House size={18} aria-hidden /> },
     { key: 'projects', label: 'Proyectos', icon: <Briefcase size={18} aria-hidden /> },
+    { key: 'notifications', label: 'Notificaciones', icon: <Bell size={18} aria-hidden /> },
     { key: 'tasks', label: 'Mis acciones', icon: <ListChecks size={18} aria-hidden /> },
     { key: 'roles', label: 'Mis roles', icon: <UserRound size={18} aria-hidden /> },
     ...(user.isAdmin ? [{ key: 'admin' as const, label: 'Administración', icon: <ShieldCheck size={18} aria-hidden /> }] : []),
@@ -172,9 +186,12 @@ function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?
     <nav aria-label="Principal" className="flex flex-1 flex-col gap-1">
       {items.map((item) => (
         <button key={item.key} type="button" aria-current={section === item.key ? 'page' : undefined}
-          onClick={() => { setSection(item.key); setMenuOpen(false); }}
+          onClick={() => { setSection(item.key); setTarget(undefined); setMenuOpen(false); }}
           className={`flex min-h-10 items-center gap-3 rounded-control px-3 text-sm font-medium ${section === item.key ? 'bg-brand-soft text-brand-strong' : 'text-ink-soft hover:bg-subtle'}`}>
           {item.icon}{item.label}
+          {item.key === 'notifications' && inbox && inbox.unread > 0 && (
+            <span className="ml-auto rounded-full bg-bad px-2 py-0.5 text-xs font-semibold text-white" aria-label={`${inbox.unread} sin leer`}>{inbox.unread}</span>
+          )}
         </button>
       ))}
     </nav>
@@ -206,7 +223,9 @@ function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?
       <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
         {error && <div className="mb-4"><Notice tone="red">{error}</Notice></div>}
         {section === 'admin' && user.isAdmin && <Admin currentUserId={user.id} />}
-        {section === 'projects' && <Projects user={user} />}
+        {section === 'home' && <Home onOpen={open} />}
+        {section === 'notifications' && <Notifications inbox={inbox} onChange={setInbox} onOpen={open} />}
+        {section === 'projects' && <Projects user={user} target={target} />}
         {section === 'tasks' && <MyTasks />}
         {section === 'roles' && (
           <>

@@ -7,6 +7,7 @@ import {
 } from '@phs/contracts';
 import { INTERNAL_AUTH_HEADER } from '@phs/service-kit';
 import { z } from 'zod';
+import { CenterService } from './center.service.js';
 import type { Actor } from './governance.service.js';
 import { HolidayService, type HolidayResult } from './holiday.service.js';
 import { InternalAuthGuard, type AuthenticatedRequest } from './internal-auth.guard.js';
@@ -46,6 +47,7 @@ export class ReviewController {
     @Inject(ReviewService) private readonly reviews: ReviewService,
     @Inject(HolidayService) private readonly holidays: HolidayService,
     @Inject(SchedulerService) private readonly scheduler: SchedulerService,
+    @Inject(CenterService) private readonly center: CenterService,
   ) {}
 
   private actor(request: AuthenticatedRequest, identity: string): Actor {
@@ -92,6 +94,11 @@ export class ReviewController {
   @HttpCode(201)
   validate(@Param('reviewId') reviewId: string, @Body() body: unknown, @Headers(INTERNAL_AUTH_HEADER) identity: string, @Req() request: AuthenticatedRequest) {
     return run(this.reviews.validate(this.actor(request, identity), uuid(reviewId), parse(validateReviewBody, body)));
+  }
+
+  @Get('center')
+  healthCenter(@Headers(INTERNAL_AUTH_HEADER) identity: string, @Req() request: AuthenticatedRequest) {
+    return this.center.view(request.internal.userId, identity);
   }
 
   @Get('scheduler')

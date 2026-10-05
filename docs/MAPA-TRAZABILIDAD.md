@@ -65,6 +65,8 @@ Tablas añadidas desde este mapa: `command_idempotency`, `evidence_withdrawal` (
 
 **BIT-0026:** la pantalla Salud del proyecto incluye confianza explicada, tendencia y proyección (PHS-027 a PHS-029), y existe el proceso programado de Salud (PHS-033, en parte); `scheduler_run` lleva el esquema a 37 tablas. De R3 solo falta lo anotado en el backlog; siguen sin construir alertas y notificaciones, Health Center, portafolio, timeline e historial, modelo PHF y la consulta de pausados y cerrados.
 
+**BIT-0028:** construidas, pendientes de aceptación: Alertas y prioridades (notificaciones en Plataforma, con el despacho del outbox) y Health Center de PM, líder y Dirección (pantalla "Inicio", consulta de Salud que pide a Proyectos el alcance del usuario). Sin tablas nuevas. Faltan portafolio, timeline e historial, modelo PHF y la consulta de pausados y cerrados.
+
 ## Brechas detectadas en el cruce
 
 | # | Brecha | Estado |

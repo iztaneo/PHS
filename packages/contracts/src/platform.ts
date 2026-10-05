@@ -25,6 +25,25 @@ export const addEvidenceForm = evidenceTargetQuery.extend({
 });
 export const withdrawEvidenceBody = z.object({ reason: text(1000) });
 
+// ---- In-app notifications (PHS-034)
+export const notification = z.object({
+  id: z.uuid(),
+  type: z.string().describe('Tipo del mensaje de origen, por ejemplo `event.opened` o `review.submitted`.'),
+  state: z.enum(['actionable', 'attended', 'info']).describe('actionable: alguien debe actuar. attended: ya se atendió. info: no requiere acción.'),
+  severity: z.enum(['critical', 'warning', 'info']),
+  title: z.string(),
+  project: z.object({ id: z.uuid(), code: z.string(), name: z.string() }),
+  owner: z.object({ id: z.uuid(), displayName: z.string() }).nullable().describe('Responsable de la acción, cuando la notificación viene de una alerta.'),
+  dueOn: z.iso.date().nullable(),
+  tab: z.enum(['alerts', 'reviews', 'changes']).describe('Pestaña del proyecto donde está el origen.'),
+  sentAt: z.iso.datetime({ offset: true }),
+  readAt: z.iso.datetime({ offset: true }).nullable(),
+});
+export const inbox = z.object({
+  unread: z.number().int(),
+  items: z.array(notification).describe('Primero lo accionable, por criticidad y plazo; al final lo ya atendido. Solo proyectos que el usuario puede consultar.'),
+});
+
 // Internal API of the Platform service.
 export const platformRoutes: RouteContract[] = [
   { method: 'get', path: '/health', summary: 'Estado del servicio y de su base de datos', tag: 'Estado', auth: 'none',
@@ -50,4 +69,11 @@ export const platformRoutes: RouteContract[] = [
       400: errors.invalidRequest, 401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
       409: { description: 'Ya estaba retirada (`already_withdrawn`).', schema: errorResponse },
     } },
+  { method: 'get', path: '/notifications', summary: 'Mis notificaciones', tag: 'Notificaciones', auth: 'session',
+    responses: { 200: { description: 'Las 100 más recientes del usuario.', schema: inbox }, 401: errors.unauthenticated } },
+  { method: 'post', path: '/notifications/read-all', summary: 'Marcar todas como leídas', tag: 'Notificaciones', auth: 'session',
+    responses: { 200: { description: 'Bandeja actualizada. Leer no resuelve alertas ni cierra acciones.', schema: inbox }, 401: errors.unauthenticated } },
+  { method: 'post', path: '/notifications/:id/read', summary: 'Marcar una notificación como leída', tag: 'Notificaciones', auth: 'session',
+    params: { id: z.uuid() },
+    responses: { 200: { description: 'Bandeja actualizada.', schema: inbox }, 401: errors.unauthenticated, 404: errors.notFound } },
 ];

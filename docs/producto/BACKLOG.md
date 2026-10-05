@@ -793,6 +793,8 @@ Criterios de aceptación:
 3. Una entrega repetida del mismo evento/destinatario/canal no crea notificaciones duplicadas.
 4. Se distinguen alertas informativas, accionables y ya atendidas según D04; fallos de entrega pueden reintentarse.
 
+**Estado (BIT-0028):** construida, en revisión. Plataforma convierte cada 30 segundos lo publicado por los servicios en notificaciones dentro de la aplicación: alertas (al responsable de la acción y al PM; al líder si es crítica), revisiones por validar, devueltas o validadas, y cambios propuestos o decididos. La bandeja ordena por lo que requiere acción, criticidad y plazo, con proyecto, responsable y botón para abrir el origen; el contador solo incluye proyectos que el usuario puede ver; leer no resuelve nada; una entrega repetida no duplica; un mensaje que falla se reintenta. Límites: sin correo ni otros canales (PHS-044); el botón abre la pestaña del proyecto, no el elemento; la bandeja muestra las 100 más recientes.
+
 
 ## E08 — Gobierno y consulta
 
@@ -815,6 +817,8 @@ Criterios de aceptación:
 3. Sin proyectos muestra vacío útil; un fallo parcial no presenta conteos incompletos como completos.
 4. Se valida que todas las tarjetas respetan permisos y que una acción relevante puede abrirse sin buscarla en otra pantalla.
 
+**Estado (BIT-0028):** construida, en revisión. "Inicio" es la primera pantalla: revisión vencida, por vencer o devuelta, alertas críticas sin causa y plan, acciones a cargo del usuario, e hitos y mitigaciones de los próximos 7 días, cada uno con "Abrir" hacia su pestaña; vacío útil sin proyectos y aviso cuando el panorama es parcial. Del criterio 2, el borrador de revisión se conserva por proyecto y usuario; no hay selector de proyecto en el inicio.
+
 ### PHS-036 — Construir Health Center del líder
 
 Como **líder**, quiero identificar dónde intervenir, para priorizar apoyo y decisiones.
@@ -832,6 +836,8 @@ Criterios de aceptación:
 1. Se muestran proyectos en riesgo/atención, revisiones vencidas, baja confianza y decisiones pendientes de su alcance.
 2. Cada foco explica el motivo y abre proyecto, revisión, cambio o acción pertinente.
 3. Filtrar por práctica o responsable actualiza lista y conteos consistentemente; ausencia de evaluaciones no se clasifica como saludable.
+
+**Estado (BIT-0028):** construida, en revisión. La misma pantalla "Inicio" muestra a quien decide o gobierna los proyectos en riesgo o en atención, confianza baja, revisiones vencidas y lo que espera su decisión (revisiones, cambios, causas y planes), con el motivo y acceso directo; filtros por práctica y PM que actualizan lista, focos y conteos. Dirección ve el estado sin decisiones que no le corresponden. Límite: un proyecto casi sin datos puede obtener score por la sola dimensión de equipo; se marca con confianza baja, no como sano sin más.
 
 ### PHS-037 — Construir portafolio y vista de Dirección
 

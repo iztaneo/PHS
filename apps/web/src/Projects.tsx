@@ -23,10 +23,12 @@ const STATUS: Record<string, { label: string; tone: Tone }> = {
 const StatusBadge = ({ status }: { status: string }) => <Badge tone={STATUS[status]?.tone}>{STATUS[status]?.label ?? status}</Badge>;
 const NO_FILTERS: ProjectFilters = { q: '', clientId: '', serviceTypeCode: '', status: '', page: 1 };
 
-type Screen = { name: 'list' } | { name: 'new' } | { name: 'detail'; id: string; created?: boolean };
+type Screen = { name: 'list' } | { name: 'new' } | { name: 'detail'; id: string; created?: boolean; tab?: string; n?: number };
 
-export function Projects({ user }: { user: SessionUser }) {
-  const [screen, setScreen] = useState<Screen>({ name: 'list' });
+export function Projects({ user, target }: { user: SessionUser; target?: { id: string; tab: string; n: number } }) {
+  const [screen, setScreen] = useState<Screen>(target ? { name: 'detail', ...target } : { name: 'list' });
+  // Opening a project from the home page or a notification, also when this screen is already showing.
+  useEffect(() => { if (target) setScreen({ name: 'detail', ...target }); }, [target?.n]);
   const creatable = user.memberships.filter((m) => m.role !== 'director');
   const practices = [...new Map(creatable.map((m) => [m.practiceId, m.practiceName])).entries()];
 
@@ -37,7 +39,7 @@ export function Projects({ user }: { user: SessionUser }) {
     );
   }
   if (screen.name === 'detail') {
-    return <ProjectCard id={screen.id} created={screen.created} onBack={() => setScreen({ name: 'list' })} />;
+    return <ProjectCard key={`${screen.id}-${screen.n ?? 0}`} id={screen.id} created={screen.created} initialTab={screen.tab as Tab | undefined} onBack={() => setScreen({ name: 'list' })} />;
   }
   return (
     <ProjectList canCreate={practices.length > 0} onNew={() => setScreen({ name: 'new' })}
@@ -316,7 +318,7 @@ const TABS: readonly (readonly [Tab, string])[] = [
   ['health', 'Salud'], ['reviews', 'Revisión'], ['alerts', 'Alertas y acciones'], ['card', 'Ficha'], ['team', 'Equipo'], ['milestones', 'Hitos'], ['risks', 'Riesgos'], ['baseline', 'Línea base'], ['changes', 'Cambios'], ['finance', 'Economía'],
 ];
 
-function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; onBack: () => void }) {
+function ProjectCard({ id, created, initialTab, onBack }: { id: string; created?: boolean; initialTab?: Tab; onBack: () => void }) {
   const [project, setProject] = useState<ProjectDetail>();
   const [values, setValues] = useState<FormValues>();
   // What the form showed when the user started editing; only fields that differ from it are sent.
@@ -327,7 +329,7 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
   const [conflict, setConflict] = useState(false);
   const [notice, setNotice] = useState(created ? 'Proyecto creado.' : undefined);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<Tab>(created ? 'card' : 'health');
+  const [tab, setTab] = useState<Tab>(initialTab ?? (created ? 'card' : 'health'));
 
   async function load(keepForm = false) {
     try {

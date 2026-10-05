@@ -257,6 +257,23 @@ export interface SchedulerStatus {
   intervalSeconds: number; lastRun: { startedAt: string; finishedAt: string | null; projects: number; failures: number } | null;
 }
 
+export interface AppNotification {
+  id: string; type: string; state: 'actionable' | 'attended' | 'info'; severity: 'critical' | 'warning' | 'info'; title: string;
+  project: { id: string; code: string; name: string }; owner: Person | null; dueOn: string | null; tab: string; sentAt: string; readAt: string | null;
+}
+export interface Inbox { unread: number; items: AppNotification[] }
+export interface CenterProject {
+  id: string; code: string; name: string; status: string; practiceId: string; practiceName: string; clientName: string; pmName: string; mine: boolean;
+  assessed: boolean; score: string | null; band: 'healthy' | 'attention' | 'risk' | null; confidenceLevel: 'high' | 'medium' | 'low' | null;
+  review: { status: 'open' | 'overdue' | 'submitted' | 'returned'; dueOn: string } | null;
+  counts: { criticalAlerts: number; overdueActions: number; upcomingMilestones: number; upcomingRisks: number; pendingDecisions: number };
+}
+export interface FocusItem {
+  kind: string; severity: 'critical' | 'warning' | 'info'; projectId: string; projectName: string; subject: string | null; count: number;
+  dueOn: string | null; tab: string;
+}
+export interface HealthCenter { today: string; projects: CenterProject[]; focus: FocusItem[]; incomplete: boolean }
+
 export interface Responsibilities4 { milestones: number; risks: number; renewals: number; tasks: number }
 
 export type ProjectChanges = Partial<Omit<ProjectInput, 'practiceId' | 'code' | 'clientName'>>;
@@ -406,6 +423,10 @@ export const api = {
     call<Change>('POST', `/api/v1/projects/${id}/changes/${changeId}/decision`, { decision, comment }, key),
   assessment: (id: string) => call<Assessment>('GET', `/api/v1/assessments/${id}`),
   outlook: (id: string) => call<Outlook>('GET', `/api/v1/assessments/${id}/outlook`),
+  center: () => call<HealthCenter>('GET', '/api/v1/governance/center'),
+  notifications: () => call<Inbox>('GET', '/api/v1/notifications'),
+  readNotification: (id: string) => call<Inbox>('POST', `/api/v1/notifications/${id}/read`),
+  readAllNotifications: () => call<Inbox>('POST', '/api/v1/notifications/read-all'),
   scheduler: () => call<SchedulerStatus>('GET', '/api/v1/governance/scheduler'),
   finance: (id: string) => call<FinanceSummary>('GET', `/api/v1/projects/${id}/finance`),
   recordObservation: (id: string, input: { effectiveOn: string; totalCost: string; totalEffortHours: string | null; source: string; supersedesId: string | null }, key: string) =>

@@ -261,6 +261,40 @@ export const schedulerStatus = z.object({
   }).nullable(),
 });
 
+// ---- Health Center (PHS-035, PHS-036)
+export const centerProject = z.object({
+  id: z.uuid(), code: z.string(), name: z.string(), status: z.string(), practiceId: z.uuid(), practiceName: z.string(), clientName: z.string(), pmName: z.string(),
+  mine: z.boolean().describe('true: el usuario es el PM del proyecto.'),
+  assessed: z.boolean().describe('false: no se pudo calcular la evaluación; no equivale a "sin evaluación".'),
+  score: score.describe('null: sin evaluación; nunca se presenta como saludable.'),
+  band: z.enum(['healthy', 'attention', 'risk']).nullable(),
+  confidenceLevel: confidenceLevel.nullable(),
+  review: z.object({ status: z.enum(['open', 'overdue', 'submitted', 'returned']), dueOn: z.iso.date() }).nullable().describe('Ciclo que espera envío, corrección o validación.'),
+  counts: z.object({
+    criticalAlerts: z.number().int().describe('Alertas críticas sin causa y plan.'),
+    overdueActions: z.number().int(),
+    upcomingMilestones: z.number().int().describe('Hitos que vencen en los próximos 7 días.'),
+    upcomingRisks: z.number().int().describe('Mitigaciones que vencen en los próximos 7 días.'),
+    pendingDecisions: z.number().int().describe('Revisiones, cambios y respuestas que esperan decisión del usuario; 0 si no decide en el proyecto.'),
+  }),
+});
+export const focusItem = z.object({
+  kind: z.enum(['review_overdue', 'review_due', 'review_returned', 'review_to_validate', 'change_to_decide', 'response_to_validate',
+    'alerts_untreated', 'my_action', 'project_at_risk', 'project_in_attention', 'low_confidence', 'milestone_due', 'risk_due']),
+  severity: z.enum(['critical', 'warning', 'info']),
+  projectId: z.uuid(), projectName: z.string(),
+  subject: z.string().nullable().describe('Título del elemento, o el score o la confianza cuando el foco es el proyecto.'),
+  count: z.number().int(),
+  dueOn: z.iso.date().nullable(),
+  tab: z.enum(['health', 'reviews', 'alerts', 'milestones', 'risks', 'changes']).describe('Pestaña del proyecto donde se atiende.'),
+});
+export const healthCenter = z.object({
+  today: z.iso.date(),
+  projects: z.array(centerProject).describe('Proyectos no cerrados del alcance del usuario, del score más bajo al más alto; sin evaluación al final.'),
+  focus: z.array(focusItem).describe('Qué atender, por criticidad y después por plazo.'),
+  incomplete: z.boolean().describe('true: faltó incluir algo; los conteos no son el panorama completo.'),
+});
+
 // Internal API of the Health service.
 export const healthRoutes: RouteContract[] = [
   { method: 'get', path: '/health', summary: 'Estado del servicio y de su base de datos', tag: 'Estado', auth: 'none',
@@ -274,6 +308,8 @@ export const healthRoutes: RouteContract[] = [
   { method: 'get', path: '/assessments/:projectId/outlook', summary: 'Tendencia entre ciclos y proyección de los próximos', tag: 'Salud', auth: 'session',
     params: { projectId: z.uuid() },
     responses: { 200: { description: 'Tendencia y presión de los compromisos que vencen en el horizonte configurado.', schema: outlook }, 401: errors.unauthenticated, 404: errors.notFound } },
+  { method: 'get', path: '/center', summary: 'Health Center: qué atender hoy en mis proyectos', tag: 'Salud', auth: 'session',
+    responses: { 200: { description: 'Según el papel del usuario en cada proyecto: lo que debe hacer como PM, lo que debe decidir como líder y dónde mirar como quien gobierna.', schema: healthCenter }, 401: errors.unauthenticated } },
   { method: 'get', path: '/scheduler', summary: 'Estado del proceso programado', tag: 'Estado', auth: 'session',
     responses: { 200: { description: 'Última pasada que actualizó alertas, acciones y evaluaciones sin intervención de usuarios.', schema: schedulerStatus }, 401: errors.unauthenticated } },
   { method: 'get', path: '/projects/:projectId/events', summary: 'Eventos de salud del proyecto', tag: 'Eventos y acciones', auth: 'session',

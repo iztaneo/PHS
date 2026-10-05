@@ -59,6 +59,7 @@ Salud y Plataforma se construyeron el 2026-10-04, con lo que existen los cuatro 
 - **Llamadas entre servicios.** Salud y Plataforma no repiten las reglas de alcance: reenvían al servicio Proyectos la identidad que firmó el gateway y le preguntan si el usuario puede ver el proyecto o actualizar el elemento. Validado en ejecución. Costo: una o dos llamadas HTTP adicionales por petición y dependencia de que Proyectos esté disponible.
 - **Evaluación al consultar.** Mientras no exista el proceso programado (PHS-033), Salud calcula y guarda la evaluación la primera vez que se pide para una versión de los datos y un día. Un `GET` puede escribir; la clave de idempotencia evita duplicados.
 - **Roles de base.** Salud y Plataforma se conectan con sus propios usuarios; cada uno escribe solo sus tablas.
+- **Despacho del outbox (BIT-0028).** Plataforma toma los mensajes pendientes con `FOR UPDATE SKIP LOCKED`, de modo que varias instancias no procesan el mismo; decide los destinatarios leyendo las tablas de los otros servicios y marca el mensaje como procesado en la misma transacción que crea las notificaciones. Un mensaje que falla se reintenta más tarde, cada vez más espaciado.
 - **Proceso programado (BIT-0026).** Corre dentro del servicio Salud con un temporizador, no como proceso aparte: cada pasada repite todo el trabajo, que es idempotente, y un candado de PostgreSQL garantiza una sola pasada a la vez entre instancias. La evaluación al consultar se conserva para reflejar un cambio de inmediato.
 
 ## Envío de la revisión entre Salud y Proyectos (BIT-0025)

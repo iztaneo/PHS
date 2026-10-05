@@ -3,6 +3,7 @@ import { PG_POOL, createPool, requireEnv } from '@phs/service-kit';
 import type pg from 'pg';
 import { AssessmentsController } from './assessments.controller.js';
 import { AssessmentsService } from './assessments.service.js';
+import { CenterService } from './center.service.js';
 import { GovernanceController } from './governance.controller.js';
 import { GovernanceService } from './governance.service.js';
 import { HealthController } from './health.controller.js';
@@ -36,6 +37,11 @@ import { SchedulerService } from './scheduler.service.js';
         // Every five minutes unless configured otherwise; 0 turns the timer off.
         new SchedulerService(pool, governance, assessments, Number(process.env.HEALTH_SCHEDULER_SECONDS ?? 300) || 0),
       inject: [PG_POOL, GovernanceService, AssessmentsService],
+    },
+    {
+      provide: CenterService,
+      useFactory: (pool: pg.Pool, projects: ProjectsClient, assessments: AssessmentsService) => new CenterService(pool, projects, assessments),
+      inject: [PG_POOL, ProjectsClient, AssessmentsService],
     },
     { provide: HolidayService, useFactory: (pool: pg.Pool) => new HolidayService(pool), inject: [PG_POOL] },
     {

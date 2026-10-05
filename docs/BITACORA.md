@@ -11,7 +11,8 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
 - **R3 construido (en revisión, sin aceptar):** alertas, acciones y causa y plan (BIT-0024); ciclo de revisión, Health Review, validación y festivos (BIT-0025); confianza explicada, tendencia, proyección y proceso programado (BIT-0026). Lo que falta de cada historia está en su estado en el backlog.
-- **Todavía no implementado:** todo R4 (alertas y notificaciones, despacho del outbox, Health Center, portafolio, timeline e historial, modelo PHF, consulta de pausados y cerrados) y R5 (piloto).
+- **R4 en curso (en revisión, sin aceptar):** notificaciones dentro de la aplicación con despacho del outbox (PHS-034) y Health Center de PM, líder y Dirección (PHS-035, PHS-036), BIT-0028.
+- **Todavía no implementado:** de R4, portafolio (PHS-037, requiere D10), timeline e historial (PHS-038), modelo PHF (PHS-039) y consulta de pausados y cerrados (PHS-046); todo R5 (piloto).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
@@ -22,7 +23,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Datos de demostración:** `seed:demo` carga seis usuarios y cinco proyectos (DEMO-001 a DEMO-005); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** prueba y aceptación del usuario de R1 a R3; después R4, empezando por alertas y notificaciones (PHS-034) y el Health Center del PM (PHS-035). Por confirmar: las interpretaciones marcadas en la tabla de BIT-0025 de DECISIONES, D08 y los supuestos de BIT-0024. Abiertas: D07 y D10 (D10 se necesita para el portafolio).
+- **Siguiente paso funcional:** prueba y aceptación del usuario de R1 a R3 y de lo construido de R4; después PHS-038, PHS-039 y PHS-046, y PHS-037 cuando el usuario defina D10. Por confirmar: las interpretaciones marcadas en la tabla de BIT-0025 de DECISIONES, D08 y los supuestos de BIT-0024, BIT-0026 y BIT-0028. Abiertas: D07 y D10.
 
 ## Cómo se mantiene
 
@@ -1045,6 +1046,48 @@ Borrar lo viejo y conservarlo en un histórico. Entre tabla y archivo eligió la
 ### Pendientes y siguiente paso
 
 Aceptación del usuario de R1 a R3; después R4. Siguiente entrada: BIT-0028.
+
+## BIT-0028 — Notificaciones y Health Center
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** primer incremento de R4: que cada usuario sepa qué pasó y qué atender sin recorrer proyecto por proyecto.
+
+**Relación:** PHS-034, PHS-035, PHS-036; termina el despacho pendiente de PHS-033; D04, D05; RN-15 a RN-18, RN-20.
+
+**Identificación:** commit con prefijo `BIT-0028`.
+
+### Trabajo realizado
+
+- **Plataforma.** [notification.service.ts](../apps/platform/src/notification.service.ts) y su controlador:
+  - Despacho del outbox cada `PLATFORM_DISPATCH_SECONDS` (30 por defecto): entrega una vez por mensaje, destinatario y canal; los mensajes que nadie necesita se marcan como procesados; el que falla se reintenta.
+  - Destinatarios: alerta al responsable de su acción y al PM, y al líder si es crítica; revisión enviada al líder; revisión devuelta o validada a su autor; cambio propuesto al líder y cambio decidido a quien lo propuso.
+  - Bandeja por usuario con estado (requiere acción, informativa, ya atendida), criticidad, proyecto, responsable y plazo; marcar una o todas como leídas.
+- **Salud.** [center.service.ts](../apps/health/src/center.service.ts): `GET /center` pide a Proyectos los proyectos del alcance del usuario y arma, según su papel en cada uno, la lista de qué atender y el estado de cada proyecto.
+- **Gateway y contratos.** `/api/v1/notifications` hacia Plataforma; contratos de bandeja y Health Center.
+- **Web.** [Home.tsx](../apps/web/src/Home.tsx): "Inicio" como primera pantalla y "Notificaciones" con contador en el menú, actualizado cada minuto; desde ambas se abre el proyecto en la pestaña que corresponde.
+
+### Archivos
+
+`apps/platform/src/{notification.service,notification.controller,app.module}.ts`, `apps/platform/test/notifications.test.ts`, `apps/health/src/{center.service,projects.client,review.controller,app.module}.ts`, `apps/health/test/center.int.test.ts`, `apps/gateway/src/routes.ts`, `packages/contracts/src/{platform,health,gateway}.ts`, `docs/api/*.openapi.json`, `docs/api/README.md`, `apps/web/src/{Home,App,Projects}.tsx`, `apps/web/src/api.ts`, `.env.example`, y documentación: backlog, mapa, ADR-002 y esta bitácora.
+
+### Decisiones y supuestos
+
+- El usuario pidió continuar; sin decisiones nuevas suyas.
+- Supuestos míos: a quién se notifica cada cosa (lista de arriba); "próximo" son 7 días; una revisión "por vencer" es la que vence en 2 días o menos; al PM no se le presenta "proyecto en riesgo" de su propio proyecto como foco, sino sus causas; el Health Center es una sola pantalla para los tres perfiles.
+- No se necesitaron datos de demostración nuevos: las notificaciones salen de lo que los servicios ya habían publicado.
+
+### Validación y límites
+
+- `pnpm typecheck` y `pnpm build` sin errores. `pnpm test`: 157 pruebas en 8 paquetes (Plataforma 12, tres nuevas; Salud 28, tres nuevas). `pnpm db:test`: 15 de 15.
+- Por el gateway con los usuarios de demostración: el PM tiene 9 notificaciones y 7 focos; el líder 10 notificaciones y 9 focos, entre ellos dos revisiones por validar y los dos proyectos en riesgo; Dirección no tiene notificaciones y ve los dos proyectos en riesgo y dos con confianza baja.
+- Al arrancar por primera vez, el despacho procesó todo lo publicado desde que existe el outbox, así que la bandeja incluye avisos de hechos anteriores; los ya resueltos aparecen como atendidos.
+- **No comprobado:** las pantallas no se revisaron en el navegador. No hay prueba de dos despachos simultáneos.
+- Límites: sin correo; el Health Center calcula la evaluación de cada proyecto al consultarse, lo que no se ha medido con muchos proyectos; a Dirección no le llegan notificaciones.
+
+### Pendientes y siguiente paso
+
+Prueba del usuario. Después PHS-038, PHS-039 y PHS-046; PHS-037 requiere D10. Siguiente entrada: BIT-0029.
 
 ## Plantilla para próximas entradas
 

@@ -795,6 +795,333 @@
         }
       }
     },
+    "/center": {
+      "get": {
+        "summary": "Health Center: qué atender hoy en mis proyectos",
+        "tags": [
+          "Salud"
+        ],
+        "security": [
+          {
+            "gatewaySignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Según el papel del usuario en cada proyecto: lo que debe hacer como PM, lo que debe decidir como líder y dónde mirar como quien gobierna.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "today": {
+                      "type": "string",
+                      "format": "date",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                    },
+                    "projects": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "practiceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "practiceName": {
+                            "type": "string"
+                          },
+                          "clientName": {
+                            "type": "string"
+                          },
+                          "pmName": {
+                            "type": "string"
+                          },
+                          "mine": {
+                            "type": "boolean",
+                            "description": "true: el usuario es el PM del proyecto."
+                          },
+                          "assessed": {
+                            "type": "boolean",
+                            "description": "false: no se pudo calcular la evaluación; no equivale a \"sin evaluación\"."
+                          },
+                          "score": {
+                            "description": "null: sin evaluación; nunca se presenta como saludable.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "band": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "healthy",
+                                  "attention",
+                                  "risk"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "confidenceLevel": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "high",
+                                  "medium",
+                                  "low"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "review": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "open",
+                                      "overdue",
+                                      "submitted",
+                                      "returned"
+                                    ]
+                                  },
+                                  "dueOn": {
+                                    "type": "string",
+                                    "format": "date",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                                  }
+                                },
+                                "required": [
+                                  "status",
+                                  "dueOn"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Ciclo que espera envío, corrección o validación."
+                          },
+                          "counts": {
+                            "type": "object",
+                            "properties": {
+                              "criticalAlerts": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "Alertas críticas sin causa y plan."
+                              },
+                              "overdueActions": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "upcomingMilestones": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "Hitos que vencen en los próximos 7 días."
+                              },
+                              "upcomingRisks": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "Mitigaciones que vencen en los próximos 7 días."
+                              },
+                              "pendingDecisions": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991,
+                                "description": "Revisiones, cambios y respuestas que esperan decisión del usuario; 0 si no decide en el proyecto."
+                              }
+                            },
+                            "required": [
+                              "criticalAlerts",
+                              "overdueActions",
+                              "upcomingMilestones",
+                              "upcomingRisks",
+                              "pendingDecisions"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "code",
+                          "name",
+                          "status",
+                          "practiceId",
+                          "practiceName",
+                          "clientName",
+                          "pmName",
+                          "mine",
+                          "assessed",
+                          "score",
+                          "band",
+                          "confidenceLevel",
+                          "review",
+                          "counts"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Proyectos no cerrados del alcance del usuario, del score más bajo al más alto; sin evaluación al final."
+                    },
+                    "focus": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "review_overdue",
+                              "review_due",
+                              "review_returned",
+                              "review_to_validate",
+                              "change_to_decide",
+                              "response_to_validate",
+                              "alerts_untreated",
+                              "my_action",
+                              "project_at_risk",
+                              "project_in_attention",
+                              "low_confidence",
+                              "milestone_due",
+                              "risk_due"
+                            ]
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": [
+                              "critical",
+                              "warning",
+                              "info"
+                            ]
+                          },
+                          "projectId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "projectName": {
+                            "type": "string"
+                          },
+                          "subject": {
+                            "description": "Título del elemento, o el score o la confianza cuando el foco es el proyecto.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "dueOn": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "tab": {
+                            "type": "string",
+                            "enum": [
+                              "health",
+                              "reviews",
+                              "alerts",
+                              "milestones",
+                              "risks",
+                              "changes"
+                            ],
+                            "description": "Pestaña del proyecto donde se atiende."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "severity",
+                          "projectId",
+                          "projectName",
+                          "subject",
+                          "count",
+                          "dueOn",
+                          "tab"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Qué atender, por criticidad y después por plazo."
+                    },
+                    "incomplete": {
+                      "type": "boolean",
+                      "description": "true: faltó incluir algo; los conteos no son el panorama completo."
+                    }
+                  },
+                  "required": [
+                    "today",
+                    "projects",
+                    "focus",
+                    "incomplete"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/scheduler": {
       "get": {
         "summary": "Estado del proceso programado",
