@@ -1369,6 +1369,35 @@ Implementar una prueba controlada de fallo/recuperación y restauración de resp
 
 Revisar la primera corrida. Después AT-16 y D07. Siguiente entrada: BIT-0036.
 
+## BIT-0036 — Corrección de la instalación en integración continua
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** corregir el fallo de la primera corrida del flujo creado en BIT-0035.
+
+**Relación:** PHS-042; BIT-0035.
+
+**Identificación:** commit con prefijo `BIT-0036`.
+
+### Trabajo realizado
+
+- La primera corrida (37380401871) falló en "Dependencias" con `ERR_PNPM_IGNORED_BUILDS`: con `CI=true`, pnpm 12 no continúa si un paquete trae script de instalación sin decisión explícita. El paquete es `@scarf/scarf`, telemetría de instalación que llega con `swagger-ui-dist`.
+- `pnpm-workspace.yaml`: `allowBuilds` declara que ese script no se ejecuta.
+
+### Archivos
+
+`pnpm-workspace.yaml` y esta bitácora.
+
+### Validación y límites
+
+- Reproducido en local con `CI=true pnpm install --frozen-lockfile`: fallaba igual que en GitHub y pasa con el cambio; el lockfile no cambió.
+- Primer intento fallido: la clave `ignoredBuiltDependencies` no tiene efecto en pnpm 12; la correcta es `allowBuilds`.
+- Los pasos posteriores del flujo (compilar, pruebas, e2e) aún no se han ejecutado en GitHub; se sabrá con la corrida de este commit.
+
+### Pendientes y siguiente paso
+
+Revisar la corrida. Siguiente entrada: BIT-0037.
+
 ## Plantilla para próximas entradas
 
 ```text

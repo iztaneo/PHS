@@ -3,3 +3,7 @@ packages:
   - packages/*
 minimumReleaseAgeExclude:
   - lucide-react@1.51.0
+# Paquetes con script de instalación que no se ejecuta a propósito. @scarf/scarf solo envía
+# telemetría de instalación (llega con swagger-ui-dist); pnpm exige declararlo para no fallar en CI.
+allowBuilds:
+  '@scarf/scarf': false
