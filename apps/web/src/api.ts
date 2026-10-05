@@ -163,6 +163,41 @@ export interface HealthEvent {
   task: Task | null; canRespond: boolean; canValidate: boolean;
 }
 
+export type Cadence = 'weekly' | 'fortnightly' | 'monthly';
+export type ReviewTopic = 'schedule' | 'milestones' | 'risks' | 'client' | 'finance' | 'scope' | 'team';
+export type ConfidenceLevel = 'high' | 'medium' | 'low';
+export interface ReviewFinance { totalCost: string; totalEffortHours: string | null }
+export interface Holiday { day: string; name: string }
+export type Climate = 'good' | 'tense' | 'critical';
+export interface ReviewPolicyInput {
+  cadence: Cadence; nextDueOn: string; forecastCycles: number; evidenceRequired: boolean; leadValidationRequired: boolean; autoTasks: boolean;
+}
+export interface Expectation {
+  kind: 'milestone' | 'risk' | 'task' | 'renewal' | 'change' | 'alert'; id: string; title: string; dueOn: string | null;
+  overdue: boolean; critical: boolean; blocking: boolean;
+}
+export interface DraftPayload {
+  nothingChanged: boolean; topics: ReviewTopic[]; notes: Partial<Record<ReviewTopic, string>>; clientClimate: Climate | null;
+  supportText: string; activeSeconds: number; declaredConfidence: ConfidenceLevel | null; finance: ReviewFinance | null;
+}
+export interface Review {
+  id: string; revisionNo: number; author: Person; submittedAt: string; effectiveOn: string; late: boolean; nothingChanged: boolean;
+  topics: ReviewTopic[]; notes: Partial<Record<ReviewTopic, string>>; clientClimate: Climate | null; supportText: string | null;
+  durationSeconds: number | null; expectations: Expectation[]; declaredConfidence: ConfidenceLevel | null; finance: ReviewFinance | null;
+  assessment: null | { score: string | null; band: 'healthy' | 'attention' | 'risk' | null };
+  validation: null | { decision: 'validated' | 'returned'; validator: Person; decidedAt: string; comment: string };
+}
+export interface ReviewCycle {
+  id: string; projectId: string; projectName: string; startsOn: string; dueOn: string;
+  status: 'open' | 'overdue' | 'submitted' | 'returned' | 'validated' | 'closed';
+  policy: { cadence: Cadence; forecastCycles: number; evidenceRequired: boolean; leadValidationRequired: boolean };
+  expectations: Expectation[]; draft: null | { revision: number; payload: DraftPayload; updatedAt: string }; reviews: Review[];
+  lastClimate: Climate | null; projectRevision: number; canSubmit: boolean; canValidate: boolean;
+}
+export interface ReviewSchedule {
+  projectId: string; policy: (ReviewPolicyInput & { revision: number }) | null; canConfigure: boolean; cycles: ReviewCycle[];
+}
+
 export interface StatusView {
   status: string; since: string | null; daysInStatus: number | null; allowed: string[]; justificationRequired: boolean;
   justificationAfterDays: number; open: Responsibilities4;
@@ -177,7 +212,7 @@ export interface Evidence {
   id: string; text: string | null; file: { name: string; mime: string; sizeBytes: number } | null; uploadedBy: Person;
   uploadedAt: string; addendum: boolean; withdrawn: { by: Person; at: string; reason: string } | null;
 }
-export type EvidenceKind = 'milestone' | 'risk' | 'change';
+export type EvidenceKind = 'milestone' | 'risk' | 'change' | 'review';
 
 interface BeforeAfter { before: string | null; proposed: string | null }
 export interface Change {
@@ -304,6 +339,19 @@ export const api = {
   baselines: (id: string) => call<Baseline[]>('GET', `/api/v1/projects/${id}/baselines`),
   publishBaseline: (id: string, input: { expectedRevision: number; scope: string; budget: string | null; effortHours: string | null }, key: string) =>
     call<Baseline>('POST', `/api/v1/projects/${id}/baselines`, input, key),
+  reviewSchedule: (id: string) => call<ReviewSchedule>('GET', `/api/v1/governance/projects/${id}/review-schedule`),
+  saveReviewPolicy: (id: string, input: ReviewPolicyInput, expectedRevision: number) =>
+    call<ReviewSchedule>('PUT', `/api/v1/governance/projects/${id}/review-policy`, { ...input, expectedRevision }),
+  saveReviewDraft: (cycleId: string, payload: DraftPayload, expectedRevision: number) =>
+    call<ReviewCycle>('PUT', `/api/v1/governance/cycles/${cycleId}/draft`, { payload, expectedRevision }),
+  submitReview: (cycleId: string, payload: DraftPayload, expectedProjectRevision: number, key: string) =>
+    call<ReviewCycle>('POST', `/api/v1/governance/cycles/${cycleId}/reviews`, { ...payload, expectedProjectRevision }, key),
+  validateReview: (reviewId: string, decision: 'validated' | 'returned', comment: string) =>
+    call<ReviewCycle>('POST', `/api/v1/governance/reviews/${reviewId}/validation`, { decision, comment }),
+  holidays: (year: number) => call<Holiday[]>('GET', `/api/v1/governance/holidays?year=${year}`),
+  addHoliday: (day: string, name: string) => call<Holiday[]>('POST', '/api/v1/governance/holidays', { day, name }),
+  removeHoliday: (day: string) => call<Holiday[]>('DELETE', `/api/v1/governance/holidays/${day}`),
+  pendingReviews: () => call<ReviewCycle[]>('GET', '/api/v1/governance/reviews/pending'),
   events: (id: string) => call<HealthEvent[]>('GET', `/api/v1/governance/projects/${id}/events`),
   respondEvent: (eventId: string, input: { cause: string; kind: 'remediation' | 'replan'; plan: string; changeId: string | null }) =>
     call<HealthEvent>('POST', `/api/v1/governance/events/${eventId}/responses`, input),
@@ -394,6 +442,16 @@ const MESSAGES: Record<string, string> = {
   invalid_completion_date: 'La fecha de cumplimiento no puede ser futura.',
   invalid_effective_date: 'La fecha efectiva no puede ser futura.',
   already_superseded: 'Esa observación ya fue corregida. Corrige la más reciente.',
+  due_date_in_past: 'La próxima fecha de revisión no puede ser anterior a hoy.',
+  project_not_active: 'El proyecto está pausado o cerrado; no admite revisiones mientras siga así.',
+  review_already_submitted: 'Este ciclo ya tiene una revisión enviada.',
+  support_required: 'Escribe el soporte de la revisión: qué respalda lo que reportas.',
+  finance_rejected: 'No se pudieron registrar el costo y el esfuerzo. Revisa las cifras.',
+  holiday_taken: 'Ese día ya está registrado como festivo.',
+  climate_required: 'Indica el clima del cliente.',
+  nothing_changed_blocked: 'No puedes enviar "nada cambió" mientras haya alertas críticas sin causa y plan.',
+  stale_review: 'El PM envió una versión más reciente; revisa esa.',
+  validation_not_required: 'Este ciclo no exige validación del líder.',
   change_required: 'Para replanificar, elige la propuesta de cambio que mueve la fecha.',
   response_not_expected: 'Esta alerta no requiere causa y plan, o ya está resuelta.',
   response_already_submitted: 'Ya hay una respuesta en espera de validación o validada.',

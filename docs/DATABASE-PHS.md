@@ -196,6 +196,10 @@ Con estas dos migraciones el esquema tiene 33 tablas. `evidence_withdrawal` la e
 
 `011_event_response.sql` aplica D04: `event_response` guarda cada versión de la causa y el plan que el PM da a una alerta (remediación, o replanificación vinculada a una propuesta de cambio del mismo proyecto) y `event_response_validation` la única decisión del líder sobre cada versión. Ambas son de solo inserción y las escribe Salud. Con ellas el esquema tiene 35 tablas.
 
+`012_review_schedule.sql` aplica D03: `review_policy` gana `anchor_on` (la fecha a la que se ancla el calendario: su día de la semana o del mes es el día de corte), `revision` para el control de concurrencia, `updated_at` y `updated_by`. No añade tablas.
+
+`013_holiday.sql` añade `holiday` (día, nombre, quién lo registró): los días en que no vence ninguna revisión. La escribe Salud; se puede borrar un día capturado por error y la auditoría conserva quién lo hizo. Con ella el esquema tiene 36 tablas.
+
 ## Instalación y validación
 
 Desde BIT-0010 las migraciones se aplican con [dbmate](https://github.com/amacneil/dbmate), que ejecuta cada archivo en una transacción y registra las aplicadas en `public.schema_migrations`. Los archivos ya no contienen `BEGIN/COMMIT` propios y no deben aplicarse con `psql -f`. No tienen reversión destructiva: el bloque `migrate:down` falla a propósito; se corrige con una migración nueva o restaurando un respaldo.
@@ -225,8 +229,10 @@ npx pnpm@12.9.1 db:local:stop
 | `009_evidence_addendum_and_withdrawal.sql` | Adendas y retiro de evidencias. |
 | `010_project_status_log_and_renewal_outcome.sql` | Historial de estado con motivos y resultado de renovaciones. |
 | `011_event_response.sql` | Causa y plan de una alerta y su validación (D04). |
+| `012_review_schedule.sql` | Ancla y versión de la política de revisión (D03). |
+| `013_holiday.sql` | Calendario de días festivos (D03). |
 
-Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso), `006_admin.sql` (3 rechazos), `007_idempotency.sql` (6 rechazos), `008_context.sql`, `009_evidence.sql` (6 rechazos) `010_status_and_renewals.sql` (8 rechazos) y `011_event_response.sql` (9 rechazos). Se ejecutan con el propietario del esquema.
+Pruebas en `db/tests`: `001_integrity.sql` (11 rechazos), `002_credentials.sql` (8), `003_sessions.sql` (7), `004_hardening.sql` (14) `005_roles.sql` (12 denegaciones de permiso), `006_admin.sql` (3 rechazos), `007_idempotency.sql` (6 rechazos), `008_context.sql`, `009_evidence.sql` (6 rechazos) `010_status_and_renewals.sql` (8 rechazos) `011_event_response.sql` (9 rechazos) `012_review_schedule.sql` (5 rechazos) y `013_holiday.sql` (4 rechazos). Se ejecutan con el propietario del esquema.
 
 ## Evolución pendiente
 

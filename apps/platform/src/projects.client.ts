@@ -1,6 +1,6 @@
 import { INTERNAL_AUTH_HEADER, type ProjectCapabilities } from '@phs/service-kit';
 
-export type TargetKind = 'milestone' | 'risk' | 'change';
+export type TargetKind = 'milestone' | 'risk' | 'change' | 'review';
 
 export interface TargetAccess {
   capabilities: ProjectCapabilities;
@@ -31,7 +31,7 @@ export class ProjectsClient {
     return project?.capabilities.view ? project.capabilities : null;
   }
 
-  async target(signedIdentity: string, projectId: string, kind: TargetKind, id: string): Promise<TargetAccess | null> {
+  async target(signedIdentity: string, projectId: string, kind: Exclude<TargetKind, 'review'>, id: string): Promise<TargetAccess | null> {
     const capabilities = await this.capabilities(signedIdentity, projectId);
     if (!capabilities) return null;
     const path = { milestone: 'milestones', risk: 'risks', change: 'changes' }[kind];

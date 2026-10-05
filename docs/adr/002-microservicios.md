@@ -60,6 +60,15 @@ Salud y Plataforma se construyeron el 2026-10-04, con lo que existen los cuatro 
 - **Evaluación al consultar.** Mientras no exista el proceso programado (PHS-033), Salud calcula y guarda la evaluación la primera vez que se pide para una versión de los datos y un día. Un `GET` puede escribir; la clave de idempotencia evita duplicados.
 - **Roles de base.** Salud y Plataforma se conectan con sus propios usuarios; cada uno escribe solo sus tablas.
 
+## Envío de la revisión entre Salud y Proyectos (BIT-0025)
+
+El usuario decidió conservar la funcionalidad del prototipo. Así quedó el protocolo propuesto arriba:
+
+- Hitos, riesgos, equipo y cambios se editan desde el formulario de la revisión con las operaciones normales de Proyectos, en el momento; no esperan al envío.
+- Costo y esfuerzo se capturan en el formulario. Al enviar, Salud valida todo lo demás y, como último paso antes de escribir, pide a Proyectos que registre la observación económica con la identidad del usuario y una clave derivada de la del envío. Después guarda revisión, evaluación oficial y siguiente ciclo en una transacción.
+- Si falla algo después de registrar las cifras, estas quedan guardadas y el borrador se conserva; al reenviar, Salud ve que la observación del día ya tiene esos valores y no la repite.
+- Límite: la observación incrementa la versión del proyecto, así que un reintento tras ese fallo recibe `revision_conflict` y la pantalla pide revisar y enviar de nuevo.
+
 ## Revisión de la decisión
 
 Revisar si el acoplamiento por la base bloquea despliegues, si el protocolo de envío de revisión no logra la coherencia requerida por D02 o si el costo operativo supera la capacidad del equipo. Registrar una nueva ADR en lugar de sustituir esta.

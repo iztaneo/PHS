@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { errorResponse, errors, healthReport, text, type RouteContract } from './common.js';
 
 const person = z.object({ id: z.uuid(), displayName: z.string() });
-export const evidenceTargetKind = z.enum(['milestone', 'risk', 'change']);
+export const evidenceTargetKind = z.enum(['milestone', 'risk', 'change', 'review']);
 export const evidenceTargetQuery = z.object({
   projectId: z.uuid(),
   kind: evidenceTargetKind,

@@ -6,6 +6,7 @@ import {
 } from './api';
 import { Changes } from './Changes';
 import { Alerts } from './Governance';
+import { ReviewsTab } from './Reviews';
 import { HealthView } from './HealthView';
 import { BaselineSection, Milestones, Team } from './ProjectSections';
 import { Finance, Risks } from './RiskFinance';
@@ -310,9 +311,9 @@ function toValues(project: ProjectDetail): FormValues {
   };
 }
 
-type Tab = 'health' | 'alerts' | 'card' | 'team' | 'milestones' | 'risks' | 'baseline' | 'changes' | 'finance';
+type Tab = 'health' | 'reviews' | 'alerts' | 'card' | 'team' | 'milestones' | 'risks' | 'baseline' | 'changes' | 'finance';
 const TABS: readonly (readonly [Tab, string])[] = [
-  ['health', 'Salud'], ['alerts', 'Alertas y acciones'], ['card', 'Ficha'], ['team', 'Equipo'], ['milestones', 'Hitos'], ['risks', 'Riesgos'], ['baseline', 'Línea base'], ['changes', 'Cambios'], ['finance', 'Economía'],
+  ['health', 'Salud'], ['reviews', 'Revisión'], ['alerts', 'Alertas y acciones'], ['card', 'Ficha'], ['team', 'Equipo'], ['milestones', 'Hitos'], ['risks', 'Riesgos'], ['baseline', 'Línea base'], ['changes', 'Cambios'], ['finance', 'Economía'],
 ];
 
 function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; onBack: () => void }) {
@@ -407,6 +408,7 @@ function ProjectCard({ id, created, onBack }: { id: string; created?: boolean; o
       {tab === 'team' && <Team project={project} people={known} onChanged={() => void load(true)} />}
       {tab === 'milestones' && <Milestones project={project} people={known} onChanged={() => void load(true)} />}
       {tab === 'health' && <HealthView project={project} />}
+      {tab === 'reviews' && <ReviewsTab project={project} people={known} onChanged={() => void load(true)} onNavigate={(next) => setTab(next as Tab)} />}
       {tab === 'alerts' && <Alerts project={project} people={known} />}
       {tab === 'changes' && <Changes project={project} onChanged={() => void load(true)} />}
       {tab === 'risks' && <Risks project={project} people={known} onChanged={() => void load(true)} />}

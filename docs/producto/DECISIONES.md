@@ -57,6 +57,19 @@ Esa última precisión contradecía D05 (Dirección solo consulta; el líder apr
 | A qué aplica la exigencia de causa y plan | A toda alerta crítica: hito vencido, mitigación de riesgo vencida, desviación de proyecto y desviación financiera. |
 | Día de corte del ciclo semanal | Configurable por proyecto. |
 
+Aplicación de D02, D03 y D08 en BIT-0025. El usuario revisó estos puntos el 2026-10-05:
+
+| Tema | Cómo quedó | Estado |
+| --- | --- | --- |
+| Alcance del Health Review | Se conserva la funcionalidad del prototipo: el formulario pregunta qué cambió y cada tema abre ahí mismo hitos, riesgos, equipo o cambios; costo y esfuerzo se capturan en el formulario y se registran al enviar; clima del cliente, confianza declarada y soporte con comentario y archivo. | Decisión del usuario |
+| Revisión tardía | No desplaza el calendario: el ciclo siguiente inicia al día siguiente del envío y vence en el primer día de corte posterior; las fechas que se saltaron no se generan. | Aceptado por el usuario "por ahora" |
+| Festivos | Se consideran y son parametrizables porque cambian cada año: los mantiene el administrador. | Decisión del usuario |
+| Días inhábiles | Sábados, domingos y festivos son inhábiles (el usuario lo indicó el 2026-10-05). La revisión que vence en día inhábil pasa al siguiente día hábil; el día de corte de los ciclos siguientes no cambia. | Decisión del usuario; mover al día siguiente y no al anterior es interpretación mía |
+| Proyecto pausado o cerrado | No genera alerta de revisión vencida ni admite configurar o enviar revisiones. El usuario pidió una consulta donde se vean estos proyectos: PHS-046. | Aceptado por el usuario |
+| Día de corte | Es el día de la semana (o del mes, en la cadencia mensual) de la "próxima revisión" que se captura al configurar el ciclo. | Interpretación mía, por confirmar |
+| Vigencia (D02) | La evaluación calculada al enviar es oficial de inmediato. Devolver no la anula: abre una acción de corrección para el PM con 3 días. | Interpretación mía, por confirmar |
+| "Nada cambió" | Se rechaza si hay alertas críticas sin causa y plan. El atraso del propio ciclo no cuenta. | Interpretación mía, por confirmar |
+
 Con esto D03 y D04 quedan definidas para construir. Interpretación de implementación aún sin confirmar: cuando la causa desaparece, el evento se resuelve y su acción automática se cierra sola con una nota del sistema.
 
 ### D09 — Evidencias (confirmado el 2026-10-04, BIT-0020)

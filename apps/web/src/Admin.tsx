@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import {
-  api, errorMessage, type AdminUser, type Practice, type PracticeRole, type ServiceType,
+  api, errorMessage, type AdminUser, type Holiday, type Practice, type PracticeRole, type ServiceType,
 } from './api';
 import { Badge, Button, Card, Empty, Input, Loading, Notice, PageHeader, Tabs } from './ui';
 
@@ -9,8 +9,8 @@ const ROLES: { key: PracticeRole; label: string }[] = [
   { key: 'lead', label: 'Líder' },
   { key: 'director', label: 'Dirección' },
 ];
-type Tab = 'users' | 'practices' | 'types';
-const TABS = [['users', 'Usuarios'], ['practices', 'Prácticas'], ['types', 'Tipos de servicio']] as const;
+type Tab = 'users' | 'practices' | 'types' | 'holidays';
+const TABS = [['users', 'Usuarios'], ['practices', 'Prácticas'], ['types', 'Tipos de servicio'], ['holidays', 'Días festivos']] as const;
 
 export function Admin({ currentUserId }: { currentUserId: string }) {
   const [tab, setTab] = useState<Tab>('users');
@@ -162,6 +162,8 @@ export function Admin({ currentUserId }: { currentUserId: string }) {
           </Card>
         </div>
       )}
+
+      {tab === 'holidays' && <Holidays />}
     </>
   );
 }
@@ -205,5 +207,66 @@ function PairForm({ first, second, button, onSubmit }: {
       <Input aria-label={second} placeholder={second} required value={b} onChange={(event) => setB(event.target.value)} />
       <Button type="submit" variant="primary">{button}</Button>
     </form>
+  );
+}
+
+// Days on which no review is due (D03). They change every year, so they are kept here.
+function Holidays() {
+  const [year, setYear] = useState(() => new Date().getFullYear());
+  const [items, setItems] = useState<Holiday[]>();
+  const [day, setDay] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string>();
+  useEffect(() => {
+    setItems(undefined);
+    api.holidays(year).then(setItems).catch((f) => setError(errorMessage(f)));
+  }, [year]);
+
+  async function run(work: () => Promise<Holiday[]>, shownYear: number) {
+    setError(undefined);
+    try {
+      const saved = await work();
+      if (shownYear === year) setItems(saved); else setYear(shownYear);
+    } catch (failure) {
+      setError(errorMessage(failure));
+    }
+  }
+  function add(event: FormEvent) {
+    event.preventDefault();
+    void run(async () => { const saved = await api.addHoliday(day, name.trim()); setDay(''); setName(''); return saved; }, Number(day.slice(0, 4)));
+  }
+
+  return (
+    <div className="space-y-4">
+      {error && <Notice tone="red">{error}</Notice>}
+      <Card title="Nuevo día festivo">
+        <p className="mb-3 text-sm text-muted">Sábados y domingos ya son inhábiles. Una revisión que venza en fin de semana o en día festivo pasa al siguiente día hábil; el día de corte de los ciclos siguientes no cambia.</p>
+        <form onSubmit={add} className="flex flex-wrap items-end gap-3">
+          <Input aria-label="Fecha" type="date" required value={day} onChange={(e) => setDay(e.target.value)} className="sm:w-48" />
+          <Input aria-label="Nombre" placeholder="Nombre, por ejemplo Día de la Independencia" required maxLength={120} value={name}
+            onChange={(e) => setName(e.target.value)} className="min-w-0 flex-1" />
+          <Button type="submit" variant="primary">Agregar</Button>
+        </form>
+      </Card>
+      <Card title={`Festivos de ${year}`} actions={(
+        <span className="flex gap-2">
+          <Button size="sm" onClick={() => setYear(year - 1)}>{year - 1}</Button>
+          <Button size="sm" onClick={() => setYear(year + 1)}>{year + 1}</Button>
+        </span>
+      )}>
+        {!items && !error && <Loading />}
+        {items?.length === 0 && <Empty title={`No hay festivos registrados para ${year}`} />}
+        {items && items.length > 0 && (
+          <ul className="divide-y divide-line">
+            {items.map((h) => (
+              <li key={h.day} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
+                <span className="min-w-0 flex-1 text-sm text-ink">{h.day} · {h.name}</span>
+                <Button size="sm" variant="danger" onClick={() => { if (window.confirm(`¿Quitar el festivo del ${h.day}?`)) void run(() => api.removeHoliday(h.day), year); }}>Quitar</Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
   );
 }

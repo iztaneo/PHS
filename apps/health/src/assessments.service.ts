@@ -111,7 +111,9 @@ export class AssessmentsService {
       const loaded = await this.inputs(client, projectId);
       if (!loaded) { await client.query('ROLLBACK'); return null; }
       const { input, revision, baselineId } = loaded;
-      const key = `operational:${projectId}:${revision}:${input.today}:${RULE_SET_VERSION}`;
+      // Reviews change the inputs without changing the project's revision, so they are part of the key.
+      const reviews = input.governance.reviewCount;
+      const key = `operational:${projectId}:${revision}:${input.today}:${RULE_SET_VERSION}${reviews ? `:r${reviews}` : ''}`;
       let view: AssessmentView;
       if (baselineId === null) {
         view = { ...assess(input), projectId, stored: false, kind: 'operational', publication: 'provisional',
@@ -119,22 +121,7 @@ export class AssessmentsService {
       } else {
         let row = await this.stored(client, key);
         if (!row) {
-          const result = assess(input);
-          await client.query(
-            `INSERT INTO phs.rule_set(version, definition, engine_version, created_by) VALUES($1, $2, $3, $4)
-             ON CONFLICT (version) DO NOTHING`,
-            [RULE_SET_VERSION, JSON.stringify(RULE_SET_DEFINITION), RULE_SET_VERSION, userId]);
-          // A retry or a concurrent request for the same revision and day finds the key taken and reuses the row.
-          await client.query(
-            `INSERT INTO phs.health_assessment(project_id, baseline_id, rule_set_id, effective_on, project_revision, assessment_kind,
-                                               publication, score, weighted_score, gate_cap, confidence, dimension_results,
-                                               gate_results, input_snapshot, forecast, idempotency_key)
-             SELECT $1, $2, rs.id, $3, $4, 'operational', 'provisional', $5, $6, $7, $8, $9, $10, $11, '{}', $12
-               FROM phs.rule_set rs WHERE rs.version = $13
-             ON CONFLICT (idempotency_key) DO NOTHING`,
-            [projectId, baselineId, input.today, revision, result.score, result.weightedScore, result.gateCap, result.confidence.value,
-              JSON.stringify({ dimensions: result.dimensions, band: result.band, confidenceLevel: result.confidence.level, metrics: result.metrics }),
-              JSON.stringify(result.gates), JSON.stringify(input), key, RULE_SET_VERSION]);
+          await this.store(client, userId, projectId, baselineId, input, revision, key, null);
           row = (await this.stored(client, key))!;
         }
         view = {
@@ -154,6 +141,37 @@ export class AssessmentsService {
     } finally {
       client.release();
     }
+  }
+
+  private async store(
+    client: pg.PoolClient, userId: string, projectId: string, baselineId: string, input: AssessmentInput, revision: number, key: string,
+    review: { cycleId: string; reviewId: string } | null,
+  ): Promise<void> {
+    const result = assess(input);
+    await client.query(
+      `INSERT INTO phs.rule_set(version, definition, engine_version, created_by) VALUES($1, $2, $3, $4)
+       ON CONFLICT (version) DO NOTHING`,
+      [RULE_SET_VERSION, JSON.stringify(RULE_SET_DEFINITION), RULE_SET_VERSION, userId]);
+    // A retry or a concurrent request for the same key finds it taken and reuses the row.
+    await client.query(
+      `INSERT INTO phs.health_assessment(project_id, baseline_id, rule_set_id, effective_on, project_revision, assessment_kind,
+                                         publication, score, weighted_score, gate_cap, confidence, dimension_results,
+                                         gate_results, input_snapshot, forecast, idempotency_key, cycle_id, review_id)
+       SELECT $1, $2, rs.id, $3, $4, $14, $15, $5, $6, $7, $8, $9, $10, $11, '{}', $12, $16, $17
+         FROM phs.rule_set rs WHERE rs.version = $13
+       ON CONFLICT (idempotency_key) DO NOTHING`,
+      [projectId, baselineId, input.today, revision, result.score, result.weightedScore, result.gateCap, result.confidence.value,
+        JSON.stringify({ dimensions: result.dimensions, band: result.band, confidenceLevel: result.confidence.level, metrics: result.metrics }),
+        JSON.stringify(result.gates), JSON.stringify(input), key, RULE_SET_VERSION,
+        review ? 'cycle' : 'operational', review ? 'official' : 'provisional', review?.cycleId ?? null, review?.reviewId ?? null]);
+  }
+
+  // D02: a review counts from the moment it is submitted, so its assessment is official at once.
+  // Called inside the transaction that inserts the review. Without a baseline nothing is kept.
+  async storeForReview(client: pg.PoolClient, userId: string, projectId: string, cycleId: string, reviewId: string): Promise<void> {
+    const loaded = await this.inputs(client, projectId);
+    if (!loaded || loaded.baselineId === null) return;
+    await this.store(client, userId, projectId, loaded.baselineId, loaded.input, loaded.revision, `cycle:${reviewId}`, { cycleId, reviewId });
   }
 
   private async stored(client: pg.PoolClient, key: string): Promise<StoredRow | undefined> {

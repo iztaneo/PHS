@@ -5,24 +5,24 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 ## Estado actual para retomar
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
-- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–011 (35 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
+- **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–013 (36 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, los cuatro servicios (`identity`, `projects`, `health`, `platform`) y los paquetes `service-kit`, `contracts` y `health-engine`; ver README para arrancarlo.
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
-- **R3 en curso (en revisión, sin aceptar):** alertas con episodios, acciones automáticas y manuales, causa y plan del PM con validación del líder (PHS-030 a PHS-032 en parte, BIT-0024).
-- **Todavía no implementado:** el resto de R3 a R5: ciclo de revisión y Health Review, validaciones de revisión, procesos programados, notificaciones, Health Center, portafolio, timeline e historial, y operación del piloto.
+- **R3 en curso (en revisión, sin aceptar):** alertas con episodios, acciones automáticas y manuales, causa y plan con validación del líder (PHS-030 a PHS-032 en parte, BIT-0024); ciclo de revisión, expectativas, Health Review con borrador, envío y validación (PHS-020 a PHS-024, BIT-0025).
+- **Todavía no implementado:** de R3, confianza, tendencia y proyección (PHS-027 a PHS-029) y el proceso programado (PHS-033); todo R4 (notificaciones, Health Center, portafolio, timeline e historial, modelo PHF) y R5 (piloto).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
-- **Backlog:** 45 elementos propuestos, 42 para el MVP y 3 posteriores; 175 criterios de aceptación desde BIT-0008. Ninguna historia se considera implementada por la existencia de estos documentos.
+- **Backlog:** 46 elementos, 43 para el MVP y 3 posteriores (PHS-046, consulta de proyectos pausados y cerrados, añadida en BIT-0025). Ninguna historia se considera implementada por la existencia de estos documentos.
 - **Decisiones abiertas:** D07 y D10 completas. D03 y D04 definidas por el usuario el 2026-10-04 (BIT-0023). D02 y D08 indicadas por el usuario con una interpretación de implementación pendiente de que la confirme. D09 confirmada, incluidas sus consecuencias de diseño, salvo expiración y restricción adicional de acceso; D06 parcialmente confirmada; de D05 solo quedan la separación de funciones tras el piloto y los responsables externos. D01 confirmada como reglas versión 1 ([REGLAS-PHF-v1.md](producto/REGLAS-PHF-v1.md)); faltan el peso del hito y la calibración. Ver [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Datos de demostración:** `seed:demo` carga seis usuarios y cinco proyectos (DEMO-001 a DEMO-005); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** que el usuario pruebe "Alertas y acciones" y "Mis acciones"; después ciclo de revisión (PHS-020) y Health Review (PHS-021 a PHS-024). Siguen sin confirmar las interpretaciones de D02 y D08.
+- **Siguiente paso funcional:** que el usuario pruebe la pestaña "Revisión", la bandeja del líder y los días festivos en Administración; después PHS-027 a PHS-029 y PHS-033. Por confirmar: las interpretaciones marcadas en la tabla de BIT-0025 de DECISIONES, D08 y los supuestos de BIT-0024.
 
 ## Cómo se mantiene
 
@@ -905,6 +905,67 @@ Construir R3. Siguiente entrada: BIT-0024.
 ### Pendientes y siguiente paso
 
 Lo que falta de PHS-030 a PHS-032 está en el estado de cada historia en el backlog. Siguiente: prueba del usuario; después ciclo de revisión (PHS-020). Siguiente entrada: BIT-0025.
+
+## BIT-0025 — Ciclo de revisión, Health Review y días festivos
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** segundo incremento de R3: programar revisiones, mostrar lo esperado, capturar y enviar el Health Review como en el prototipo y que el líder lo valide o devuelva.
+
+**Relación:** PHS-020 a PHS-024, PHS-017, PHS-046 (nueva); D02, D03, D05, D08, D09; RN-11 a RN-13.
+
+**Identificación:** commit con prefijo `BIT-0025`.
+
+### Decisiones del usuario (2026-10-05)
+
+Al revisar una primera versión de este trabajo el usuario indicó:
+
+1. Conservar la funcionalidad de la revisión que propone el prototipo. La primera versión solo dejaba una nota por tema; se rehízo.
+2. La regla de revisión tardía queda como está, por ahora.
+3. Los festivos se deben considerar y ser parametrizables, porque cambian cada año.
+4. De acuerdo con que un proyecto pausado o cerrado no tenga revisiones; pidió una historia para ver ese reporte si no existía. No existía: se añadió PHS-046.
+5. Los fines de semana son inhábiles.
+
+### Trabajo realizado
+
+- **Base.** Migraciones [012](../db/migrations/012_review_schedule.sql) (ancla, versión y autor en `review_policy`) y [013](../db/migrations/013_holiday.sql) (`holiday`; 36 tablas), con sus pruebas.
+- **Calendario.** [cadence.ts](../apps/health/src/cadence.ts): semanal 7 días, quincenal 14, mensual por mes calendario con ajuste al último día; primer día de corte a partir de una fecha; salto de sábados, domingos y festivos al siguiente día hábil.
+- **Revisiones.** [review.service.ts](../apps/health/src/review.service.ts) y su controlador:
+  - Política por proyecto con control de versión. Guardarla programa el primer ciclo o mueve el que aún no tiene envío; los ciclos enviados conservan su política.
+  - Expectativas: hitos, mitigaciones y acciones que vencen hasta la fecha del ciclo, renovaciones dentro del horizonte, cambios por decidir y alertas críticas sin causa y plan.
+  - Borrador por usuario y ciclo, con control de versión.
+  - Envío idempotente: revalida expectativas y versión del proyecto, rechaza "nada cambió" con alertas críticas sin tratar, exige soporte si la política lo pide, registra costo y esfuerzo en Proyectos y guarda revisión, evaluación oficial y siguiente ciclo en una transacción.
+  - Validación del líder sobre el envío más reciente; devolver permite reenviar una versión consecutiva del mismo ciclo.
+- **Festivos.** [holiday.service.ts](../apps/health/src/holiday.service.ts): consulta por año para cualquier usuario; alta y baja solo para administradores, auditadas. Al agregar un festivo, las revisiones sin enviar que vencían ese día se mueven.
+- **Alertas.** Revisión vencida (acción para el PM, 1 día) y revisión devuelta (acción de corrección, 3 días); se resuelven solas al enviar. No aplican a proyectos pausados o cerrados.
+- **Evaluación.** Evaluación del ciclo (`cycle`, `official`) al enviar; la clave de la evaluación operativa incluye el número de revisiones.
+- **Plataforma.** La evidencia admite revisiones como destino: la ve quien ve el proyecto, la agregan el PM y el líder, y es adenda si la revisión ya fue validada.
+- **Web.** [Reviews.tsx](../apps/web/src/Reviews.tsx): pestaña "Revisión" con configuración, lo esperado con botón "Atender", temas que abren hitos, riesgos, equipo y cambios dentro del formulario, finanzas, clima, confianza declarada con la sugerida por el sistema, soporte con comentario y archivo, guardado automático e historial; "Revisiones por validar" en "Mis acciones"; "Días festivos" en Administración.
+- **Datos de demostración.** Festivos oficiales de México de 2026 y 2027; DEMO-001 con ciclo semanal abierto y borrador; DEMO-002 con revisión en validación del líder; DEMO-003 con revisión devuelta y su acción de corrección; DEMO-004 sin ciclo; DEMO-005 pausado.
+- **Backlog.** PHS-046, consulta de proyectos pausados y cerrados (R4), sin construir.
+
+### Archivos
+
+`db/migrations/{012_review_schedule,013_holiday}.sql`, `db/tests/{012_review_schedule,013_holiday}.sql`, `apps/health/src/{cadence,review.service,review.controller,holiday.service,governance.service,assessments.service,projects.client,app.module}.ts`, `apps/health/src/cli/seed-demo.ts`, `apps/health/test/{cadence.test,review.int.test,governance.int.test}.ts`, `apps/platform/src/{evidence.service,projects.client}.ts`, `packages/contracts/src/{health,platform}.ts`, `docs/api/*.openapi.json`, `docs/api/README.md`, `apps/web/src/{Reviews,Projects,Governance,Admin}.tsx`, `apps/web/src/api.ts`, y documentación: backlog, decisiones, base de datos, mapa, ADR-002 y esta bitácora.
+
+### Supuestos sin confirmar
+
+- Una revisión que vence en día inhábil pasa al siguiente día hábil, no al anterior.
+- Las demás interpretaciones marcadas "por confirmar" en la tabla de BIT-0025 de [DECISIONES.md](producto/DECISIONES.md).
+- Quién envía: quien tiene el permiso de PM del proyecto. Quién valida: quien decide (líder de la práctica); la autoaprobación sigue permitida en el piloto.
+
+### Validación y límites
+
+- `pnpm typecheck` y `pnpm build` sin errores. `pnpm test`: 141 pruebas en 8 paquetes (Salud 20: nueve nuevas, cuatro de calendario y cinco de integración). `pnpm db:test`: 13 de 13.
+- **Fallo intermitente sin explicar:** la prueba de festivos falló una vez dentro de `pnpm test` y no se reprodujo en 34 ejecuciones posteriores. No se capturó el mensaje. Se cambió para usar solo fechas lejanas propias; no hay evidencia de que esa fuera la causa.
+- Otros fallos corregidos durante el trabajo: la migración 012 por un índice que ya existía, una prueba de BIT-0024 que insertaba una política sin ancla y el orden de detección de alertas al guardar la política.
+- Por el gateway con los usuarios de demostración: ciclos en el estado esperado, bandeja del líder con la revisión de DEMO-002, acción de corrección de DEMO-003 en las acciones del PM, festivos de 2026 visibles para un PM y alta de festivo rechazada para quien no es administrador.
+- **No comprobado:** las pantallas no se revisaron en el navegador (compilan y pasan la verificación de tipos). El alta y la baja de festivos como administrador no se probaron por el gateway porque la contraseña del administrador en `.env` ya no es la vigente; sí están cubiertas por la prueba de integración. El registro de costo desde la revisión se probó con un sustituto de Proyectos, no contra el servicio real. La evidencia en revisiones no tiene prueba automática propia; se comprobó a mano por el gateway (el PM agregó un texto a la revisión de DEMO-002 y el líder lo consultó).
+- Límites: la política de soporte se cumple con el comentario, no con el archivo solo; el archivo no se guarda en el borrador; la confianza declarada se guarda pero no altera la calculada (PHS-027).
+
+### Pendientes y siguiente paso
+
+Prueba del usuario. Después PHS-027 a PHS-029 y PHS-033. Siguiente entrada: BIT-0026.
 
 ## Plantilla para próximas entradas
 

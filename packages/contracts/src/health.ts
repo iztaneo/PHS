@@ -46,7 +46,7 @@ const stamp = z.iso.datetime({ offset: true });
 // ---- Events, responses and actions (PHS-030 to PHS-032, D04)
 export const eventRule = z.enum([
   'milestone_overdue', 'risk_mitigation_overdue', 'risk_materialized', 'project_deviation', 'financial_deviation',
-  'renewal_due', 'change_pending',
+  'renewal_due', 'change_pending', 'review_overdue', 'review_returned',
 ]);
 export const eventResponse = z.object({
   id: z.uuid(),
@@ -116,6 +116,112 @@ export const transitionTaskBody = z.object({
   note: text(2000).optional().describe('Obligatoria al completar o cancelar.'),
 });
 
+// ---- Review cycle and Health Review (PHS-020 to PHS-024; D02, D03)
+export const cadence = z.enum(['weekly', 'fortnightly', 'monthly']).describe('weekly: 7 días. fortnightly: 14 días. monthly: mes calendario.');
+export const reviewTopic = z.enum(['schedule', 'milestones', 'risks', 'client', 'finance', 'scope', 'team'])
+  .describe('Qué cambió, como en el prototipo: cronograma, hitos, riesgos, cliente, finanzas, alcance, equipo.');
+export const confidenceLevel = z.enum(['high', 'medium', 'low']);
+const amountText = z.string().regex(/^\d{1,16}(\.\d{1,2})?$/).describe('Decimal no negativo como texto, hasta dos decimales.');
+export const reviewFinance = z.object({ totalCost: amountText, totalEffortHours: amountText.nullable() })
+  .describe('Costo real acumulado y esfuerzo consumido a la fecha de la revisión.');
+export const climate = z.enum(['good', 'tense', 'critical']);
+const policyFields = {
+  cadence,
+  nextDueOn: z.iso.date().describe('Próxima fecha de revisión. Su día de la semana (o del mes, en la cadencia mensual) es el día de corte de los ciclos siguientes.'),
+  forecastCycles: z.number().int().min(1).max(12).describe('Ciclos futuros que se consideran al listar renovaciones próximas.'),
+  evidenceRequired: z.boolean().describe('Exigir texto de soporte al enviar una revisión con cambios.'),
+  leadValidationRequired: z.boolean().describe('false: la revisión se cierra al enviarla, sin validación del líder.'),
+  autoTasks: z.boolean().describe('false: los eventos se abren sin acción automática.'),
+};
+export const reviewPolicy = z.object({ ...policyFields, revision: z.number().int() });
+export const savePolicyBody = z.object({
+  ...policyFields,
+  expectedRevision: z.number().int().min(0).describe('0 al configurar por primera vez.'),
+});
+export const expectation = z.object({
+  kind: z.enum(['milestone', 'risk', 'task', 'renewal', 'change', 'alert']),
+  id: z.uuid(),
+  title: z.string(),
+  dueOn: z.iso.date().nullable(),
+  overdue: z.boolean(),
+  critical: z.boolean(),
+  blocking: z.boolean().describe('true: alerta crítica sin causa y plan; impide enviar "nada cambió".'),
+});
+const draftPayload = z.object({
+  nothingChanged: z.boolean().default(false),
+  topics: z.array(reviewTopic).max(7).default([]),
+  notes: z.partialRecord(reviewTopic, z.string().max(4000)).default({}),
+  clientClimate: climate.nullable().default(null),
+  supportText: z.string().max(8000).default(''),
+  activeSeconds: z.number().int().min(0).max(86_400).default(0),
+  declaredConfidence: confidenceLevel.nullable().default(null),
+  finance: z.object({ totalCost: z.string().max(20), totalEffortHours: z.string().max(20).nullable() }).nullable().default(null),
+});
+export const saveDraftBody = z.object({
+  expectedRevision: z.number().int().min(0).describe('0 si aún no hay borrador.'),
+  payload: draftPayload,
+});
+export const submitReviewBody = z.object({
+  nothingChanged: z.boolean(),
+  topics: z.array(reviewTopic).max(7),
+  notes: z.partialRecord(reviewTopic, z.string().trim().max(4000)).describe('Comentario opcional por tema.'),
+  clientClimate: climate.nullable().describe('Obligatorio cuando el tema `client` está seleccionado.'),
+  declaredConfidence: confidenceLevel.nullable().describe('Confianza que declara el PM; el sistema sugiere la calculada.'),
+  finance: reviewFinance.nullable().describe('Con el tema `finance`: se registra como observación económica del proyecto al enviar.'),
+  supportText: z.string().trim().max(8000),
+  activeSeconds: z.number().int().min(0).max(86_400),
+  expectedProjectRevision: z.number().int().min(1).describe('Versión de los datos del proyecto que el PM tenía a la vista.'),
+});
+export const validateReviewBody = z.object({ decision: z.enum(['validated', 'returned']), comment: text(2000) });
+export const review = z.object({
+  id: z.uuid(),
+  revisionNo: z.number().int(),
+  author: person,
+  submittedAt: stamp,
+  effectiveOn: z.iso.date(),
+  late: z.boolean().describe('Enviada después del vencimiento del ciclo.'),
+  nothingChanged: z.boolean(),
+  topics: z.array(reviewTopic),
+  notes: z.partialRecord(reviewTopic, z.string()),
+  clientClimate: climate.nullable(),
+  declaredConfidence: confidenceLevel.nullable(),
+  finance: reviewFinance.nullable().describe('Cifras que este envío registró en la economía del proyecto.'),
+  supportText: z.string().nullable(),
+  durationSeconds: z.number().int().nullable(),
+  expectations: z.array(expectation).describe('Lo que se esperaba al momento del envío.'),
+  assessment: z.object({ score, band: z.enum(['healthy', 'attention', 'risk']).nullable() }).nullable()
+    .describe('Evaluación oficial calculada con este envío (D02); null si el proyecto no tiene línea base.'),
+  validation: z.object({ decision: z.enum(['validated', 'returned']), validator: person, decidedAt: stamp, comment: z.string() }).nullable(),
+});
+export const reviewCycle = z.object({
+  id: z.uuid(),
+  projectId: z.uuid(),
+  projectName: z.string(),
+  startsOn: z.iso.date(),
+  dueOn: z.iso.date(),
+  status: z.enum(['open', 'overdue', 'submitted', 'returned', 'validated', 'closed'])
+    .describe('open/overdue: sin envío. submitted: en validación del líder. returned: devuelta, el PM debe reenviar. validated: validada. closed: enviada sin exigir validación.'),
+  policy: z.object({ cadence, forecastCycles: z.number().int(), evidenceRequired: z.boolean(), leadValidationRequired: z.boolean() })
+    .describe('Política vigente cuando se programó el ciclo.'),
+  expectations: z.array(expectation).describe('Calculadas ahora si el ciclo admite envío; si no, las del último envío.'),
+  draft: z.object({ revision: z.number().int(), payload: draftPayload, updatedAt: stamp }).nullable().describe('Borrador del usuario que consulta.'),
+  reviews: z.array(review).describe('Envíos del ciclo, del más reciente al más antiguo.'),
+  lastClimate: climate.nullable().describe('Clima del cliente del último envío del proyecto, para precargarlo.'),
+  projectRevision: z.number().int(),
+  canSubmit: z.boolean(),
+  canValidate: z.boolean(),
+});
+export const reviewSchedule = z.object({
+  projectId: z.uuid(),
+  policy: reviewPolicy.nullable().describe('null: el proyecto no tiene ciclo configurado.'),
+  canConfigure: z.boolean(),
+  cycles: z.array(reviewCycle).describe('Ciclos del proyecto, del más reciente al más antiguo (máximo 12).'),
+});
+
+export const holiday = z.object({ day: z.iso.date(), name: z.string() });
+export const holidayQuery = z.object({ year: z.coerce.number().int().min(2000).max(2100) });
+export const addHolidayBody = z.object({ day: z.iso.date(), name: text(120) });
+
 // Internal API of the Health service.
 export const healthRoutes: RouteContract[] = [
   { method: 'get', path: '/health', summary: 'Estado del servicio y de su base de datos', tag: 'Estado', auth: 'none',
@@ -165,4 +271,55 @@ export const healthRoutes: RouteContract[] = [
       401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
       409: { description: 'Otro usuario la modificó (`revision_conflict`) o la transición no está permitida (`invalid_transition`).', schema: conflictResponse },
     } },
+  { method: 'get', path: '/projects/:projectId/review-schedule', summary: 'Política de revisión y ciclos del proyecto', tag: 'Revisiones', auth: 'session',
+    params: { projectId: z.uuid() },
+    responses: { 200: { description: 'Un proyecto sin política se devuelve con `policy` null; no recibe un ciclo implícito.', schema: reviewSchedule }, 401: errors.unauthenticated, 404: errors.notFound } },
+  { method: 'put', path: '/projects/:projectId/review-policy', summary: 'Configurar cadencia, próxima fecha y políticas', tag: 'Revisiones', auth: 'session',
+    params: { projectId: z.uuid() }, body: savePolicyBody,
+    responses: {
+      200: { description: 'Política guardada. Se programa el ciclo si no había uno sin envío, o se reprograma el que estaba abierto; los ciclos ya enviados no cambian.', schema: reviewSchedule },
+      400: { description: 'Datos inválidos o próxima fecha anterior a hoy (`due_date_in_past`).', schema: errorResponse },
+      401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: 'Otro usuario cambió la política (`revision_conflict`) o el proyecto está pausado o cerrado (`project_not_active`).', schema: conflictResponse },
+    } },
+  { method: 'get', path: '/cycles/:cycleId', summary: 'Un ciclo con sus expectativas, borrador y envíos', tag: 'Revisiones', auth: 'session',
+    params: { cycleId: z.uuid() },
+    responses: { 200: { description: 'Ciclo.', schema: reviewCycle }, 401: errors.unauthenticated, 404: errors.notFound } },
+  { method: 'put', path: '/cycles/:cycleId/draft', summary: 'Guardar el borrador de la revisión', tag: 'Revisiones', auth: 'session',
+    params: { cycleId: z.uuid() }, body: saveDraftBody,
+    responses: {
+      200: { description: 'Borrador guardado para este usuario y ciclo.', schema: reviewCycle },
+      400: errors.invalidRequest, 401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: 'El borrador cambió en otra pestaña o sesión (`revision_conflict`), o el ciclo ya no admite envío (`review_already_submitted`).', schema: conflictResponse },
+    } },
+  { method: 'post', path: '/cycles/:cycleId/reviews', summary: 'Enviar el Health Review del ciclo', tag: 'Revisiones', auth: 'session',
+    params: { cycleId: z.uuid() }, headers: { 'Idempotency-Key': idempotencyKey }, body: submitReviewBody,
+    responses: {
+      201: { description: 'Revisión registrada y vigente desde este momento (D02). El primer envío programa el siguiente ciclo. Repetir la petición con la misma clave devuelve el mismo resultado.', schema: reviewCycle },
+      400: { description: 'Datos inválidos, `idempotency_key_required`, falta el texto de soporte (`support_required`) o el clima del cliente (`climate_required`), o Proyectos rechazó las cifras económicas (`finance_rejected`).', schema: errorResponse },
+      401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: 'Los datos del proyecto cambiaron (`revision_conflict`); hay alertas críticas sin causa y plan y se envió "nada cambió" (`nothing_changed_blocked`); el ciclo ya tiene un envío vigente (`review_already_submitted`); el proyecto está pausado o cerrado (`project_not_active`); o `idempotency_key_reused`.', schema: conflictResponse },
+    } },
+  { method: 'post', path: '/reviews/:reviewId/validation', summary: 'Validar o devolver una revisión', tag: 'Revisiones', auth: 'session',
+    params: { reviewId: z.uuid() }, body: validateReviewBody,
+    responses: {
+      201: { description: 'Decisión registrada. Devolver conserva el envío y abre una acción de corrección para el PM.', schema: reviewCycle },
+      400: errors.invalidRequest, 401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound,
+      409: { description: 'El envío ya tenía decisión (`already_decided`), existe un envío más reciente (`stale_review`) o el ciclo no exige validación (`validation_not_required`).', schema: errorResponse },
+    } },
+  { method: 'get', path: '/reviews/pending', summary: 'Revisiones que esperan mi validación', tag: 'Revisiones', auth: 'session',
+    responses: { 200: { description: 'Ciclos con un envío sin decisión en los proyectos donde el usuario puede decidir.', schema: z.array(reviewCycle) }, 401: errors.unauthenticated } },
+  { method: 'get', path: '/holidays', summary: 'Días festivos de un año', tag: 'Revisiones', auth: 'session',
+    query: { year: z.coerce.number().int().min(2000).max(2100) },
+    responses: { 200: { description: 'Días en que no vence ninguna revisión, además de sábados y domingos: la fecha pasa al siguiente día hábil.', schema: z.array(holiday) }, 400: errors.invalidRequest, 401: errors.unauthenticated } },
+  { method: 'post', path: '/holidays', summary: 'Agregar un día festivo', tag: 'Revisiones', auth: 'admin',
+    body: addHolidayBody,
+    responses: {
+      201: { description: 'Festivos del año. Las revisiones sin enviar que vencían ese día se mueven al siguiente día hábil.', schema: z.array(holiday) },
+      400: errors.invalidRequest, 401: errors.unauthenticated, 403: errors.forbidden,
+      409: { description: 'Ese día ya es festivo (`holiday_taken`).', schema: errorResponse },
+    } },
+  { method: 'delete', path: '/holidays/:day', summary: 'Quitar un día festivo', tag: 'Revisiones', auth: 'admin',
+    params: { day: z.iso.date() },
+    responses: { 200: { description: 'Festivos del año. Las revisiones ya programadas no se mueven de vuelta.', schema: z.array(holiday) }, 401: errors.unauthenticated, 403: errors.forbidden, 404: errors.notFound } },
 ];

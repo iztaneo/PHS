@@ -38,7 +38,7 @@ export class GovernanceError extends Error {
 }
 
 // D04: every critical alert needs its cause and a plan, validated by the lead.
-const NEEDS_RESPONSE = new Set(['milestone_overdue', 'risk_mitigation_overdue', 'project_deviation', 'financial_deviation']);
+export const NEEDS_RESPONSE = new Set(['milestone_overdue', 'risk_mitigation_overdue', 'project_deviation', 'financial_deviation']);
 const SYSTEM_RESOLUTION = 'La condición que originó el evento dejó de cumplirse.';
 const SYSTEM_CLOSURE = 'Cerrada por el sistema: la condición que la originó dejó de cumplirse.';
 
@@ -46,7 +46,7 @@ const SYSTEM_CLOSURE = 'Cerrada por el sistema: la condición que la originó de
 // prototype's rule for owner, deadline and priority (D04).
 interface Condition {
   ruleKey: string; key: string; severity: Severity; title: string;
-  target?: { column: 'milestone_id' | 'risk_id' | 'renewal_id' | 'change_id'; id: string };
+  target?: { column: 'milestone_id' | 'risk_id' | 'renewal_id' | 'change_id' | 'cycle_id'; id: string };
   task: { ownerId: string; days: number; priority: Priority; title: string; notAfter?: string };
 }
 
@@ -89,8 +89,8 @@ export class GovernanceService {
   }
 
   private async conditions(client: pg.PoolClient, projectId: string): Promise<{ conditions: Condition[]; today: string; autoTasks: boolean }> {
-    const project = (await client.query<{ pm_id: string; lead_id: string; today: string; auto_tasks: boolean | null }>(
-      `SELECT p.pm_id, p.lead_id, (now() AT TIME ZONE p.timezone)::date::text AS today,
+    const project = (await client.query<{ pm_id: string; lead_id: string; status: string; today: string; auto_tasks: boolean | null }>(
+      `SELECT p.pm_id, p.lead_id, p.status, (now() AT TIME ZONE p.timezone)::date::text AS today,
               (SELECT auto_tasks FROM phs.review_policy rp WHERE rp.project_id = p.id) AS auto_tasks
          FROM phs.project p WHERE p.id = $1`, [projectId])).rows[0]!;
     const conditions: Condition[] = [];
@@ -161,6 +161,26 @@ export class GovernanceService {
         target: { column: 'change_id', id: c.id },
         task: { ownerId: project.lead_id, days: 7, priority: 'medium', title: `Decidir el cambio: ${c.title}` },
       });
+    }
+    // Review cycle (PHS-020, PHS-024). A paused or closed project is not expected to be reviewed.
+    if (!['paused', 'closed'].includes(project.status)) {
+      const cycles = await client.query<{ id: string; due_on: string; reviewed: boolean; returned: boolean }>(
+        `SELECT c.id, c.due_on::text AS due_on, l.id IS NOT NULL AS reviewed, coalesce(v.decision = 'returned', false) AS returned
+           FROM phs.review_cycle c
+           LEFT JOIN LATERAL (SELECT r.id FROM phs.health_review r WHERE r.cycle_id = c.id ORDER BY r.revision_no DESC LIMIT 1) l ON true
+           LEFT JOIN phs.review_validation v ON v.review_id = l.id
+          WHERE c.project_id = $1 AND ((l.id IS NULL AND c.due_on < $2::date) OR v.decision = 'returned') ORDER BY c.due_on, c.id`, [projectId, project.today]);
+      for (const c of cycles.rows) {
+        conditions.push(c.returned ? {
+          ruleKey: 'review_returned', key: `review_returned:${c.id}`, severity: 'warning', title: `Revisión devuelta por el líder (ciclo del ${c.due_on})`,
+          target: { column: 'cycle_id', id: c.id },
+          task: { ownerId: project.pm_id, days: 3, priority: 'high', title: `Corregir y reenviar la revisión del ciclo del ${c.due_on}` },
+        } : {
+          ruleKey: 'review_overdue', key: `review_overdue:${c.id}`, severity: 'warning', title: `Revisión vencida el ${c.due_on}`,
+          target: { column: 'cycle_id', id: c.id },
+          task: { ownerId: project.pm_id, days: 1, priority: 'high', title: `Enviar la revisión vencida el ${c.due_on}` },
+        });
+      }
     }
     return { conditions, today: project.today, autoTasks: project.auto_tasks ?? true };
   }

@@ -1,6 +1,6 @@
 # PHS — Backlog de producto v0.1
 
-Estado de todas las historias: **Propuesta / por refinar**. Ninguna funcionalidad se considera terminada porque exista en el prototipo o en el esquema SQL. 45 elementos: 42 del MVP y 3 candidatos posteriores. Los habilitadores técnicos tienen criterios verificables igual que las historias funcionales.
+Estado de todas las historias: **Propuesta / por refinar**. Ninguna funcionalidad se considera terminada porque exista en el prototipo o en el esquema SQL. 46 elementos: 43 del MVP y 3 candidatos posteriores (PHS-046 se añadió el 2026-10-05, BIT-0025). Los habilitadores técnicos tienen criterios verificables igual que las historias funcionales.
 
 Prioridad: **P0** imprescindible para operación o integridad; **P1** completa la experiencia MVP; **P2** posterior. P1 también debe terminar para declarar este MVP completo. Tamaño **S/M/L** es una hipótesis relativa de complejidad, no puntos, horas ni compromiso de fechas. Las historias M/L se dividen en refinamiento si no caben en una iteración.
 
@@ -51,6 +51,7 @@ Fuentes, reglas RN y requisitos NF están definidos en [ESPECIFICACION.md](ESPEC
 | PHS-037 | E08 | Construir portafolio y vista de Dirección | R4 | P1 | M | PHS-026, PHS-027, PHS-028, PHS-014, PHS-006 | D05, D10 |
 | PHS-038 | E08 | Consultar timeline e historial completo | R4 | P1 | M | PHS-019, PHS-024, PHS-030, PHS-032, PHS-008 | D07 |
 | PHS-039 | E08 | Publicar ayuda y modelo PHF | R4 | P1 | S | PHS-002, PHS-026 | — |
+| PHS-046 | E08 | Consultar proyectos pausados y cerrados | R4 | P1 | S | PHS-014, PHS-006 | D08 |
 | PHS-040 | E09 | Validar el recorrido integral con escenarios | R5 | P0 | M | PHS-019, PHS-024, PHS-027, PHS-028, PHS-029, PHS-033, PHS-035, PHS-036, PHS-037, PHS-038, PHS-039 | — |
 | PHS-041 | E09 | Verificar usabilidad, accesibilidad y rendimiento | R5 | P0 | M | PHS-035, PHS-036, PHS-037, PHS-040 | D06, D07 |
 | PHS-042 | E09 | Preparar operación y liberar piloto | R5 | P0 | M | PHS-040, PHS-041 | D06, D07, D09 |
@@ -493,6 +494,8 @@ Criterios de aceptación:
 3. Cambiar política no altera ciclos ya enviados; pausar/cerrar sigue D08.
 4. Un proyecto sin ciclo se muestra incompleto; no recibe un ciclo implícito silencioso.
 
+**Estado (BIT-0025):** construida, en revisión. Cadencia, próxima fecha, horizonte y políticas; el día de corte sale de la próxima fecha; mensual por mes calendario con ajuste al último día; una revisión tardía no desplaza el calendario; una revisión nunca vence en sábado, domingo ni festivo (pasa al siguiente día hábil) y los festivos los mantiene el administrador. Cambiar la política mueve solo el ciclo sin envío. Límites: un proyecto pausado o cerrado no genera alerta de revisión ni admite envíos, y al reanudarlo el PM reprograma la próxima fecha.
+
 ### PHS-021 — Calcular expectativas para la revisión
 
 Como **PM**, quiero ver lo que debería haber cambiado, para atender compromisos sin depender de mi memoria.
@@ -512,6 +515,8 @@ Criterios de aceptación:
 3. Las expectativas se recalculan al enviar, no solo al abrir el formulario.
 4. La revisión del propio ciclo vencido no genera un bloqueo circular según D02; una tarea vencida conserva su identidad.
 
+**Estado (BIT-0025):** construida, en revisión. Lista hitos, mitigaciones y acciones que vencen hasta la fecha del ciclo, renovaciones dentro del horizonte, cambios por decidir y alertas críticas sin causa y plan, cada una con un botón "Atender" que lleva a su pestaña; se recalcula al enviar.
+
 ### PHS-022 — Preparar revisión adaptativa y recuperar borrador
 
 Como **PM**, quiero registrar solo los cambios relevantes, para reducir esfuerzo y no perder captura.
@@ -530,6 +535,8 @@ Criterios de aceptación:
 2. “Nada cambió” y selección de temas son excluyentes; se explica qué condición impide esa opción.
 3. El borrador persiste para usuario/ciclo y puede recuperarse tras recarga o nueva sesión sin mezclar proyectos.
 4. Duración activa excluye espera de validación; errores de red no muestran confirmación falsa ni borran la captura.
+
+**Estado (BIT-0025):** construida, en revisión. Como en el prototipo: se elige qué cambió (cronograma, hitos, riesgos, cliente, finanzas, alcance, equipo) y cada tema abre en el mismo formulario el lugar donde vive ese dato; "nada cambió" es excluyente y explica qué lo impide; borrador por usuario y ciclo con guardado automático; tiempo de captura. Se precargan el clima del cliente, el costo y el esfuerzo vigentes. El archivo de soporte no se guarda en el borrador.
 
 ### PHS-023 — Enviar Health Review consistente
 
@@ -551,6 +558,8 @@ Criterios de aceptación:
 4. Reintentar el envío devuelve la misma revisión; conflicto de versión requiere reconciliar antes de confirmar.
 5. La respuesta distingue pendiente de validación o cerrada según D02 y programa el ciclo conforme política.
 
+**Estado (BIT-0025):** construida, en revisión. Criterios 1 a 5 implementados y probados. El costo y el esfuerzo capturados se registran en Economía al enviar; revisión, evaluación oficial y siguiente ciclo se guardan en una transacción. Límites: la política de soporte se cumple con el comentario (el archivo es adicional y se adjunta justo después del envío, a diferencia del prototipo, donde bastaba la imagen); la evaluación oficial solo se guarda si el proyecto tiene línea base.
+
 ### PHS-024 — Validar, devolver y reenviar revisiones
 
 Como **líder**, quiero revisar la información enviada, para controlar calidad sin borrar las correcciones.
@@ -569,6 +578,8 @@ Criterios de aceptación:
 2. Validar/devolver exige comentario y permiso; una segunda decisión del mismo envío no crea otro resultado.
 3. Devolver conserva el envío original y genera una acción de corrección deduplicada; el PM puede reenviar versión consecutiva del mismo ciclo.
 4. El efecto en evaluación oficial y vencimiento del ciclo coincide con D02; el líder no valida una versión distinta de la que revisó.
+
+**Estado (BIT-0025):** construida, en revisión. Bandeja del líder en "Mis acciones" con datos, soporte adjunto y evaluación del envío; validar o devolver con comentario; acción de corrección única para el PM que se cierra al reenviar; rechazo de una versión ya reemplazada.
 
 
 ## E06 — Motor de salud
@@ -870,6 +881,27 @@ Criterios de aceptación:
 2. Los indicadores enlazan a explicación de la versión vigente y señalan reglas candidatas frente a aprobadas.
 3. La ayuda es navegable por teclado y coincide con el comportamiento implementado; no afirma capacidades pospuestas.
 
+
+### PHS-046 — Consultar proyectos pausados y cerrados
+
+Como **líder o Dirección**, quiero ver en un solo lugar los proyectos pausados y cerrados con su motivo, para dar seguimiento a los que llevan tiempo detenidos.
+
+**Entrega:** R4 · **Prioridad:** P1 · **Tamaño orientativo:** S
+
+**Dependencias:** PHS-014, PHS-006 · **Decisiones pendientes:** D08
+
+**Trazabilidad:** Pedida por el usuario el 2026-10-05 (BIT-0025); no existe en el prototipo · RN-01, RN-18
+
+**Datos / artefactos:** project, project_status_log
+
+Criterios de aceptación:
+
+1. La consulta lista los proyectos pausados y cerrados del alcance del usuario con cliente, PM, fecha y motivo del cambio de estado y días transcurridos.
+2. Distingue los que superan 30 días sin justificación registrada (D08) y muestra la última justificación de los demás.
+3. Indica qué quedó detenido: revisiones sin programar, acciones y riesgos abiertos al momento de pausar o cerrar.
+4. Se puede filtrar por práctica, estado y antigüedad, y abrir el proyecto desde cada renglón.
+
+**Estado (BIT-0025):** propuesta, sin construir.
 
 ## E09 — Calidad y operación
 

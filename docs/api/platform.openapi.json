@@ -82,7 +82,8 @@
               "enum": [
                 "milestone",
                 "risk",
-                "change"
+                "change",
+                "review"
               ]
             }
           },
@@ -121,7 +122,8 @@
                             "enum": [
                               "milestone",
                               "risk",
-                              "change"
+                              "change",
+                              "review"
                             ]
                           },
                           "id": {
@@ -349,7 +351,8 @@
                     "enum": [
                       "milestone",
                       "risk",
-                      "change"
+                      "change",
+                      "review"
                     ]
                   },
                   "targetId": {
@@ -397,7 +400,8 @@
                           "enum": [
                             "milestone",
                             "risk",
-                            "change"
+                            "change",
+                            "review"
                           ]
                         },
                         "id": {
@@ -772,7 +776,8 @@
                           "enum": [
                             "milestone",
                             "risk",
-                            "change"
+                            "change",
+                            "review"
                           ]
                         },
                         "id": {

@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { api, errorMessage, type Change, type HealthEvent, type PracticePerson, type ProjectDetail, type Task } from './api';
+import { PendingReviews } from './Reviews';
 import { Badge, Button, Card, Empty, Field, Input, Loading, Notice, PageHeader, Select, Textarea, type Tone } from './ui';
 
 const SEVERITY: Record<string, { label: string; tone: Tone }> = {
@@ -264,7 +265,8 @@ export function MyTasks() {
   useEffect(() => { void load(); }, []);
   return (
     <>
-      <PageHeader title="Mis acciones" subtitle="Lo que tienes asignado en todos tus proyectos, por plazo." />
+      <PageHeader title="Mis acciones" subtitle="Lo que tienes asignado en todos tus proyectos, por plazo, y las revisiones que esperan tu validación." />
+      <PendingReviews />
       {error && <Notice tone="red">{error}</Notice>}
       {!tasks && !error && <Loading />}
       {tasks?.length === 0 && <Empty title="No tienes acciones abiertas" />}

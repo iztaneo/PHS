@@ -6,12 +6,15 @@ import { AssessmentsService } from './assessments.service.js';
 import { GovernanceController } from './governance.controller.js';
 import { GovernanceService } from './governance.service.js';
 import { HealthController } from './health.controller.js';
+import { HolidayService } from './holiday.service.js';
 import { InternalAuthGuard } from './internal-auth.guard.js';
 import { OpenApiController } from './openapi.controller.js';
 import { ProjectsClient } from './projects.client.js';
+import { ReviewController } from './review.controller.js';
+import { ReviewService } from './review.service.js';
 
 @Module({
-  controllers: [HealthController, OpenApiController, AssessmentsController, GovernanceController],
+  controllers: [HealthController, OpenApiController, AssessmentsController, GovernanceController, ReviewController],
   providers: [
     InternalAuthGuard,
     { provide: PG_POOL, useFactory: () => createPool(requireEnv('HEALTH_DATABASE_URL')) },
@@ -25,6 +28,13 @@ import { ProjectsClient } from './projects.client.js';
       provide: GovernanceService,
       useFactory: (pool: pg.Pool, projects: ProjectsClient, assessments: AssessmentsService) => new GovernanceService(pool, projects, assessments),
       inject: [PG_POOL, ProjectsClient, AssessmentsService],
+    },
+    { provide: HolidayService, useFactory: (pool: pg.Pool) => new HolidayService(pool), inject: [PG_POOL] },
+    {
+      provide: ReviewService,
+      useFactory: (pool: pg.Pool, projects: ProjectsClient, governance: GovernanceService, assessments: AssessmentsService) =>
+        new ReviewService(pool, projects, governance, assessments),
+      inject: [PG_POOL, ProjectsClient, GovernanceService, AssessmentsService],
     },
   ],
 })

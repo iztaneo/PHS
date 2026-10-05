@@ -78,7 +78,7 @@ describe.skipIf(!ready)('events, responses and actions (PHS-030 to PHS-032, D04)
     ]);
     const quiet = await project();
     await milestone(quiet, day(-1));
-    await owner!.query("INSERT INTO phs.review_policy(project_id, cadence, auto_tasks) VALUES($1, 'weekly', false)", [quiet]);
+    await owner!.query("INSERT INTO phs.review_policy(project_id, anchor_on, cadence, auto_tasks) VALUES($1, CURRENT_DATE, 'weekly', false)", [quiet]);
     const [alone] = await governance.events(as(pm, 'pm'), quiet);
     expect(alone).toMatchObject({ ruleKey: 'milestone_overdue', severity: 'warning', task: null, responseStatus: 'missing' });
   });

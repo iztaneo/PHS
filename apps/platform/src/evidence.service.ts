@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { insertAudit, insertOutbox, withTransaction } from '@phs/service-kit';
 import type pg from 'pg';
 import { MAX_FILE_BYTES, detectFileType, safeFileName } from './file-type.js';
-import type { ProjectsClient, TargetKind } from './projects.client.js';
+import type { ProjectsClient, TargetAccess, TargetKind } from './projects.client.js';
 import type { EvidenceStorage } from './storage.js';
 
 export interface EvidenceView {
@@ -28,17 +28,17 @@ export class EvidenceError extends Error {
   }
 }
 
-const COLUMN = { milestone: 'milestone_id', risk: 'risk_id', change: 'change_id' } as const;
+const COLUMN = { milestone: 'milestone_id', risk: 'risk_id', change: 'change_id', review: 'review_id' } as const;
 
 interface Row {
-  id: string; milestone_id: string | null; risk_id: string | null; change_id: string | null; body_text: string | null;
+  id: string; milestone_id: string | null; risk_id: string | null; change_id: string | null; review_id: string | null; body_text: string | null;
   object_key: string | null; original_filename: string | null; mime_type: string | null; size_bytes: string | null;
   uploaded_by: string; uploader: string; uploaded_at: Date; addendum: boolean; project_id: string;
   withdrawn_by: string | null; withdrawer: string | null; withdrawn_at: Date | null; reason: string | null;
 }
 
 const SELECT = `
-  SELECT e.id, e.project_id, e.milestone_id, e.risk_id, e.change_id, e.body_text, e.object_key, e.original_filename,
+  SELECT e.id, e.project_id, e.milestone_id, e.risk_id, e.change_id, e.review_id, e.body_text, e.object_key, e.original_filename,
          e.mime_type, e.size_bytes, e.uploaded_by, u.display_name AS uploader, e.uploaded_at, e.addendum,
          w.withdrawn_by, wu.display_name AS withdrawer, w.withdrawn_at, w.reason
     FROM phs.evidence e
@@ -47,10 +47,10 @@ const SELECT = `
     LEFT JOIN phs.app_user wu ON wu.id = w.withdrawn_by`;
 
 function toView(r: Row): EvidenceView {
-  const kind: TargetKind = r.milestone_id ? 'milestone' : r.risk_id ? 'risk' : 'change';
+  const kind: TargetKind = r.milestone_id ? 'milestone' : r.risk_id ? 'risk' : r.review_id ? 'review' : 'change';
   const withdrawn = r.withdrawn_at !== null;
   return {
-    id: r.id, target: { kind, id: (r.milestone_id ?? r.risk_id ?? r.change_id)! },
+    id: r.id, target: { kind, id: (r.milestone_id ?? r.risk_id ?? r.review_id ?? r.change_id)! },
     // Withdrawn content is no longer served; the record of the withdrawal is.
     text: withdrawn ? null : r.body_text,
     file: withdrawn || !r.object_key ? null : { name: r.original_filename!, mime: r.mime_type!, sizeBytes: Number(r.size_bytes) },
@@ -66,15 +66,29 @@ export class EvidenceService {
     private readonly storage: EvidenceStorage,
   ) {}
 
+  // Milestones, risks and changes belong to Projects, which says who may update them. A Health
+  // Review belongs to Health: whoever may see the project sees its support, the PM and the lead
+  // may add to it, and once the lead validated it anything new is an addendum (D09).
+  private async access(actor: Actor, target: Target): Promise<TargetAccess | null> {
+    if (target.kind !== 'review') return this.projects.target(actor.identity, target.projectId, target.kind, target.id);
+    const capabilities = await this.projects.capabilities(actor.identity, target.projectId);
+    if (!capabilities) return null;
+    const review = await this.pool.query<{ validated: boolean }>(
+      `SELECT EXISTS (SELECT 1 FROM phs.review_validation v WHERE v.review_id = r.id AND v.decision = 'validated') AS validated
+         FROM phs.health_review r WHERE r.project_id = $1 AND r.id = $2`, [target.projectId, target.id]);
+    if (!review.rowCount) return null;
+    return { capabilities, canAdd: capabilities.proposeAndReview || capabilities.decide, closed: review.rows[0]!.validated };
+  }
+
   async list(actor: Actor, target: Target): Promise<EvidenceView[]> {
-    if (!(await this.projects.target(actor.identity, target.projectId, target.kind, target.id))) throw new EvidenceError('not_found');
+    if (!(await this.access(actor, target))) throw new EvidenceError('not_found');
     const found = await this.pool.query<Row>(
       `${SELECT} WHERE e.project_id = $1 AND e.${COLUMN[target.kind]} = $2 ORDER BY e.uploaded_at`, [target.projectId, target.id]);
     return found.rows.map(toView);
   }
 
   async add(actor: Actor, target: Target, text: string | null, upload: Upload | null): Promise<EvidenceView> {
-    const access = await this.projects.target(actor.identity, target.projectId, target.kind, target.id);
+    const access = await this.access(actor, target);
     if (!access) throw new EvidenceError('not_found');
     if (!access.canAdd) throw new EvidenceError('forbidden');
     const body = text?.trim() || null;
