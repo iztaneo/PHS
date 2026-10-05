@@ -44,9 +44,17 @@ services_pid=$!
 web_log_file="${TMPDIR:-/tmp}/phs-e2e-web.log"
 npx --yes pnpm@12.9.1 --filter @phs/web dev >"$web_log_file" 2>&1 &
 web_pid=$!
+# Stops a process and everything it started. SIGTERM, not SIGINT: a shell without job control starts
+# background commands with SIGINT ignored, so on Linux the services never received it and the
+# script waited for ever (seen in CI, BIT-0037).
+stop_tree() {
+  for child in $(pgrep -P "$1" 2>/dev/null); do stop_tree "$child"; done
+  kill -TERM "$1" 2>/dev/null || true
+}
 cleanup() {
-  kill -INT "$services_pid" 2>/dev/null || true
-  kill -INT "$web_pid" 2>/dev/null || true
+  trap - EXIT INT TERM
+  stop_tree "$services_pid"
+  stop_tree "$web_pid"
   wait "$services_pid" 2>/dev/null || true
   wait "$web_pid" 2>/dev/null || true
 }

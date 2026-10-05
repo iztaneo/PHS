@@ -1398,6 +1398,33 @@ Revisar la primera corrida. Después AT-16 y D07. Siguiente entrada: BIT-0036.
 
 Revisar la corrida. Siguiente entrada: BIT-0037.
 
+## BIT-0037 — Cierre de servicios del recorrido e2e en integración continua
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** corregir el segundo fallo del flujo de integración continua.
+
+**Relación:** PHS-040, PHS-042; BIT-0034, BIT-0035, BIT-0036.
+
+**Identificación:** commit con prefijo `BIT-0037`.
+
+### Trabajo realizado
+
+- Corrida 37380602593 (commit de BIT-0036): "Compilar y probar" terminó bien en GitHub. En "Recorrido de punta a punta" pasaron los 13 escenarios por gateway y las 3 pruebas de navegador, pero el paso no terminó: `scripts/e2e.sh` detenía los servicios con `SIGINT`, que en Linux no llega a procesos lanzados en segundo plano por un shell sin control de trabajos, y se quedó esperando. Se canceló a los 20 minutos.
+- `scripts/e2e.sh`: detiene cada proceso y sus descendientes con `SIGTERM`.
+
+### Archivos
+
+`scripts/e2e.sh` y esta bitácora.
+
+### Validación y límites
+
+- En local (macOS): `pnpm test:e2e` con 13 de 13 y 3 de 3, código 0, y ningún proceso escuchando en los puertos al terminar. En macOS el script ya terminaba antes del cambio, así que la corrección real solo se comprueba en GitHub con la corrida de este commit.
+
+### Pendientes y siguiente paso
+
+Revisar la corrida. Después AT-16 y D07. Siguiente entrada: BIT-0038.
+
 ## Plantilla para próximas entradas
 
 ```text
