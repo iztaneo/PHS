@@ -8,6 +8,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–015 (38 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, los cuatro servicios (`identity`, `projects`, `health`, `platform`) y los paquetes `service-kit`, `contracts` y `health-engine`; ver README para arrancarlo.
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
+- **Diccionario de datos:** [DICCIONARIO-DATOS.md](DICCIONARIO-DATOS.md), con diagramas entidad-relación por módulo, generado desde la base con `pnpm db:dictionary` (BIT-0029).
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
 - **R3 construido (en revisión, sin aceptar):** alertas, acciones y causa y plan (BIT-0024); ciclo de revisión, Health Review, validación y festivos (BIT-0025); confianza explicada, tendencia, proyección y proceso programado (BIT-0026). Lo que falta de cada historia está en su estado en el backlog.
@@ -1088,6 +1089,44 @@ Aceptación del usuario de R1 a R3; después R4. Siguiente entrada: BIT-0028.
 ### Pendientes y siguiente paso
 
 Prueba del usuario. Después PHS-038, PHS-039 y PHS-046; PHS-037 requiere D10. Siguiente entrada: BIT-0029.
+
+## BIT-0029 — Diccionario de datos y diagramas entidad-relación
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** el usuario pidió un diccionario de datos detallado del diagrama entidad-relación, porque el existente estaba desactualizado.
+
+**Relación:** PHS-004; todas las migraciones (001 a 015). Solo documentación y herramientas; sin cambios en el esquema ni en la aplicación.
+
+**Identificación:** commit con prefijo `BIT-0029`.
+
+### Trabajo realizado
+
+- [DICCIONARIO-DATOS.md](DICCIONARIO-DATOS.md): las 38 tablas y 349 columnas en seis módulos. Por tabla: qué guarda, qué servicio la escribe, protección de la historia, columnas con tipo, obligatoriedad, valor por defecto, claves y descripción, valores permitidos con su significado, referencias, unicidad, reglas que impone la base e índices. Un diagrama entidad-relación general y uno por módulo con columnas clave.
+- [descripciones.json](diccionario/descripciones.json): la descripción en español de cada tabla, columna y valor permitido.
+- Generador: [data-dictionary.sql](../scripts/data-dictionary.sql) lee la estructura del catálogo de PostgreSQL y [data-dictionary.mjs](../scripts/data-dictionary.mjs) la cruza con las descripciones. No escribe si falta o sobra una descripción. `pnpm db:dictionary` genera; `pnpm db:dictionary -- --check` comprueba que el archivo esté al día.
+- [DATABASE-PHS.md](DATABASE-PHS.md): se quitó el diagrama anterior, que ya no correspondía al esquema (le faltaban 12 de las 38 tablas), y se enlaza al diccionario.
+- [AGENTS.md](../AGENTS.md): toda migración que cambie tablas o columnas actualiza las descripciones y regenera el diccionario en el mismo commit.
+
+### Archivos
+
+`docs/DICCIONARIO-DATOS.md`, `docs/diccionario/descripciones.json`, `scripts/data-dictionary.sql`, `scripts/data-dictionary.mjs`, `scripts/local-db.sh`, `package.json`, `docs/DATABASE-PHS.md`, `AGENTS.md`, `README.md` y esta bitácora.
+
+### Decisiones y supuestos
+
+- Decisión mía: generar el documento desde la base en lugar de escribirlo a mano, para que no vuelva a desactualizarse; y agrupar las tablas en seis módulos que no coinciden uno a uno con los cuatro servicios (Salud se divide en ciclo de revisión, motor de salud, y eventos y acciones).
+- En los diagramas se omiten las referencias a `app_user` fuera del módulo de identidad, porque casi todas las tablas las tienen; sí aparecen en el detalle de cada tabla.
+
+### Validación y límites
+
+- El generador validó las 38 tablas, las 349 columnas y los valores permitidos de 27 columnas contra la base local con las 15 migraciones; `--check` confirma que el archivo está al día.
+- Las líneas de los diagramas se comprobaron contra la sintaxis de Mermaid con una expresión regular; **no se renderizaron** en un visor.
+- Las descripciones las escribí a partir del esquema y del código; el usuario no las ha revisado. La estructura de los campos JSON se describe en texto, sin esquema formal por campo.
+- El generador necesita la base local levantada; no corre en una instalación sin PostgreSQL.
+
+### Pendientes y siguiente paso
+
+Revisión del diccionario por el usuario. Después continuar R4 (PHS-038, PHS-039, PHS-046; PHS-037 requiere D10). Siguiente entrada: BIT-0030.
 
 ## Plantilla para próximas entradas
 

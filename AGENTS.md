@@ -29,3 +29,4 @@
 - `docs/producto/DECISIONES.md`: políticas pendientes.
 - `docs/producto/PLAN-ENTREGAS.md`: secuencia y pruebas integrales.
 - `docs/ARQUITECTURA-PHS.md` y `docs/DATABASE-PHS.md`: arquitectura y persistencia.
+- `docs/DICCIONARIO-DATOS.md`: diccionario de datos y diagramas entidad-relación, generados desde la base. Toda migración que agregue o cambie tablas o columnas describe lo nuevo en `docs/diccionario/descripciones.json` y regenera el documento con `pnpm db:dictionary` en el mismo commit.

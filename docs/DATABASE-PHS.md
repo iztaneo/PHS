@@ -17,36 +17,11 @@ Supuesto: aplicación interna de una empresa con varias prácticas. Un cliente p
 
 PostgreSQL permite aplicar [restricciones y claves foráneas](https://www.postgresql.org/docs/17/ddl-constraints.html) y conservar estructuras de snapshot en [JSONB](https://www.postgresql.org/docs/17/datatype-json.html). Las relaciones operativas no se ocultan dentro de un único documento JSON.
 
-## Mapa de entidades
+## Mapa de entidades y diccionario de datos
 
-```mermaid
-erDiagram
-  practice ||--o{ practice_membership : autoriza
-  app_user ||--o{ practice_membership : participa
-  practice ||--o{ project : agrupa
-  client ||--o{ project : contrata
-  project ||--o{ project_member : asigna
-  project ||--o{ milestone : compromete
-  project ||--o{ risk : gestiona
-  project ||--o{ renewal : anticipa
-  project ||--o{ financial_observation : registra
-  project ||--o{ baseline : versiona
-  project ||--o{ project_change : propone
-  project_change ||--o| change_decision : decide
-  change_decision o|--o| baseline : origina
-  project ||--o| review_policy : configura
-  project ||--o{ review_cycle : programa
-  review_cycle ||--o{ health_review : recibe
-  health_review ||--o| review_validation : valida
-  baseline ||--o{ health_assessment : referencia
-  rule_set ||--o{ health_assessment : calcula
-  project ||--o{ health_event : detecta
-  health_event o|--o{ health_task : motiva
-  project ||--o{ activity : conserva
-  project ||--o{ evidence : respalda
-  project o|--o{ audit_entry : audita
-  outbox_message ||--o{ notification_delivery : entrega
-```
+El diagrama entidad-relación vigente, uno por módulo, y la descripción de cada tabla y columna están en [DICCIONARIO-DATOS.md](DICCIONARIO-DATOS.md). Ese documento se genera desde la base con `pnpm db:dictionary`, así que refleja el esquema real: 38 tablas tras la migración 015. El diagrama que estaba aquí se quitó en BIT-0029 porque ya no correspondía al esquema.
+
+Este documento conserva las decisiones de diseño y la historia de las migraciones; para saber qué guarda una columna, usar el diccionario.
 
 ## Propiedad de tablas por servicio
 

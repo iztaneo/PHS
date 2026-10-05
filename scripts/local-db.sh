@@ -45,6 +45,11 @@ case "${1:-}" in
     DATABASE_URL="postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@127.0.0.1:$POSTGRES_PORT/phs_test?sslmode=disable" \
       ./node_modules/.bin/dbmate --migrations-dir db/migrations --no-dump-schema up
     ;;
+  dictionary)
+    # Data dictionary generated from the real schema; pass --check to verify the file is up to date.
+    shift
+    run_psql -At -d "$POSTGRES_DB" -f scripts/data-dictionary.sql | node scripts/data-dictionary.mjs "$@"
+    ;;
   seed)
     # Development user from .env; the password is passed through the environment, not the command line.
     : "${DEV_USER_EMAIL:?Falta DEV_USER_EMAIL en .env}" "${DEV_USER_NAME:?Falta DEV_USER_NAME en .env}" "${DEV_USER_PASSWORD:?Falta DEV_USER_PASSWORD en .env}"
@@ -65,7 +70,7 @@ case "${1:-}" in
     echo "Datos locales eliminados"
     ;;
   *)
-    echo "Uso: $0 start|stop|logins|test|test-db|seed|seed-demo|reset" >&2
+    echo "Uso: $0 start|stop|logins|test|test-db|dictionary|seed|seed-demo|reset" >&2
     exit 2
     ;;
 esac

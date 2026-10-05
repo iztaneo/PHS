@@ -1,0 +1,774 @@
+{
+ "modulos": [
+  "Identidad y acceso",
+  "Proyectos y compromisos",
+  "Ciclo de revisión",
+  "Motor de salud",
+  "Eventos y acciones",
+  "Evidencia, historial y mensajería"
+ ],
+ "tablas": {
+  "app_user": {
+   "modulo": "Identidad y acceso",
+   "descripcion": "Persona que usa el sistema o que aparece como responsable de algo. No guarda contraseñas.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "identity_issuer": "Emisor de la identidad. `local` para usuarios validados en esta base; reservado para un proveedor externo (OIDC) futuro.",
+    "identity_subject": "Identificador del usuario dentro del emisor. Para usuarios locales se genera automáticamente.",
+    "display_name": "Nombre que se muestra en pantallas e historial.",
+    "email": "Correo; es el nombre de inicio de sesión. Único sin distinguir mayúsculas.",
+    "active": "Si puede iniciar sesión y ser asignado como responsable. Desactivar no borra su historia.",
+    "created_at": "Cuándo se dio de alta.",
+    "is_admin": "Administrador global: gestiona usuarios, prácticas, catálogos y festivos. No da acceso a proyectos."
+   }
+  },
+  "user_credential": {
+   "modulo": "Identidad y acceso",
+   "descripcion": "Credencial local de un usuario. Solo guarda el hash de la contraseña.",
+   "columnas": {
+    "user_id": "Usuario dueño de la credencial; una por usuario.",
+    "password_hash": "Hash Argon2id en formato PHC. Nunca la contraseña en claro.",
+    "must_change_password": "La contraseña es temporal y debe cambiarse antes de usar el sistema.",
+    "password_changed_at": "Último cambio de contraseña.",
+    "failed_attempts": "Intentos fallidos consecutivos; se reinicia al entrar.",
+    "locked_until": "Bloqueo temporal por intentos fallidos; nulo si no está bloqueado.",
+    "last_login_at": "Último inicio de sesión correcto.",
+    "created_at": "Cuándo se creó la credencial.",
+    "created_by": "Administrador que la creó o restableció."
+   }
+  },
+  "user_session": {
+   "modulo": "Identidad y acceso",
+   "descripcion": "Sesión de navegador iniciada. La cookie lleva un token aleatorio; aquí solo queda su huella.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "user_id": "Usuario de la sesión.",
+    "token_hash": "SHA-256 del token de la cookie.",
+    "created_at": "Inicio de la sesión.",
+    "last_seen_at": "Última actividad; de aquí se deriva el vencimiento por inactividad.",
+    "expires_at": "Límite absoluto de la sesión.",
+    "revoked_at": "Cuándo se cerró o revocó; nulo si sigue vigente.",
+    "revoke_reason": "Por qué se revocó.",
+    "ip_address": "Dirección desde la que se inició.",
+    "user_agent": "Navegador declarado al iniciar."
+   },
+   "valores": {
+    "revoke_reason": {
+     "logout": "El usuario cerró sesión",
+     "password_change": "Cambió su contraseña",
+     "user_disabled": "El usuario fue desactivado",
+     "admin": "Un administrador la revocó"
+    }
+   }
+  },
+  "practice": {
+   "modulo": "Identidad y acceso",
+   "descripcion": "Práctica o unidad de negocio que agrupa proyectos y sobre la que se otorgan roles.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "code": "Clave corta y única de la práctica.",
+    "name": "Nombre de la práctica.",
+    "timezone": "Zona horaria por defecto de la práctica."
+   }
+  },
+  "practice_membership": {
+   "modulo": "Identidad y acceso",
+   "descripcion": "Rol de un usuario en una práctica. Un usuario puede acumular varios roles en la misma práctica.",
+   "columnas": {
+    "practice_id": "Práctica.",
+    "user_id": "Usuario.",
+    "role": "Rol que tiene en esa práctica (D05)."
+   },
+   "valores": {
+    "role": {
+     "pm": "Puede crear proyectos y gestiona los suyos",
+     "lead": "Líder: ve y edita todos los proyectos de la práctica, valida y decide",
+     "director": "Dirección: consulta todos los proyectos de la práctica, incluida la economía"
+    }
+   }
+  },
+  "client": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Cliente para el que se ejecutan proyectos.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "name": "Nombre del cliente.",
+    "primary_contact": "Contacto general del cliente. El contacto de cada proyecto está en `project.client_contact`.",
+    "escalation_notes": "Notas generales de escalación del cliente.",
+    "created_at": "Cuándo se registró."
+   }
+  },
+  "service_type": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Catálogo de tipos de servicio que clasifica los proyectos.",
+   "columnas": {
+    "code": "Clave del tipo, en minúsculas.",
+    "name": "Nombre que se muestra.",
+    "active": "Si se puede elegir en proyectos nuevos; desactivarlo no afecta a los existentes."
+   }
+  },
+  "project": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Proyecto o servicio que se gobierna. Es el eje del modelo: casi todo lo demás cuelga de él.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "practice_id": "Práctica a la que pertenece; determina quién lo ve por rol.",
+    "client_id": "Cliente.",
+    "code": "Clave única del proyecto.",
+    "name": "Nombre.",
+    "description": "Descripción libre.",
+    "service_type_code": "Tipo de servicio.",
+    "status": "Estado del proyecto.",
+    "pm_id": "PM responsable de operarlo.",
+    "lead_id": "Líder nombrado en el proyecto.",
+    "technical_owner_id": "Responsable técnico; obligatorio.",
+    "sponsor_id": "Sponsor, si lo hay.",
+    "starts_on": "Inicio de la vigencia.",
+    "ends_on": "Fin de la vigencia.",
+    "currency": "Moneda ISO de tres letras en que se expresan presupuesto y costos.",
+    "timezone": "Zona horaria con la que se decide qué día es \"hoy\" para vencimientos.",
+    "current_baseline_id": "Línea base vigente; nulo mientras no se publique la primera.",
+    "revision": "Versión de la fila para control de concurrencia: aumenta en cada cambio y una edición basada en una versión anterior se rechaza. También aumenta cuando cambian sus hitos, riesgos, equipo, economía o estado.",
+    "created_at": "Cuándo se creó.",
+    "client_contact": "Contacto del cliente para este proyecto.",
+    "escalation_notes": "Ruta de escalación para este proyecto."
+   },
+   "valores": {
+    "status": {
+     "planned": "Planeado",
+     "active": "Activo",
+     "paused": "Pausado",
+     "renewing": "En renovación",
+     "closed": "Cerrado"
+    }
+   }
+  },
+  "project_member": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Integrante del equipo de un proyecto, además de PM, líder, responsable técnico y sponsor.",
+   "columnas": {
+    "project_id": "Proyecto.",
+    "user_id": "Integrante.",
+    "role": "Papel en el proyecto.",
+    "allocation_pct": "Porcentaje de dedicación; nulo si no se registró."
+   },
+   "valores": {
+    "role": {
+     "contributor": "Participa en la ejecución",
+     "viewer": "Solo consulta"
+    }
+   }
+  },
+  "milestone": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Hito o entregable comprometido del proyecto.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "title": "Nombre del hito.",
+    "deliverable": "Qué se entrega.",
+    "owner_id": "Responsable del hito.",
+    "due_on": "Fecha operativa vigente. El PM puede moverla; hacerlo sin un cambio aprobado cuenta como reprogramación.",
+    "critical": "Hito crítico: vencido activa un tope del score.",
+    "status": "Estado.",
+    "progress_pct": "Avance de 0 a 100; nulo si no se ha informado.",
+    "completed_on": "Fecha real de cumplimiento; solo cuando está completado.",
+    "completion_note": "Comentario al completar, cancelar o reabrir.",
+    "revision": "Versión de la fila para control de concurrencia: aumenta en cada cambio y una edición basada en una versión anterior se rechaza.",
+    "committed_due_on": "Fecha comprometida en la línea base vigente. Solo la mueve un cambio aprobado; nula si el hito aún no entra a una línea base."
+   },
+   "valores": {
+    "status": {
+     "pending": "Pendiente",
+     "in_progress": "En curso",
+     "completed": "Completado",
+     "rescheduled": "Reprogramado",
+     "cancelled": "Cancelado"
+    }
+   }
+  },
+  "risk": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Riesgo identificado y su plan de mitigación.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "title": "Nombre del riesgo.",
+    "description": "Descripción.",
+    "risk_type": "Si es un riesgo del proyecto o del cliente.",
+    "category": "Categoría: cronograma, financiero, cliente, equipo, técnico, proveedor o alcance.",
+    "probability": "Probabilidad de 1 (baja) a 3 (alta).",
+    "impact": "Impacto de 1 (bajo) a 3 (alto). Severidad = probabilidad × impacto.",
+    "owner_id": "Responsable de la mitigación.",
+    "mitigation_due_on": "Fecha límite de la mitigación.",
+    "strategy": "Estrategia de mitigación.",
+    "status": "Estado.",
+    "revision": "Versión de la fila para control de concurrencia: aumenta en cada cambio y una edición basada en una versión anterior se rechaza."
+   },
+   "valores": {
+    "risk_type": {
+     "project": "Del proyecto",
+     "client": "Del cliente; alimenta la dimensión Cliente"
+    },
+    "status": {
+     "open": "Abierto",
+     "mitigating": "En mitigación",
+     "mitigated": "Mitigado",
+     "materialized": "Materializado: ocurrió",
+     "closed": "Cerrado"
+    }
+   }
+  },
+  "renewal": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Compromiso de renovar el contrato o servicio en una fecha.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "due_on": "Fecha en que vence la renovación.",
+    "owner_id": "Responsable de gestionarla.",
+    "status": "Estado.",
+    "notes": "Notas de seguimiento.",
+    "outcome_note": "Resultado al cerrarla: qué se acordó o por qué se canceló.",
+    "closed_at": "Cuándo se cerró.",
+    "revision": "Versión de la fila para control de concurrencia: aumenta en cada cambio y una edición basada en una versión anterior se rechaza."
+   },
+   "valores": {
+    "status": {
+     "pending": "Pendiente",
+     "renewed": "Renovada",
+     "cancelled": "Cancelada"
+    }
+   }
+  },
+  "financial_observation": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Observación económica acumulada del proyecto a una fecha. No se edita: una corrección es otra observación que reemplaza a la anterior.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "effective_on": "Fecha a la que corresponden las cifras.",
+    "total_cost": "Costo real acumulado a esa fecha, en la moneda del proyecto.",
+    "total_effort_hours": "Horas de esfuerzo consumidas acumuladas; nulo si no se informó.",
+    "source": "De dónde salió el dato; por ejemplo un reporte o `Health Review`.",
+    "recorded_by": "Quién la registró.",
+    "recorded_at": "Cuándo se registró.",
+    "supersedes_id": "Observación que esta corrige; la corregida se conserva."
+   }
+  },
+  "project_change": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Propuesta de cambio a los compromisos del proyecto. No se modifica después de proponerla.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "title": "Título del cambio.",
+    "description": "Motivo y descripción.",
+    "change_type": "Origen del cambio.",
+    "proposed_by": "Quién lo propuso.",
+    "proposed_at": "Cuándo se propuso.",
+    "requested_impact": "Impacto solicitado (JSON): línea base de referencia y, para fecha de fin, presupuesto, esfuerzo, alcance e hitos, el valor antes y el propuesto."
+   },
+   "valores": {
+    "change_type": {
+     "client": "Pedido por el cliente",
+     "internal": "Interno",
+     "regulatory": "Regulatorio",
+     "technical": "Técnico"
+    }
+   }
+  },
+  "change_decision": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Decisión única sobre una propuesta de cambio. Aprobar publica una nueva línea base.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "change_id": "Propuesta decidida; una decisión por propuesta.",
+    "decision": "Resultado.",
+    "decided_by": "Quién decidió.",
+    "decided_at": "Cuándo.",
+    "comment": "Comentario obligatorio de la decisión."
+   },
+   "valores": {
+    "decision": {
+     "approved": "Aprobado: se publica una nueva línea base",
+     "rejected": "Rechazado: la línea base no cambia"
+    }
+   }
+  },
+  "baseline": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Línea base: fotografía versionada de los compromisos contra la que se mide la desviación. No se modifica.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "version": "Número consecutivo por proyecto; la 1 es la inicial.",
+    "previous_baseline_id": "Versión anterior; nula en la inicial.",
+    "approved_decision_id": "Decisión de cambio que originó esta versión; nula en la inicial.",
+    "decision_kind": "Tipo de decisión que la respalda; hoy siempre `approved`.",
+    "starts_on": "Inicio comprometido.",
+    "ends_on": "Fin comprometido.",
+    "scope": "Alcance comprometido.",
+    "budget": "Presupuesto comprometido; nulo si se desconoce.",
+    "effort_hours": "Esfuerzo comprometido en horas; nulo si se desconoce.",
+    "currency": "Moneda del presupuesto.",
+    "milestone_snapshot": "Hitos comprometidos (JSON, arreglo): id, título, entregable, fecha, responsable, criticidad y peso de cada uno.",
+    "team_snapshot": "Equipo al publicar (JSON, arreglo).",
+    "reason": "Motivo de la versión.",
+    "created_by": "Quién la publicó.",
+    "created_at": "Cuándo."
+   }
+  },
+  "project_status_log": {
+   "modulo": "Proyectos y compromisos",
+   "descripcion": "Historial de cambios de estado del proyecto y de las justificaciones que exige la regla de pausa o cierre prolongado (D08). Solo inserción.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "kind": "Qué registra la fila.",
+    "from_status": "Estado anterior; nulo en una justificación.",
+    "to_status": "Estado nuevo, o el estado en que se justifica.",
+    "reason": "Motivo del cambio o descripción de la situación.",
+    "recorded_by": "Quién lo registró.",
+    "recorded_at": "Cuándo."
+   },
+   "valores": {
+    "kind": {
+     "transition": "Cambio de estado",
+     "justification": "Justificación tras 30 días pausado o cerrado"
+    },
+    "from_status": {
+     "planned": "Planeado",
+     "active": "Activo",
+     "paused": "Pausado",
+     "renewing": "En renovación",
+     "closed": "Cerrado"
+    },
+    "to_status": {
+     "planned": "Planeado",
+     "active": "Activo",
+     "paused": "Pausado",
+     "renewing": "En renovación",
+     "closed": "Cerrado"
+    }
+   }
+  },
+  "review_policy": {
+   "modulo": "Ciclo de revisión",
+   "descripcion": "Política de revisión del proyecto: cadencia y reglas. Un proyecto sin fila no tiene ciclo configurado.",
+   "columnas": {
+    "project_id": "Proyecto; una política por proyecto.",
+    "cadence": "Cada cuánto se revisa.",
+    "evidence_required": "Exigir comentario de soporte en cada revisión con cambios.",
+    "lead_validation_required": "El líder debe validar cada revisión; si no, se cierra al enviarla.",
+    "auto_tasks": "Crear una acción automática al abrirse una alerta.",
+    "forecast_cycles": "Ciclos futuros que cubre la proyección y la búsqueda de renovaciones próximas (1 a 12).",
+    "anchor_on": "Fecha a la que se ancla el calendario: su día de la semana (o del mes, en cadencia mensual) es el día de corte.",
+    "revision": "Versión de la fila para control de concurrencia: aumenta en cada cambio y una edición basada en una versión anterior se rechaza.",
+    "updated_at": "Último cambio de la política.",
+    "updated_by": "Quién la cambió."
+   },
+   "valores": {
+    "cadence": {
+     "weekly": "Semanal, cada 7 días",
+     "fortnightly": "Quincenal, cada 14 días",
+     "monthly": "Mensual, por mes calendario"
+    }
+   }
+  },
+  "review_cycle": {
+   "modulo": "Ciclo de revisión",
+   "descripcion": "Periodo en el que se espera una revisión. El primero se crea al configurar la política y los siguientes al enviar cada revisión.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "starts_on": "Inicio del periodo.",
+    "due_on": "Fecha límite de la revisión; nunca cae en sábado, domingo ni festivo.",
+    "policy_snapshot": "Política vigente cuando se programó (JSON): cadencia, horizonte, soporte obligatorio y validación del líder. Un ciclo ya enviado conserva la suya."
+   }
+  },
+  "review_draft": {
+   "modulo": "Ciclo de revisión",
+   "descripcion": "Borrador de la revisión que un usuario está capturando en un ciclo. Se borra al enviar.",
+   "columnas": {
+    "cycle_id": "Ciclo.",
+    "author_id": "Usuario que captura; un borrador por usuario y ciclo.",
+    "payload": "Captura en curso (JSON): temas, clima, finanzas, confianza declarada, comentario de soporte y segundos de captura.",
+    "revision": "Versión de la fila para control de concurrencia: aumenta en cada cambio y una edición basada en una versión anterior se rechaza.",
+    "updated_at": "Último guardado."
+   }
+  },
+  "health_review": {
+   "modulo": "Ciclo de revisión",
+   "descripcion": "Health Review enviado. Cuenta para la salud desde que se envía (D02) y no se modifica: una corrección es otra versión del mismo ciclo.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "cycle_id": "Ciclo que cubre.",
+    "revision_no": "Versión dentro del ciclo; 1 la primera, consecutivas tras cada devolución.",
+    "supersedes_id": "Versión anterior que esta reemplaza; nula en la primera.",
+    "author_id": "Quién la envió.",
+    "submitted_at": "Cuándo se envió.",
+    "effective_on": "Fecha de negocio del envío, en la zona del proyecto.",
+    "nothing_changed": "El PM declaró que nada cambió; excluyente con los temas.",
+    "topics": "Qué cambió: cronograma, hitos, riesgos, cliente, finanzas, alcance, equipo.",
+    "client_climate": "Clima del cliente vigente con este envío.",
+    "support_text": "Comentario de soporte.",
+    "duration_seconds": "Tiempo activo de captura.",
+    "submitted_data": "Datos del envío (JSON): notas por tema, versión del proyecto, confianza declarada y cifras económicas registradas.",
+    "expectations_snapshot": "Lo que el sistema esperaba al enviar (JSON, arreglo): tipo, elemento, fecha, si estaba vencido, si era crítico y si bloqueaba \"nada cambió\"."
+   },
+   "valores": {
+    "client_climate": {
+     "good": "Bueno",
+     "tense": "Tenso",
+     "critical": "Crítico: activa un tope del score"
+    }
+   }
+  },
+  "review_validation": {
+   "modulo": "Ciclo de revisión",
+   "descripcion": "Decisión única del líder sobre un envío de revisión. Devolver no anula el envío.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "review_id": "Envío decidido; una decisión por envío.",
+    "decision": "Resultado.",
+    "validator_id": "Quién decidió.",
+    "decided_at": "Cuándo.",
+    "comment": "Comentario obligatorio."
+   },
+   "valores": {
+    "decision": {
+     "validated": "Validada",
+     "returned": "Devuelta: el PM debe corregir y reenviar"
+    }
+   }
+  },
+  "holiday": {
+   "modulo": "Ciclo de revisión",
+   "descripcion": "Día festivo. Junto con sábados y domingos, son días en que no vence ninguna revisión. Los mantiene el administrador.",
+   "columnas": {
+    "day": "Fecha del festivo.",
+    "name": "Nombre.",
+    "created_at": "Cuándo se registró.",
+    "created_by": "Administrador que lo registró."
+   }
+  },
+  "rule_set": {
+   "modulo": "Motor de salud",
+   "descripcion": "Versión del conjunto de reglas PHF con la que se calculó una evaluación.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "version": "Identificador de la versión, por ejemplo `phf-v1`.",
+    "definition": "Valores de la versión (JSON): pesos, topes, umbrales y coeficientes.",
+    "engine_version": "Versión del motor de cálculo.",
+    "created_by": "Usuario en cuyo nombre se registró.",
+    "created_at": "Cuándo."
+   }
+  },
+  "health_assessment": {
+   "modulo": "Motor de salud",
+   "descripcion": "Resultado guardado de evaluar la salud de un proyecto en una fecha, con todo lo necesario para reproducirlo. No se modifica.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "baseline_id": "Línea base contra la que se midió.",
+    "rule_set_id": "Reglas usadas.",
+    "review_id": "Revisión que originó la evaluación, si es de ciclo.",
+    "cycle_id": "Ciclo al que corresponde, si es de ciclo.",
+    "effective_on": "Fecha de negocio evaluada.",
+    "calculated_at": "Cuándo se calculó.",
+    "project_revision": "Versión de los datos del proyecto con la que se calculó.",
+    "assessment_kind": "Tipo de evaluación.",
+    "publication": "Si es oficial o provisional.",
+    "score": "Score de salud de 0 a 100; nulo es \"sin evaluación\". Es el menor entre el promedio ponderado y el tope.",
+    "weighted_score": "Promedio ponderado de las dimensiones con dato.",
+    "gate_cap": "Menor tope activo por regla crítica; 100 si no hay ninguno.",
+    "confidence": "Confianza de la información, de 0 a 100; independiente del score.",
+    "dimension_results": "Resultado por dimensión (JSON): score y restas de cada una, semáforo, nivel y restas de la confianza, y métricas de avance y desviación.",
+    "gate_results": "Reglas críticas (JSON, arreglo): clave, tope y si está activa.",
+    "input_snapshot": "Datos de entrada del cálculo (JSON), para reproducirlo.",
+    "forecast": "Reservado para guardar la proyección (JSON); hoy la proyección se calcula al consultar.",
+    "idempotency_key": "Clave que evita guardar dos veces la misma evaluación."
+   },
+   "valores": {
+    "assessment_kind": {
+     "operational": "Del día: se calcula al consultar o por el proceso programado",
+     "cycle": "Corte de un ciclo: se calcula al enviar la revisión",
+     "retrospective": "Recalculo posterior; reservado"
+    },
+    "publication": {
+     "provisional": "Provisional",
+     "official": "Oficial: la de un envío de revisión"
+    }
+   }
+  },
+  "health_event": {
+   "modulo": "Eventos y acciones",
+   "descripcion": "Alerta: un hecho objetivo que indica que algo va mal, con su episodio. Se resuelve sola cuando la condición desaparece.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "rule_key": "Regla que la detectó: hito vencido, mitigación vencida, riesgo materializado, desviación de proyecto o financiera, renovación próxima, cambio pendiente, revisión vencida o devuelta.",
+    "condition_key": "Identifica la condición concreta (regla y elemento) entre ejecuciones. Solo puede haber un evento abierto por condición.",
+    "episode": "Número de episodio de esa condición; una reaparición es un episodio nuevo.",
+    "severity": "Gravedad.",
+    "title": "Texto de la alerta.",
+    "milestone_id": "Hito al que se refiere, si aplica.",
+    "risk_id": "Riesgo al que se refiere, si aplica.",
+    "renewal_id": "Renovación a la que se refiere, si aplica.",
+    "change_id": "Cambio al que se refiere, si aplica.",
+    "cycle_id": "Ciclo de revisión al que se refiere, si aplica.",
+    "opened_at": "Cuándo se detectó.",
+    "resolved_at": "Cuándo dejó de cumplirse la condición; nulo si sigue abierta.",
+    "resolution_note": "Explicación de la resolución."
+   },
+   "valores": {
+    "severity": {
+     "info": "Informativa",
+     "warning": "Advertencia",
+     "critical": "Crítica: exige causa y plan en las reglas que lo piden"
+    }
+   }
+  },
+  "event_response": {
+   "modulo": "Eventos y acciones",
+   "descripcion": "Causa y plan que el PM da a una alerta (D04). Solo inserción: tras una devolución se envía otra versión.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "event_id": "Alerta a la que responde.",
+    "revision_no": "Versión de la respuesta para ese evento.",
+    "cause": "Por qué ocurrió la desviación.",
+    "kind": "Salida elegida.",
+    "plan": "Plan de remediación o motivo de la replanificación.",
+    "change_id": "Propuesta de cambio que replanifica; obligatoria si la salida es replanificar.",
+    "submitted_by": "Quién la envió.",
+    "submitted_at": "Cuándo."
+   },
+   "valores": {
+    "kind": {
+     "remediation": "Plan de remediación para cumplir la fecha",
+     "replan": "Replanificación mediante un cambio aprobado"
+    }
+   }
+  },
+  "event_response_validation": {
+   "modulo": "Eventos y acciones",
+   "descripcion": "Decisión única del líder sobre una respuesta de causa y plan.",
+   "columnas": {
+    "response_id": "Respuesta decidida.",
+    "decision": "Resultado.",
+    "validator_id": "Quién decidió.",
+    "decided_at": "Cuándo.",
+    "comment": "Comentario obligatorio."
+   },
+   "valores": {
+    "decision": {
+     "validated": "Validada",
+     "returned": "Devuelta: el PM debe responder de nuevo"
+    }
+   }
+  },
+  "health_task": {
+   "modulo": "Eventos y acciones",
+   "descripcion": "Acción con responsable y plazo. Puede ser automática, creada por una alerta, o manual.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "event_id": "Alerta que la originó; obligatoria en las automáticas.",
+    "title": "Qué hay que hacer.",
+    "description": "Detalle.",
+    "owner_id": "Responsable.",
+    "due_on": "Plazo.",
+    "priority": "Prioridad.",
+    "status": "Estado.",
+    "automatic": "La creó el sistema al abrirse una alerta.",
+    "automation_key": "Clave que evita crear dos veces la acción automática de un mismo episodio.",
+    "created_at": "Cuándo se creó.",
+    "created_by": "Quién la creó; nulo en las automáticas.",
+    "closed_at": "Cuándo se completó o canceló.",
+    "closure_note": "Comentario de cierre; obligatorio al completar o cancelar.",
+    "revision": "Versión de la fila para control de concurrencia: aumenta en cada cambio y una edición basada en una versión anterior se rechaza."
+   },
+   "valores": {
+    "priority": {
+     "high": "Alta",
+     "medium": "Media",
+     "low": "Baja"
+    },
+    "status": {
+     "pending": "Pendiente",
+     "in_progress": "En curso",
+     "blocked": "Bloqueada",
+     "completed": "Completada",
+     "cancelled": "Cancelada"
+    }
+   }
+  },
+  "scheduler_run": {
+   "modulo": "Eventos y acciones",
+   "descripcion": "Pasada del proceso programado de Salud que actualiza alertas, acciones y evaluaciones. Conserva el detalle de los últimos tres meses.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "started_at": "Inicio de la pasada.",
+    "finished_at": "Fin; nulo si está en curso o se interrumpió.",
+    "projects_processed": "Proyectos procesados sin error.",
+    "failures": "Proyectos que fallaron (JSON, arreglo): proyecto y error. Se reintentan en la siguiente pasada."
+   }
+  },
+  "scheduler_run_daily": {
+   "modulo": "Eventos y acciones",
+   "descripcion": "Histórico del proceso programado: resumen por día de las pasadas de más de tres meses.",
+   "columnas": {
+    "day": "Día resumido, en UTC.",
+    "runs": "Pasadas iniciadas ese día.",
+    "completed": "Pasadas que terminaron.",
+    "interrupted": "Pasadas sin fin registrado.",
+    "runs_with_failures": "Pasadas en las que falló al menos un proyecto.",
+    "projects_processed": "Suma de proyectos procesados.",
+    "failures": "Fallos distintos del día (JSON, arreglo): proyecto, error y en cuántas pasadas apareció.",
+    "archived_at": "Cuándo se generó el resumen."
+   }
+  },
+  "evidence": {
+   "modulo": "Evidencia, historial y mensajería",
+   "descripcion": "Evidencia privada de un hito, riesgo, revisión, acción o cambio: texto, archivo o ambos. No se modifica ni se borra; se retira con motivo.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "milestone_id": "Hito respaldado, si aplica.",
+    "risk_id": "Riesgo respaldado, si aplica.",
+    "review_id": "Revisión respaldada, si aplica.",
+    "task_id": "Acción respaldada, si aplica; aún sin pantalla.",
+    "change_id": "Cambio respaldado, si aplica.",
+    "uploaded_by": "Quién la subió.",
+    "uploaded_at": "Cuándo.",
+    "body_text": "Texto de la evidencia.",
+    "object_key": "Clave del archivo en el almacenamiento; nula si solo hay texto.",
+    "original_filename": "Nombre saneado del archivo.",
+    "mime_type": "Tipo detectado por contenido.",
+    "size_bytes": "Tamaño en bytes (máximo 10 MB).",
+    "sha256": "Huella del contenido del archivo.",
+    "addendum": "Adenda: se agregó cuando el elemento ya estaba cerrado o decidido (D09)."
+   },
+   "notas": [
+    "Exactamente una de las columnas `milestone_id`, `risk_id`, `review_id`, `task_id` y `change_id` tiene valor."
+   ]
+  },
+  "evidence_withdrawal": {
+   "modulo": "Evidencia, historial y mensajería",
+   "descripcion": "Retiro de una evidencia. La evidencia se conserva, pero su contenido deja de servirse.",
+   "columnas": {
+    "evidence_id": "Evidencia retirada; un retiro por evidencia.",
+    "withdrawn_by": "Quién la retiró.",
+    "withdrawn_at": "Cuándo.",
+    "reason": "Motivo obligatorio."
+   }
+  },
+  "activity": {
+   "modulo": "Evidencia, historial y mensajería",
+   "descripcion": "Historial de seguimiento de hitos, riesgos y acciones: cada actualización con su antes y después. Solo inserción, desde cualquier servicio.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto al que pertenece.",
+    "milestone_id": "Hito actualizado, si aplica.",
+    "risk_id": "Riesgo actualizado, si aplica.",
+    "task_id": "Acción actualizada, si aplica.",
+    "actor_id": "Usuario que hizo el cambio; nulo si fue el sistema.",
+    "source": "Quién originó el cambio.",
+    "occurred_at": "Cuándo.",
+    "note": "Comentario del cambio.",
+    "before_data": "Valores anteriores (JSON).",
+    "after_data": "Valores nuevos (JSON)."
+   },
+   "valores": {
+    "source": {
+     "user": "Un usuario",
+     "system": "El sistema, por ejemplo al cerrar una acción automática"
+    }
+   }
+  },
+  "audit_entry": {
+   "modulo": "Evidencia, historial y mensajería",
+   "descripcion": "Bitácora de auditoría: quién hizo qué y cuándo. Se inserta en la misma transacción que el cambio y nunca se modifica.",
+   "columnas": {
+    "id": "Consecutivo.",
+    "project_id": "Proyecto afectado, si aplica.",
+    "actor_id": "Usuario que actuó; nulo si fue el sistema.",
+    "request_id": "Identificador de la petición, para correlacionar con los registros de los servicios.",
+    "action": "Acción realizada, por ejemplo `review.submitted`.",
+    "entity_type": "Tipo de entidad afectada.",
+    "entity_id": "Identificador de la entidad afectada.",
+    "occurred_at": "Cuándo.",
+    "before_data": "Estado anterior relevante (JSON). Nunca contraseñas, tokens ni hashes.",
+    "after_data": "Estado nuevo relevante (JSON)."
+   }
+  },
+  "outbox_message": {
+   "modulo": "Evidencia, historial y mensajería",
+   "descripcion": "Mensaje que un servicio publica en la misma transacción que su cambio, para que Plataforma lo procese después (notificaciones). Entrega al menos una vez.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "project_id": "Proyecto relacionado, si aplica.",
+    "event_type": "Qué ocurrió, por ejemplo `event.opened` o `review.submitted`.",
+    "deduplication_key": "Clave única que impide publicar dos veces el mismo hecho.",
+    "payload": "Datos del mensaje (JSON): identificadores del proyecto y del elemento.",
+    "created_at": "Cuándo se publicó.",
+    "available_at": "A partir de cuándo puede procesarse; se pospone tras un fallo.",
+    "attempts": "Intentos de procesamiento.",
+    "locked_until": "Reservado para bloqueo por un procesador; sin uso actual.",
+    "processed_at": "Cuándo se procesó; nulo si está pendiente.",
+    "last_error": "Último error al procesarlo."
+   }
+  },
+  "notification_delivery": {
+   "modulo": "Evidencia, historial y mensajería",
+   "descripcion": "Notificación entregada a un usuario por un canal, originada en un mensaje del outbox.",
+   "columnas": {
+    "id": "Identificador único generado por la base.",
+    "outbox_id": "Mensaje de origen.",
+    "recipient_id": "Destinatario.",
+    "channel": "Canal de entrega.",
+    "status": "Estado de la entrega.",
+    "provider_reference": "Referencia del proveedor externo; sin uso con el canal interno.",
+    "sent_at": "Cuándo se entregó.",
+    "read_at": "Cuándo la leyó el usuario; leer no resuelve la alerta de origen."
+   },
+   "valores": {
+    "channel": {
+     "in_app": "Dentro de la aplicación",
+     "email": "Correo; aún no implementado"
+    },
+    "status": {
+     "pending": "Pendiente",
+     "sent": "Entregada",
+     "failed": "Falló"
+    }
+   }
+  },
+  "command_idempotency": {
+   "modulo": "Evidencia, historial y mensajería",
+   "descripcion": "Resultado guardado de un comando, para que repetir la misma petición devuelva la misma respuesta sin ejecutarla dos veces.",
+   "columnas": {
+    "service": "Servicio que ejecutó el comando.",
+    "user_id": "Usuario que lo pidió.",
+    "key": "Clave de idempotencia enviada por el cliente.",
+    "command": "Nombre del comando.",
+    "request_hash": "Huella del contenido; la misma clave con otro contenido se rechaza.",
+    "response_status": "Código de la respuesta original.",
+    "response_body": "Respuesta original (JSON).",
+    "created_at": "Cuándo se ejecutó."
+   },
+   "valores": {
+    "service": {
+     "identity": "Identidad",
+     "projects": "Proyectos",
+     "health": "Salud",
+     "platform": "Plataforma"
+    }
+   }
+  }
+ }
+}
