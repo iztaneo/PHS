@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { projectDetail, projectStatusView, renewal as renewalSchema } from '@phs/contracts';
+import { inactiveProject, projectDetail, projectStatusView, renewal as renewalSchema } from '@phs/contracts';
 import { createPool, loadEnv } from '@phs/service-kit';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { MilestonesService } from '../src/milestones.service.js';
@@ -153,5 +153,34 @@ describe.skipIf(!ready)('project status and renewals (PHS-014, PHS-013, D08)', (
     expect(listed[0]?.daysToDue).toBeGreaterThan(350);
     await expect(status.createRenewal(actor(pm), p.id, { dueOn: day(10), ownerId: randomUUID(), notes: '' }, randomUUID())).rejects.toMatchObject({ code: 'responsible_not_enabled' });
     await expect(status.createRenewal(actor(dev), p.id, { dueOn: day(10), ownerId: dev, notes: '' }, randomUUID())).rejects.toMatchObject({ code: 'forbidden' });
+  });
+
+  it('PHS-046: lists paused and closed projects with reason, age, justification and what was left open', async () => {
+    const running = await newProject();
+    await move(pm, running.id, 'active', 'Inicio');
+    const recent = await newProject();
+    await move(pm, recent.id, 'active', 'Inicio', ago(50));
+    await milestones.create(actor(pm), recent.id, { title: 'Pendiente', deliverable: '', ownerId: dev, dueOn: day(20), critical: false }, randomUUID());
+    await move(pm, recent.id, 'paused', 'Vacaciones del cliente', ago(10));
+    const stale = await newProject();
+    await move(pm, stale.id, 'active', 'Inicio', ago(120));
+    await move(pm, stale.id, 'paused', 'Sin presupuesto', ago(45));
+    const explained = await newProject();
+    await move(pm, explained.id, 'active', 'Inicio', ago(200));
+    // Closing is the lead's decision.
+    await move(lead, explained.id, 'closed', 'Contrato terminado', ago(100));
+    await status.justify(actor(pm), explained.id, 'Cierre administrativo concluido.');
+
+    const report = await projects.inactive(lead);
+    expect(() => inactiveProject.strict().array().parse(report)).not.toThrow();
+    const mine = report.filter((r) => [running.id, recent.id, stale.id, explained.id].includes(r.id));
+    // Those that owe a justification first; an active project is never listed.
+    expect(mine.map((r) => r.id)).toEqual([stale.id, explained.id, recent.id]);
+    expect(mine[0]).toMatchObject({ status: 'paused', reason: 'Sin presupuesto', days: 45, justificationRequired: true, lastJustification: null, changedBy: 'pm' });
+    expect(mine[1]).toMatchObject({ status: 'closed', changedBy: 'lead', days: 100, justificationRequired: false, lastJustification: { text: 'Cierre administrativo concluido.', by: 'pm' } });
+    expect(mine[2]).toMatchObject({ days: 10, justificationRequired: false, stopped: { openMilestones: 1, openRisks: 0, openActions: 0, pendingRenewals: 0, reviewCycle: false } });
+    // Only within the user's scope: Dirección sees them, someone outside the practice does not.
+    expect((await projects.inactive(director)).some((r) => r.id === stale.id)).toBe(true);
+    expect(await projects.inactive(outsider)).toEqual([]);
   });
 });

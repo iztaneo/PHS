@@ -3649,6 +3649,635 @@
         }
       }
     },
+    "/api/v1/history": {
+      "get": {
+        "summary": "Historial del proyecto",
+        "tags": [
+          "Historial"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "project",
+                "milestone",
+                "risk",
+                "change",
+                "review",
+                "alert",
+                "action",
+                "evaluation",
+                "finance",
+                "renewal",
+                "evidence"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Incluye ese día completo.",
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "`nextCursor` de la página anterior.",
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cambios, revisiones, riesgos, hitos, acciones, alertas y evaluaciones oficiales, con autor, fecha y motivo. Paginado sin límite total.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "project",
+                              "milestone",
+                              "risk",
+                              "change",
+                              "review",
+                              "alert",
+                              "action",
+                              "evaluation",
+                              "finance",
+                              "renewal",
+                              "evidence"
+                            ]
+                          },
+                          "action": {
+                            "type": "string",
+                            "description": "Acción registrada, por ejemplo `milestone.completed`."
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "detail": {
+                            "description": "Motivo, comentario o valores pertinentes. Las cifras económicas solo para quien puede verlas.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "actor": {
+                            "description": "null: lo hizo el sistema.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "occurredAt",
+                          "category",
+                          "action",
+                          "title",
+                          "detail",
+                          "actor"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Del más reciente al más antiguo, en orden estable."
+                    },
+                    "nextCursor": {
+                      "description": "null: no hay más.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (`invalid_request`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso (`forbidden`), contraseña temporal sin cambiar (`password_change_required`) u origen no permitido (`origin_not_allowed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o está fuera del alcance del usuario (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "El servicio de identidad no respondió (`identity_unavailable`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/history/timeline": {
+      "get": {
+        "summary": "Línea de tiempo del proyecto",
+        "tags": [
+          "Historial"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pasado reciente, lo vencido hoy y lo que vence dentro del horizonte de ciclos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "today": {
+                      "type": "string",
+                      "format": "date",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                    },
+                    "horizon": {
+                      "type": "object",
+                      "properties": {
+                        "until": {
+                          "type": "string",
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                        },
+                        "cycles": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "cadence": {
+                          "type": "string",
+                          "enum": [
+                            "weekly",
+                            "fortnightly",
+                            "monthly"
+                          ]
+                        },
+                        "assumed": {
+                          "type": "boolean",
+                          "description": "true: el proyecto no tiene ciclo y se usaron dos quincenas."
+                        }
+                      },
+                      "required": [
+                        "until",
+                        "cycles",
+                        "cadence",
+                        "assumed"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "past": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "milestone",
+                              "risk",
+                              "action",
+                              "renewal",
+                              "review",
+                              "project_end",
+                              "baseline",
+                              "change",
+                              "status"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "type": "string",
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                          },
+                          "critical": {
+                            "type": "boolean"
+                          },
+                          "tab": {
+                            "type": "string",
+                            "enum": [
+                              "card",
+                              "milestones",
+                              "risks",
+                              "alerts",
+                              "reviews",
+                              "changes",
+                              "baseline"
+                            ],
+                            "description": "Pestaña del proyecto donde está."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "title",
+                          "date",
+                          "critical",
+                          "tab"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Lo ocurrido en los últimos 60 días, del más reciente al más antiguo."
+                    },
+                    "overdue": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "milestone",
+                              "risk",
+                              "action",
+                              "renewal",
+                              "review",
+                              "project_end",
+                              "baseline",
+                              "change",
+                              "status"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "type": "string",
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                          },
+                          "critical": {
+                            "type": "boolean"
+                          },
+                          "tab": {
+                            "type": "string",
+                            "enum": [
+                              "card",
+                              "milestones",
+                              "risks",
+                              "alerts",
+                              "reviews",
+                              "changes",
+                              "baseline"
+                            ],
+                            "description": "Pestaña del proyecto donde está."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "title",
+                          "date",
+                          "critical",
+                          "tab"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Compromisos abiertos con fecha anterior a hoy."
+                    },
+                    "upcoming": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "milestone",
+                              "risk",
+                              "action",
+                              "renewal",
+                              "review",
+                              "project_end",
+                              "baseline",
+                              "change",
+                              "status"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "type": "string",
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                          },
+                          "critical": {
+                            "type": "boolean"
+                          },
+                          "tab": {
+                            "type": "string",
+                            "enum": [
+                              "card",
+                              "milestones",
+                              "risks",
+                              "alerts",
+                              "reviews",
+                              "changes",
+                              "baseline"
+                            ],
+                            "description": "Pestaña del proyecto donde está."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "title",
+                          "date",
+                          "critical",
+                          "tab"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Compromisos que vencen de hoy al fin del horizonte."
+                    }
+                  },
+                  "required": [
+                    "today",
+                    "horizon",
+                    "past",
+                    "overdue",
+                    "upcoming"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (`invalid_request`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso (`forbidden`), contraseña temporal sin cambiar (`password_change_required`) u origen no permitido (`origin_not_allowed`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o está fuera del alcance del usuario (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "El servicio de identidad no respondió (`identity_unavailable`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/assessments/{projectId}": {
       "get": {
         "summary": "Evaluación de salud vigente de un proyecto",
@@ -4025,6 +4654,249 @@
           },
           "404": {
             "description": "No existe o está fuera del alcance del usuario (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "El servicio de identidad no respondió (`identity_unavailable`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/assessments/rules": {
+      "get": {
+        "summary": "Conjunto de reglas PHF vigente",
+        "tags": [
+          "Salud"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Valores que aplica el motor: pesos, topes, umbrales y coeficientes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string"
+                    },
+                    "gateThresholds": {
+                      "type": "object",
+                      "properties": {
+                        "projectDeviation": {
+                          "type": "string"
+                        },
+                        "financialDeviation": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "projectDeviation",
+                        "financialDeviation"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Umbrales estrictos: el tope aplica al superarlos."
+                    },
+                    "dimensionWeights": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "number"
+                      },
+                      "description": "Peso de cada dimensión; suman 100."
+                    },
+                    "gateCaps": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "number"
+                      },
+                      "description": "Tope del score cuando la regla crítica está activa."
+                    },
+                    "bands": {
+                      "type": "object",
+                      "properties": {
+                        "healthy": {
+                          "type": "number"
+                        },
+                        "attention": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "healthy",
+                        "attention"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "confidence": {
+                      "type": "object",
+                      "properties": {
+                        "defaultCadenceDays": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "defaultCadenceDays"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "trend": {
+                      "type": "object",
+                      "properties": {
+                        "improving": {
+                          "type": "number"
+                        },
+                        "deteriorating": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "improving",
+                        "deteriorating"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "forecast": {
+                      "type": "object",
+                      "properties": {
+                        "milestone": {
+                          "type": "number"
+                        },
+                        "criticalMilestone": {
+                          "type": "number"
+                        },
+                        "riskPerSeverityPoint": {
+                          "type": "string"
+                        },
+                        "task": {
+                          "type": "number"
+                        },
+                        "renewal": {
+                          "type": "number"
+                        },
+                        "perPointOfDecline": {
+                          "type": "string"
+                        },
+                        "activeDeviationGate": {
+                          "type": "number"
+                        },
+                        "levels": {
+                          "type": "object",
+                          "properties": {
+                            "atRisk": {
+                              "type": "number"
+                            },
+                            "deteriorating": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "atRisk",
+                            "deteriorating"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "defaultCadence": {
+                          "type": "string"
+                        },
+                        "defaultCycles": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "milestone",
+                        "criticalMilestone",
+                        "riskPerSeverityPoint",
+                        "task",
+                        "renewal",
+                        "perPointOfDecline",
+                        "activeDeviationGate",
+                        "levels",
+                        "defaultCadence",
+                        "defaultCycles"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "gateThresholds",
+                    "dimensionWeights",
+                    "gateCaps",
+                    "bands",
+                    "confidence",
+                    "trend",
+                    "forecast"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso (`forbidden`), contraseña temporal sin cambiar (`password_change_required`) u origen no permitido (`origin_not_allowed`).",
             "content": {
               "application/json": {
                 "schema": {
@@ -15468,6 +16340,256 @@
           },
           "409": {
             "description": "Código ya usado (`code_taken`) o clave de idempotencia reutilizada con otro contenido (`idempotency_key_reused`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "El servicio de identidad no respondió (`identity_unavailable`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports/inactive-projects": {
+      "get": {
+        "summary": "Proyectos pausados y cerrados",
+        "tags": [
+          "Proyectos"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proyectos pausados o cerrados al alcance del usuario; primero los que deben justificación, después los más antiguos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "code": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "paused",
+                          "closed"
+                        ]
+                      },
+                      "practiceId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "practiceName": {
+                        "type": "string"
+                      },
+                      "clientName": {
+                        "type": "string"
+                      },
+                      "pmName": {
+                        "type": "string"
+                      },
+                      "since": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Cuándo se pausó o cerró."
+                      },
+                      "days": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Días transcurridos desde entonces."
+                      },
+                      "reason": {
+                        "description": "Motivo registrado al pausar o cerrar.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "changedBy": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "justificationRequired": {
+                        "type": "boolean",
+                        "description": "Lleva 30 días o más sin que el PM describa la situación (D08)."
+                      },
+                      "lastJustification": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "text": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                              },
+                              "by": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "text",
+                              "at",
+                              "by"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "stopped": {
+                        "type": "object",
+                        "properties": {
+                          "openMilestones": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "openRisks": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "openActions": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "pendingRenewals": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "reviewCycle": {
+                            "type": "boolean",
+                            "description": "Tenía ciclo de revisión; mientras siga así no se programan revisiones."
+                          }
+                        },
+                        "required": [
+                          "openMilestones",
+                          "openRisks",
+                          "openActions",
+                          "pendingRenewals",
+                          "reviewCycle"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Lo que quedó detenido."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "code",
+                      "name",
+                      "status",
+                      "practiceId",
+                      "practiceName",
+                      "clientName",
+                      "pmName",
+                      "since",
+                      "days",
+                      "reason",
+                      "changedBy",
+                      "justificationRequired",
+                      "lastJustification",
+                      "stopped"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permiso (`forbidden`), contraseña temporal sin cambiar (`password_change_required`) u origen no permitido (`origin_not_allowed`).",
             "content": {
               "application/json": {
                 "schema": {

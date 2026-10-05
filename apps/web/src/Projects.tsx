@@ -6,6 +6,7 @@ import {
 } from './api';
 import { Changes } from './Changes';
 import { Alerts } from './Governance';
+import { HistoryTab } from './Insight';
 import { ReviewsTab } from './Reviews';
 import { HealthView } from './HealthView';
 import { BaselineSection, Milestones, Team } from './ProjectSections';
@@ -313,9 +314,9 @@ function toValues(project: ProjectDetail): FormValues {
   };
 }
 
-type Tab = 'health' | 'reviews' | 'alerts' | 'card' | 'team' | 'milestones' | 'risks' | 'baseline' | 'changes' | 'finance';
+type Tab = 'health' | 'reviews' | 'alerts' | 'history' | 'card' | 'team' | 'milestones' | 'risks' | 'baseline' | 'changes' | 'finance';
 const TABS: readonly (readonly [Tab, string])[] = [
-  ['health', 'Salud'], ['reviews', 'Revisión'], ['alerts', 'Alertas y acciones'], ['card', 'Ficha'], ['team', 'Equipo'], ['milestones', 'Hitos'], ['risks', 'Riesgos'], ['baseline', 'Línea base'], ['changes', 'Cambios'], ['finance', 'Economía'],
+  ['health', 'Salud'], ['reviews', 'Revisión'], ['alerts', 'Alertas y acciones'], ['history', 'Historial'], ['card', 'Ficha'], ['team', 'Equipo'], ['milestones', 'Hitos'], ['risks', 'Riesgos'], ['baseline', 'Línea base'], ['changes', 'Cambios'], ['finance', 'Economía'],
 ];
 
 function ProjectCard({ id, created, initialTab, onBack }: { id: string; created?: boolean; initialTab?: Tab; onBack: () => void }) {
@@ -411,6 +412,7 @@ function ProjectCard({ id, created, initialTab, onBack }: { id: string; created?
       {tab === 'milestones' && <Milestones project={project} people={known} onChanged={() => void load(true)} />}
       {tab === 'health' && <HealthView project={project} onNavigate={(next) => setTab(next as Tab)} />}
       {tab === 'reviews' && <ReviewsTab project={project} people={known} onChanged={() => void load(true)} onNavigate={(next) => setTab(next as Tab)} />}
+      {tab === 'history' && <HistoryTab project={project} onNavigate={(next) => setTab(next as Tab)} />}
       {tab === 'alerts' && <Alerts project={project} people={known} />}
       {tab === 'changes' && <Changes project={project} onChanged={() => void load(true)} />}
       {tab === 'risks' && <Risks project={project} people={known} onChanged={() => void load(true)} />}

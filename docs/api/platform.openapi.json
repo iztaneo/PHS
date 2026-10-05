@@ -1634,6 +1634,555 @@
           }
         }
       }
+    },
+    "/history": {
+      "get": {
+        "summary": "Historial del proyecto",
+        "tags": [
+          "Historial"
+        ],
+        "security": [
+          {
+            "gatewaySignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "project",
+                "milestone",
+                "risk",
+                "change",
+                "review",
+                "alert",
+                "action",
+                "evaluation",
+                "finance",
+                "renewal",
+                "evidence"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "Incluye ese día completo.",
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "`nextCursor` de la página anterior.",
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cambios, revisiones, riesgos, hitos, acciones, alertas y evaluaciones oficiales, con autor, fecha y motivo. Paginado sin límite total.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "occurredAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "project",
+                              "milestone",
+                              "risk",
+                              "change",
+                              "review",
+                              "alert",
+                              "action",
+                              "evaluation",
+                              "finance",
+                              "renewal",
+                              "evidence"
+                            ]
+                          },
+                          "action": {
+                            "type": "string",
+                            "description": "Acción registrada, por ejemplo `milestone.completed`."
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "detail": {
+                            "description": "Motivo, comentario o valores pertinentes. Las cifras económicas solo para quien puede verlas.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "actor": {
+                            "description": "null: lo hizo el sistema.",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "occurredAt",
+                          "category",
+                          "action",
+                          "title",
+                          "detail",
+                          "actor"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Del más reciente al más antiguo, en orden estable."
+                    },
+                    "nextCursor": {
+                      "description": "null: no hay más.",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (`invalid_request`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o está fuera del alcance del usuario (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/history/timeline": {
+      "get": {
+        "summary": "Línea de tiempo del proyecto",
+        "tags": [
+          "Historial"
+        ],
+        "security": [
+          {
+            "gatewaySignature": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pasado reciente, lo vencido hoy y lo que vence dentro del horizonte de ciclos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "today": {
+                      "type": "string",
+                      "format": "date",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                    },
+                    "horizon": {
+                      "type": "object",
+                      "properties": {
+                        "until": {
+                          "type": "string",
+                          "format": "date",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                        },
+                        "cycles": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "cadence": {
+                          "type": "string",
+                          "enum": [
+                            "weekly",
+                            "fortnightly",
+                            "monthly"
+                          ]
+                        },
+                        "assumed": {
+                          "type": "boolean",
+                          "description": "true: el proyecto no tiene ciclo y se usaron dos quincenas."
+                        }
+                      },
+                      "required": [
+                        "until",
+                        "cycles",
+                        "cadence",
+                        "assumed"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "past": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "milestone",
+                              "risk",
+                              "action",
+                              "renewal",
+                              "review",
+                              "project_end",
+                              "baseline",
+                              "change",
+                              "status"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "type": "string",
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                          },
+                          "critical": {
+                            "type": "boolean"
+                          },
+                          "tab": {
+                            "type": "string",
+                            "enum": [
+                              "card",
+                              "milestones",
+                              "risks",
+                              "alerts",
+                              "reviews",
+                              "changes",
+                              "baseline"
+                            ],
+                            "description": "Pestaña del proyecto donde está."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "title",
+                          "date",
+                          "critical",
+                          "tab"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Lo ocurrido en los últimos 60 días, del más reciente al más antiguo."
+                    },
+                    "overdue": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "milestone",
+                              "risk",
+                              "action",
+                              "renewal",
+                              "review",
+                              "project_end",
+                              "baseline",
+                              "change",
+                              "status"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "type": "string",
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                          },
+                          "critical": {
+                            "type": "boolean"
+                          },
+                          "tab": {
+                            "type": "string",
+                            "enum": [
+                              "card",
+                              "milestones",
+                              "risks",
+                              "alerts",
+                              "reviews",
+                              "changes",
+                              "baseline"
+                            ],
+                            "description": "Pestaña del proyecto donde está."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "title",
+                          "date",
+                          "critical",
+                          "tab"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Compromisos abiertos con fecha anterior a hoy."
+                    },
+                    "upcoming": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "milestone",
+                              "risk",
+                              "action",
+                              "renewal",
+                              "review",
+                              "project_end",
+                              "baseline",
+                              "change",
+                              "status"
+                            ]
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "date": {
+                            "type": "string",
+                            "format": "date",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                          },
+                          "critical": {
+                            "type": "boolean"
+                          },
+                          "tab": {
+                            "type": "string",
+                            "enum": [
+                              "card",
+                              "milestones",
+                              "risks",
+                              "alerts",
+                              "reviews",
+                              "changes",
+                              "baseline"
+                            ],
+                            "description": "Pestaña del proyecto donde está."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "title",
+                          "date",
+                          "critical",
+                          "tab"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Compromisos que vencen de hoy al fin del horizonte."
+                    }
+                  },
+                  "required": [
+                    "today",
+                    "horizon",
+                    "past",
+                    "overdue",
+                    "upcoming"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos inválidos (`invalid_request`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No existe o está fuera del alcance del usuario (`not_found`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {

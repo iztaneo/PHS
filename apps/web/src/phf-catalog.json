@@ -1,0 +1,699 @@
+{
+ "flow": [
+  {
+   "n": 1,
+   "key": "core",
+   "stage": "Definir",
+   "title": "Project",
+   "lead": "Definir qué estamos gobernando.",
+   "detail": "Proyecto o servicio como unidad central: cliente, tipo, estado, fechas, PM, responsable técnico, equipo, contacto y matriz de escalación.",
+   "link": "projectForm"
+  },
+  {
+   "n": 2,
+   "key": "baseline",
+   "stage": "Línea base",
+   "title": "Baseline",
+   "lead": "Definir qué debería ocurrir.",
+   "detail": "Referencia vigente contra la que se compara la realidad: fechas, alcance, esfuerzo, presupuesto, equipo comprometido e hitos.",
+   "link": "baseline"
+  },
+  {
+   "n": 3,
+   "key": "exec",
+   "stage": "Operar",
+   "title": "Ejecución",
+   "lead": "La realidad del proyecto evoluciona.",
+   "detail": "Hitos que avanzan o vencen, riesgos con probabilidad e impacto, y cambios formales que pueden modificar tiempo, esfuerzo, costo, alcance e hitos.",
+   "link": "milestones"
+  },
+  {
+   "n": 4,
+   "key": "timeline",
+   "stage": "Observar",
+   "title": "Health Timeline",
+   "lead": "Ordenar el proyecto en el tiempo.",
+   "detail": "Pasado (hitos cumplidos/vencidos, cambios, reviews), presente (estado, riesgos abiertos, acciones) y futuro (hitos próximos, deadlines, renovaciones).",
+   "link": "timeline"
+  },
+  {
+   "n": 5,
+   "key": "expect",
+   "stage": "Anticipar",
+   "title": "Expectation Engine",
+   "lead": "Preguntar qué debería haber cambiado.",
+   "detail": "Evalúa fechas y compromisos: ¿venció un hito, un riesgo, una acción o una revisión? Si el PM responde “nada cambió” con eventos esperados, el sistema obliga a revisarlos.",
+   "link": "review"
+  },
+  {
+   "n": 6,
+   "key": "review",
+   "stage": "Revisar",
+   "title": "Health Review",
+   "lead": "Actualizar en menos de un minuto.",
+   "detail": "Formulario adaptativo dirigido por eventos: qué cambió, actualización de riesgos, soporte por imagen y/o texto.",
+   "link": "review"
+  },
+  {
+   "n": 7,
+   "key": "events",
+   "stage": "Interpretar",
+   "title": "Health Event",
+   "lead": "Convertir cambios en hechos objetivos.",
+   "detail": "Hito vencido, riesgo vencido, cambio de alcance, renovación, desvío financiero, desvío de proyecto. El evento describe lo ocurrido; todavía no define qué debe hacer alguien.",
+   "link": "events"
+  },
+  {
+   "n": 8,
+   "key": "assess",
+   "stage": "Evaluar",
+   "title": "Health Assessment",
+   "lead": "Interpretar la realidad.",
+   "detail": "Compara baseline vigente + cambios aprobados contra el estado real. Produce Health Score, Trend, Confidence, Forecast y aplica Health Gates.",
+   "link": "health"
+  },
+  {
+   "n": 9,
+   "key": "tasks",
+   "stage": "Actuar",
+   "title": "Health Task",
+   "lead": "Convertir alerta en trabajo.",
+   "detail": "Acción requerida con responsable, deadline, prioridad y estado. Cierre con comentario y/o soporte que confirma la resolución.",
+   "link": "tasks"
+  },
+  {
+   "n": 10,
+   "key": "center",
+   "stage": "Gobernar",
+   "title": "Health Center",
+   "lead": "Gobernanza según el rol.",
+   "detail": "PM: ¿qué debo atender hoy? Líder: ¿dónde debo intervenir? Dirección: ¿cómo está la práctica? Más focos de atención del portafolio.",
+   "link": "center"
+  },
+  {
+   "n": 11,
+   "key": "history",
+   "stage": "Aprender",
+   "title": "Health History",
+   "lead": "Entender cómo llegamos aquí.",
+   "detail": "Histórico completo de scores, reviews, risk updates, project changes, milestone updates y health tasks para identificar patrones.",
+   "link": "history"
+  }
+ ],
+ "catalog": {
+  "phf": {
+   "title": "Project Health Framework (PHF)",
+   "category": "Solución central",
+   "what": "La metodología que define cómo se representa, revisa, mide y gobierna la salud de cualquier proyecto o servicio.",
+   "objective": "Crear un lenguaje y modelo común para toda la práctica sin imponer una metodología única de ejecución.",
+   "value": "Permite comparar proyectos heterogéneos y mantener consistencia aunque cambien las herramientas tecnológicas.",
+   "relevant": "Define información mínima, Health Review, dimensiones, métricas, Health Gates, ciclos, roles, acciones y principios de gobierno.",
+   "mvp": "El PHF debe quedar validado antes de automatizar el proceso. Es el activo principal del proyecto."
+  },
+  "phs": {
+   "title": "Project Health System (PHS)",
+   "category": "Solución central",
+   "what": "La plataforma que implementa y hace operativo el Project Health Framework.",
+   "objective": "Reducir el esfuerzo de captura y convertir el modelo de salud en una experiencia simple, repetible y accionable.",
+   "value": "Centraliza visibilidad, detecta eventos, genera alertas, calcula salud y guía acciones.",
+   "relevant": "La plataforma es reemplazable; el framework no debe depender de una tecnología específica.",
+   "mvp": "Implementará registro, Health Review, salud, timeline, acciones, alertas y soportes simples mediante texto e imágenes."
+  },
+  "centralPrinciple": {
+   "title": "Estándar en el modelo, flexible en la ejecución",
+   "category": "Principio central",
+   "what": "Todos los proyectos reportan bajo un mismo lenguaje de salud aunque puedan operar con herramientas y metodologías diferentes.",
+   "objective": "Evitar imponer un proceso único a servicios heterogéneos.",
+   "value": "Permite gobernanza común sin interferir con la forma de trabajo del cliente o del equipo.",
+   "relevant": "El PHS estandariza lo mínimo indispensable: responsables, fechas, hitos, riesgos, desviaciones, salud y acciones.",
+   "mvp": "Debe respetarse como filtro para todas las decisiones funcionales."
+  },
+  "core": {
+   "title": "1. PHS Core",
+   "category": "Componente PHF + PHS",
+   "what": "El registro mínimo y estructurado que permite entender qué es el proyecto, quién responde por él y cuáles son sus compromisos principales.",
+   "objective": "Crear una base homogénea de información para cualquier proyecto o servicio.",
+   "value": "Reduce dependencia del conocimiento individual y permite que otra persona pueda comprender y tomar control del servicio.",
+   "relevant": "Proyecto, cliente, descripción, alcance, responsables, equipo, tipo de servicio, estado, fechas, hitos y renovaciones.",
+   "mvp": "Captura inicial y mantenimiento de información estructural."
+  },
+  "healthModel": {
+   "title": "2. Health Model",
+   "category": "Componente PHF + PHS",
+   "what": "El mecanismo que traduce información operativa en una evaluación objetiva de salud.",
+   "objective": "Evitar que el estado del proyecto dependa exclusivamente de percepciones o semáforos declarativos.",
+   "value": "Permite comparar salud, detectar deterioro y establecer condiciones críticas homogéneas.",
+   "relevant": "Health Score, dimensiones, métricas, desviación de proyecto, desviación financiera, Health Gates, Confidence, Trend y Forecast.",
+   "mvp": "Definir reglas iniciales simples y transparentes, evitando modelos matemáticos innecesariamente complejos."
+  },
+  "healthReview": {
+   "title": "3. Health Review",
+   "category": "Componente PHF + PHS",
+   "what": "La revisión periódica mediante la cual el sistema confirma qué cambió y qué debía haber cambiado.",
+   "objective": "Mantener la información actualizada con menos de un minuto de esfuerzo en condiciones normales.",
+   "value": "Reduce carga administrativa y evita depender de la memoria del Project Manager.",
+   "relevant": "Ciclo semanal/quincenal/mensual, cambios desde la revisión anterior, hitos esperados, eventos vencidos, riesgos y soportes.",
+   "mvp": "Formulario adaptativo y revisión dirigida por eventos."
+  },
+  "timeline": {
+   "title": "4. Health Timeline",
+   "category": "Componente PHF + PHS",
+   "what": "La cronología de compromisos, hitos, riesgos, eventos, renovaciones y cambios relevantes del proyecto.",
+   "objective": "Permitir que el sistema observe pasado, presente y próximos ciclos.",
+   "value": "Habilita anticipación y seguimiento sistemático de compromisos.",
+   "relevant": "Hitos próximos y vencidos, riesgos activos, eventos, renovaciones, cambios de alcance e historial.",
+   "mvp": "Timeline estructurado a partir de hitos, riesgos, fechas y acciones."
+  },
+  "healthCenter": {
+   "title": "5. Health Center",
+   "category": "Componente PHF + PHS",
+   "what": "La experiencia principal de consulta y priorización para cada rol.",
+   "objective": "Mostrar a cada usuario únicamente la información que necesita para actuar.",
+   "value": "Reduce ruido y convierte la visibilidad en gestión accionable.",
+   "relevant": "Vista PM, Practice Lead, Dirección, portafolio, alertas, focos de atención y tareas.",
+   "mvp": "Vistas sencillas diferenciadas para PM y liderazgo."
+  },
+  "healthActions": {
+   "title": "6. Health Actions",
+   "category": "Componente PHF + PHS",
+   "what": "El mecanismo mediante el cual una alerta o desviación se convierte en trabajo concreto.",
+   "objective": "Evitar alertas sin seguimiento ni responsable.",
+   "value": "Transforma monitoreo en intervención.",
+   "relevant": "Acción, responsable, plazo, prioridad, seguimiento, cierre, validación e historial.",
+   "mvp": "Acciones estructuradas generadas por reglas simples."
+  },
+  "project": {
+   "title": "Proyecto / Servicio",
+   "category": "PHS Core",
+   "what": "Unidad mínima de seguimiento dentro del PHF.",
+   "objective": "Tratar de forma homogénea proyectos, servicios recurrentes, assessments, soporte u otras modalidades.",
+   "value": "Permite aplicar el mismo framework independientemente del modelo contractual.",
+   "relevant": "Debe contar con un identificador, nombre y relación con cliente.",
+   "mvp": "Obligatorio."
+  },
+  "client": {
+   "title": "Cliente",
+   "category": "PHS Core",
+   "what": "Organización receptora del proyecto o servicio.",
+   "objective": "Relacionar la salud operacional con el contexto comercial y de servicio.",
+   "value": "Permite detectar concentración de riesgos y problemas por cliente.",
+   "relevant": "Cliente, contacto principal y matriz de escalación.",
+   "mvp": "Obligatorio."
+  },
+  "scope": {
+   "title": "Descripción y Alcance",
+   "category": "PHS Core",
+   "what": "Descripción ejecutiva del propósito y cobertura del proyecto.",
+   "objective": "Permitir comprender rápidamente qué se está entregando.",
+   "value": "Evita ambigüedades cuando otra persona necesita revisar o asumir el proyecto.",
+   "relevant": "Debe ser breve y comprensible; no sustituye documentación contractual.",
+   "mvp": "Descripción textual resumida."
+  },
+  "dates": {
+   "title": "Fechas Clave",
+   "category": "PHS Core",
+   "what": "Fechas que definen la ventana temporal del servicio.",
+   "objective": "Habilitar alertas, seguimiento y detección de desviaciones.",
+   "value": "Permite anticipar cierres y renovaciones.",
+   "relevant": "Inicio, fin, posibles renovaciones y fechas de hitos.",
+   "mvp": "Inicio y fin obligatorios."
+  },
+  "roles": {
+   "title": "Responsables",
+   "category": "PHS Core",
+   "what": "Identificación explícita de accountability operativo y técnico.",
+   "objective": "Eliminar dudas respecto a quién debe actuar ante una desviación.",
+   "value": "Reduce dependencias personales y acelera escalaciones.",
+   "relevant": "Project Manager / gestor, responsable técnico y sponsor o líder cuando aplique.",
+   "mvp": "PM y responsable técnico obligatorios."
+  },
+  "team": {
+   "title": "Equipo",
+   "category": "PHS Core",
+   "what": "Personas que operan o entregan el servicio.",
+   "objective": "Mantener visibilidad sobre quién participa en la ejecución.",
+   "value": "Ayuda a comprender capacidad, continuidad y dependencias.",
+   "relevant": "No requiere sustituir sistemas de staffing.",
+   "mvp": "Lista sencilla de integrantes."
+  },
+  "serviceType": {
+   "title": "Categoría / Tipo de Servicio",
+   "category": "PHS Core",
+   "what": "Clasificación funcional del trabajo.",
+   "objective": "Permitir segmentar sin crear un modelo distinto por cada tipo.",
+   "value": "Habilita análisis comparables entre familias de servicio.",
+   "relevant": "Ejemplos: desarrollo, arquitectura, DevSecOps, assessment, AMS, soporte.",
+   "mvp": "Catálogo configurable."
+  },
+  "projectStatus": {
+   "title": "Estado del Proyecto",
+   "category": "PHS Core",
+   "what": "Situación de ciclo de vida, diferente de la salud.",
+   "objective": "Distinguir si el trabajo está por iniciar, activo, detenido o terminado.",
+   "value": "Evita confundir estado administrativo con Health Score.",
+   "relevant": "Por iniciar, en ejecución, detenido/pausado, cerrado y renovación.",
+   "mvp": "Obligatorio."
+  },
+  "score": {
+   "title": "Health Score",
+   "category": "Health Model",
+   "what": "Indicador agregado que resume la salud actual del proyecto.",
+   "objective": "Proporcionar una referencia comparable y consistente.",
+   "value": "Ayuda a priorizar atención a nivel portafolio.",
+   "relevant": "Escala inicial propuesta: 0–100, complementada por Health Gates.",
+   "mvp": "Sí, con cálculo transparente."
+  },
+  "dimensions": {
+   "title": "Dimensiones de Salud",
+   "category": "Health Model",
+   "what": "Áreas principales que explican por qué un proyecto está sano o deteriorándose.",
+   "objective": "Evitar depender de un único indicador.",
+   "value": "Permite identificar dónde está el problema.",
+   "relevant": "Desempeño del proyecto, financiero, cliente, riesgos, gobernanza y equipo.",
+   "mvp": "Conjunto reducido y configurable."
+  },
+  "metrics": {
+   "title": "Métricas Clave",
+   "category": "Health Model",
+   "what": "Indicadores cuantificables que alimentan las dimensiones.",
+   "objective": "Basar la salud en señales objetivas.",
+   "value": "Reduce subjetividad entre PMs.",
+   "relevant": "Cumplimiento de hitos, desviaciones, riesgos vencidos y actualidad de información.",
+   "mvp": "Solo métricas que puedan mantenerse fácilmente."
+  },
+  "projectDeviation": {
+   "title": "Desviación de Proyecto >10%",
+   "category": "Health Gate",
+   "what": "Umbral de desviación operativa considerado crítico.",
+   "objective": "Detectar proyectos que ya se encuentran fuera de tolerancia.",
+   "value": "Evita que un promedio alto oculte una desviación importante.",
+   "relevant": "La fórmula exacta deberá validarse según el tipo de proyecto.",
+   "mvp": "Health Gate inicial."
+  },
+  "financialDeviation": {
+   "title": "Desviación Financiera >3%",
+   "category": "Health Gate",
+   "what": "Umbral inicial de desviación económica que requiere atención.",
+   "objective": "Proteger margen y desempeño económico.",
+   "value": "Prioriza problemas de impacto directo al negocio.",
+   "relevant": "Debe calcularse respecto a la línea base/forecast acordado.",
+   "mvp": "Umbral inicial sujeto a validación."
+  },
+  "gates": {
+   "title": "Health Gates",
+   "category": "Health Model",
+   "what": "Reglas críticas capaces de limitar o forzar el estado de salud independientemente del promedio.",
+   "objective": "Evitar que situaciones graves se diluyan dentro de un score agregado.",
+   "value": "Hace al modelo más confiable para liderazgo.",
+   "relevant": "Desviación financiera, desviación de proyecto, hitos críticos, cliente y otras condiciones severas.",
+   "mvp": "Conjunto pequeño de reglas explícitas."
+  },
+  "confidence": {
+   "title": "Health Confidence",
+   "category": "Health Model",
+   "what": "Medida de qué tan confiable es la información utilizada para evaluar el proyecto.",
+   "objective": "Diferenciar un proyecto sano de un proyecto que simplemente parece sano por falta de información.",
+   "value": "Hace visible la calidad del dato.",
+   "relevant": "Actualización dentro del ciclo, consistencia y soportes.",
+   "mvp": "Indicador simplificado."
+  },
+  "trend": {
+   "title": "Health Trend",
+   "category": "Health Model",
+   "what": "Dirección de cambio de la salud a través del tiempo.",
+   "objective": "Detectar deterioro aunque el proyecto aún esté en verde.",
+   "value": "Permite intervenir antes.",
+   "relevant": "Comparación de Health Score entre ciclos.",
+   "mvp": "Tendencia simple ↑ → ↓."
+  },
+  "forecast": {
+   "title": "Health Forecast",
+   "category": "Health Model",
+   "what": "Estimación de posible deterioro en los siguientes ciclos.",
+   "objective": "Anticipar desviaciones.",
+   "value": "Transforma el sistema de reactivo a preventivo.",
+   "relevant": "Se alimenta de eventos próximos, hitos, riesgos y vencimientos.",
+   "mvp": "Reglas determinísticas; IA queda para evoluciones posteriores."
+  },
+  "cycle": {
+   "title": "Ciclo de Revisión",
+   "category": "Health Review",
+   "what": "Frecuencia con la que debe confirmarse la salud del proyecto.",
+   "objective": "Establecer una cadencia mínima de gobernanza.",
+   "value": "Evita información obsoleta.",
+   "relevant": "Semanal, quincenal o mensual según el servicio.",
+   "mvp": "Configurable por proyecto."
+  },
+  "oneMinute": {
+   "title": "Actualización < 1 minuto",
+   "category": "Health Review",
+   "what": "Restricción de diseño para la revisión periódica normal.",
+   "objective": "Hacer sostenible la adopción.",
+   "value": "Reduce la competencia entre operar para el cliente y reportar internamente.",
+   "relevant": "El sistema no debe pedir información que ya conoce.",
+   "mvp": "KPI oficial de experiencia."
+  },
+  "changes": {
+   "title": "Qué cambió desde la última revisión",
+   "category": "Health Review",
+   "what": "Modelo de actualización basado en diferencias y eventos.",
+   "objective": "Evitar repetir todo el formulario.",
+   "value": "Hace la revisión rápida y contextual.",
+   "relevant": "Cronograma, hitos, alcance, riesgos, equipo, cliente, finanzas o nada.",
+   "mvp": "Formulario adaptativo."
+  },
+  "expectedEvents": {
+   "title": "Eventos próximos y vencidos",
+   "category": "Health Review",
+   "what": "Información que el sistema espera que haya cambiado según fechas y compromisos.",
+   "objective": "Evitar aceptar 'nada cambió' cuando existen eventos que requerían actualización.",
+   "value": "Reduce dependencia de memoria humana.",
+   "relevant": "Hitos, riesgos, compromisos, revisiones y renovaciones.",
+   "mvp": "Reglas de calendario."
+  },
+  "support": {
+   "title": "Soportes: imagen y/o texto",
+   "category": "Health Review",
+   "what": "Forma simplificada de respaldar actualizaciones sin construir un sistema documental complejo.",
+   "objective": "Mejorar confianza manteniendo bajo esfuerzo.",
+   "value": "Permite incorporar contexto sin integraciones corporativas complejas.",
+   "relevant": "Captura de correo, minuta, acta, carta, tablero u otro soporte; también comentario textual.",
+   "mvp": "Imagen y texto únicamente."
+  },
+  "reviewConfidence": {
+   "title": "Nivel de Confianza",
+   "category": "Health Review",
+   "what": "Evaluación de la actualidad y respaldo de la información presentada.",
+   "objective": "Señalar cuándo una revisión necesita mayor validación.",
+   "value": "Evita confianza falsa.",
+   "relevant": "Actualidad, consistencia y soporte disponible.",
+   "mvp": "Bajo / medio / alto o score simplificado."
+  },
+  "nextMilestones": {
+   "title": "Hitos próximos",
+   "category": "Health Timeline",
+   "what": "Entregables o compromisos cuya fecha se aproxima.",
+   "objective": "Dar visibilidad anticipada.",
+   "value": "Permite preparar acciones antes del vencimiento.",
+   "relevant": "Nombre, entregable, responsable y fecha.",
+   "mvp": "Sí."
+  },
+  "expiredMilestones": {
+   "title": "Hitos vencidos",
+   "category": "Health Timeline",
+   "what": "Hitos cuya fecha ya ocurrió y no registran cumplimiento válido.",
+   "objective": "Forzar actualización y tratamiento.",
+   "value": "Son una señal objetiva de posible desviación.",
+   "relevant": "El sistema debe pedir estado, nueva fecha y soporte.",
+   "mvp": "Sí."
+  },
+  "activeRisks": {
+   "title": "Riesgos activos",
+   "category": "Health Timeline",
+   "what": "Riesgos abiertos de proyecto o cliente.",
+   "objective": "Dar seguimiento antes de que materialicen impacto.",
+   "value": "Permite asignar responsables y fechas de tratamiento.",
+   "relevant": "Tipo, impacto, responsable, deadline y estado.",
+   "mvp": "Sí."
+  },
+  "nextEvents": {
+   "title": "Eventos próximos",
+   "category": "Health Timeline",
+   "what": "Compromisos relevantes que ocurrirán dentro de los próximos ciclos.",
+   "objective": "Construir una ventana de planeación preventiva.",
+   "value": "Reduce gestión reactiva.",
+   "relevant": "Cantidad de ciclos futuros configurable.",
+   "mvp": "Sí."
+  },
+  "renewals": {
+   "title": "Renovaciones y vencimientos",
+   "category": "Health Timeline",
+   "what": "Fechas relacionadas con continuidad contractual o de servicio.",
+   "objective": "Evitar renovaciones tardías o sorpresas operativas.",
+   "value": "Conecta ejecución con continuidad comercial.",
+   "relevant": "Fecha, responsable y acciones previas.",
+   "mvp": "Sí."
+  },
+  "scopeChanges": {
+   "title": "Cambios de alcance",
+   "category": "Health Timeline",
+   "what": "Modificaciones significativas respecto al alcance original.",
+   "objective": "Mantener trazabilidad de cambios que puedan generar desviación.",
+   "value": "Facilita explicar impacto en tiempo o dinero.",
+   "relevant": "Fecha, descripción, impacto y estado de aprobación.",
+   "mvp": "Registro sencillo."
+  },
+  "eventHistory": {
+   "title": "Historial de eventos",
+   "category": "Health Timeline",
+   "what": "Secuencia temporal de cambios importantes.",
+   "objective": "Entender cómo evolucionó la salud.",
+   "value": "Permite análisis posterior y continuidad cuando cambia el responsable.",
+   "relevant": "Eventos generados por revisiones, hitos, riesgos, acciones y cambios.",
+   "mvp": "Historial básico automático."
+  },
+  "pmView": {
+   "title": "Vista Project Manager",
+   "category": "Health Center",
+   "what": "Vista enfocada en lo que el responsable necesita atender hoy.",
+   "objective": "Dar valor inmediato al PM.",
+   "value": "Reduce carga cognitiva.",
+   "relevant": "Reviews pendientes, próximos hitos, riesgos y Health Actions.",
+   "mvp": "Vista prioritaria."
+  },
+  "leadView": {
+   "title": "Vista Líder / Practice Lead",
+   "category": "Health Center",
+   "what": "Vista transversal de los proyectos bajo responsabilidad de la práctica.",
+   "objective": "Identificar dónde intervenir.",
+   "value": "Permite priorizar apoyo y escalaciones.",
+   "relevant": "Rojos, amarillos, desviaciones, información vencida y riesgos.",
+   "mvp": "Sí."
+  },
+  "directionView": {
+   "title": "Vista Dirección",
+   "category": "Health Center",
+   "what": "Resumen ejecutivo de salud y exposición del portafolio.",
+   "objective": "Apoyar decisiones estratégicas.",
+   "value": "Evita depender de consolidaciones manuales.",
+   "relevant": "Salud global, tendencia, exposición financiera y clientes críticos.",
+   "mvp": "Vista resumida."
+  },
+  "portfolio": {
+   "title": "Portafolio de Proyectos",
+   "category": "Health Center",
+   "what": "Vista consolidada de proyectos y servicios.",
+   "objective": "Comparar y priorizar.",
+   "value": "Genera una única fuente de visibilidad ejecutiva.",
+   "relevant": "Filtros por cliente, tipo, líder, estado y salud.",
+   "mvp": "Sí."
+  },
+  "priorities": {
+   "title": "Alertas y Prioridades",
+   "category": "Health Center",
+   "what": "Listado ordenado de elementos que requieren atención.",
+   "objective": "Distinguir lo urgente de lo informativo.",
+   "value": "Reduce ruido.",
+   "relevant": "Debe ordenar por criticidad, vencimiento e impacto.",
+   "mvp": "Sí."
+  },
+  "attention": {
+   "title": "Focos de Atención",
+   "category": "Health Center",
+   "what": "Patrones o áreas que concentran mayor riesgo.",
+   "objective": "Facilitar lectura ejecutiva.",
+   "value": "Convierte datos en conversación de gestión.",
+   "relevant": "Finanzas, cronograma, cliente, riesgos o falta de actualización.",
+   "mvp": "Reglas simples."
+  },
+  "tasks": {
+   "title": "Tareas y Acciones",
+   "category": "Health Center",
+   "what": "Trabajo derivado de alertas y desviaciones.",
+   "objective": "Cerrar el ciclo entre detectar y actuar.",
+   "value": "Evita que el sistema sea solo observacional.",
+   "relevant": "Responsable, fecha, prioridad y estado.",
+   "mvp": "Sí."
+  },
+  "autoActions": {
+   "title": "Generación automática de acciones",
+   "category": "Health Actions",
+   "what": "Creación de una acción cuando se cumple una regla.",
+   "objective": "Convertir alertas en trabajo concreto.",
+   "value": "Reduce dependencia de interpretación individual.",
+   "relevant": "Ejemplo: hito vencido → actualizar estado y definir nueva fecha.",
+   "mvp": "Reglas determinísticas."
+  },
+  "actionOwner": {
+   "title": "Asignación de responsable",
+   "category": "Health Actions",
+   "what": "Persona accountable de resolver o gestionar una acción.",
+   "objective": "Evitar tareas sin dueño.",
+   "value": "Acelera resolución.",
+   "relevant": "Puede derivarse del PM, responsable técnico o responsable de riesgo.",
+   "mvp": "Obligatorio."
+  },
+  "deadline": {
+   "title": "Plazo y prioridad",
+   "category": "Health Actions",
+   "what": "Fecha límite y criticidad de una acción.",
+   "objective": "Permitir priorización.",
+   "value": "Da contexto temporal y operacional.",
+   "relevant": "Prioridad basada en impacto y cercanía al vencimiento.",
+   "mvp": "Sí."
+  },
+  "followUp": {
+   "title": "Seguimiento y estatus",
+   "category": "Health Actions",
+   "what": "Estado de avance de una acción.",
+   "objective": "Mantener visibilidad hasta resolución.",
+   "value": "Evita alertas olvidadas.",
+   "relevant": "Pendiente, en curso, bloqueada y completada.",
+   "mvp": "Sí."
+  },
+  "closure": {
+   "title": "Cierre y validación",
+   "category": "Health Actions",
+   "what": "Confirmación de que la condición que generó la acción fue atendida.",
+   "objective": "Cerrar correctamente el ciclo.",
+   "value": "Evita declarar resuelto sin revisar el resultado.",
+   "relevant": "Puede solicitar soporte o comentario.",
+   "mvp": "Comentario y/o imagen."
+  },
+  "actionHistory": {
+   "title": "Historial de acciones",
+   "category": "Health Actions",
+   "what": "Registro temporal de acciones creadas y cerradas.",
+   "objective": "Mantener trazabilidad.",
+   "value": "Permite aprender sobre recurrencias y tiempos de resolución.",
+   "relevant": "Evento, responsable, fecha, estado y cierre.",
+   "mvp": "Automático."
+  },
+  "resultEarly": {
+   "title": "Detección anticipada",
+   "category": "Resultado esperado",
+   "what": "Identificar señales de deterioro antes de que exista impacto material.",
+   "objective": "Cambiar la práctica de reactiva a preventiva.",
+   "value": "Menor pérdida económica y mejor experiencia del cliente.",
+   "relevant": "Health Trend, Forecast, eventos y Health Gates.",
+   "mvp": "Resultado principal a validar."
+  },
+  "resultVisibility": {
+   "title": "Visibilidad homogénea",
+   "category": "Resultado esperado",
+   "what": "Todos los proyectos representados bajo un mismo lenguaje.",
+   "objective": "Crear comparabilidad.",
+   "value": "Simplifica gobernanza y decisiones.",
+   "relevant": "Depende de adopción y actualización.",
+   "mvp": "Resultado esencial."
+  },
+  "resultFast": {
+   "title": "Actualización rápida",
+   "category": "Resultado esperado",
+   "what": "Health Review sostenible en menos de un minuto.",
+   "objective": "Maximizar adopción.",
+   "value": "Minimiza carga administrativa.",
+   "relevant": "Debe medirse como KPI de producto.",
+   "mvp": "Meta explícita."
+  },
+  "resultDecision": {
+   "title": "Decisiones basadas en datos",
+   "category": "Resultado esperado",
+   "what": "Utilizar información estructurada y comparable para decidir.",
+   "objective": "Reducir decisiones tardías o basadas en percepción.",
+   "value": "Mejora calidad de gobierno.",
+   "relevant": "Score + contexto + acciones.",
+   "mvp": "Sí."
+  },
+  "resultImprove": {
+   "title": "Mejora continua",
+   "category": "Resultado esperado",
+   "what": "Utilizar tendencias e historial para mejorar la gestión.",
+   "objective": "Aprender de patrones de desviación.",
+   "value": "Madurez operativa creciente.",
+   "relevant": "Evolución posterior del framework.",
+   "mvp": "Se comienza capturando historial."
+  },
+  "resultLoad": {
+   "title": "Menor carga operativa",
+   "category": "Resultado esperado",
+   "what": "Eliminar reportes duplicados y minimizar captura.",
+   "objective": "Devolver tiempo a la ejecución.",
+   "value": "Mejora adopción y productividad.",
+   "relevant": "No pedir información ya conocida.",
+   "mvp": "Criterio clave de éxito."
+  },
+  "principleObjective": {
+   "title": "Objetividad sobre percepciones",
+   "category": "Principio PHF",
+   "what": "La salud debe apoyarse en criterios observables.",
+   "objective": "Reducir subjetividad.",
+   "value": "Información comparable.",
+   "relevant": "Score, métricas y Health Gates.",
+   "mvp": "Obligatorio."
+  },
+  "principleSimple": {
+   "title": "Simplicidad y bajo esfuerzo",
+   "category": "Principio PHF",
+   "what": "Cada interacción debe justificar el esfuerzo que exige.",
+   "objective": "Asegurar sostenibilidad.",
+   "value": "Mayor adopción.",
+   "relevant": "Health Review <1 minuto.",
+   "mvp": "Obligatorio."
+  },
+  "principleCommon": {
+   "title": "Modelo común, ejecución flexible",
+   "category": "Principio PHF",
+   "what": "Estandarizar gobierno, no metodología de entrega.",
+   "objective": "Servir a proyectos heterogéneos.",
+   "value": "Menos resistencia.",
+   "relevant": "No sustituir herramientas del cliente.",
+   "mvp": "Obligatorio."
+  },
+  "principleValue": {
+   "title": "Información al servicio del PM y la práctica",
+   "category": "Principio PHF",
+   "what": "La actualización debe beneficiar a quien la realiza.",
+   "objective": "Evitar captura únicamente para dirección.",
+   "value": "Mejor adopción.",
+   "relevant": "Agenda, tareas, alertas y timeline.",
+   "mvp": "Obligatorio."
+  },
+  "principleAction": {
+   "title": "Cada alerta genera acción",
+   "category": "Principio PHF",
+   "what": "Una alerta sin responsable ni siguiente paso es ruido.",
+   "objective": "Hacer accionable la salud.",
+   "value": "Mayor capacidad de reacción.",
+   "relevant": "Health Actions.",
+   "mvp": "Obligatorio."
+  },
+  "principleAnticipate": {
+   "title": "Anticipar, no solo reportar",
+   "category": "Principio PHF",
+   "what": "El sistema observa eventos futuros además del estado actual.",
+   "objective": "Intervenir antes del impacto.",
+   "value": "Prevención.",
+   "relevant": "Timeline y Forecast.",
+   "mvp": "Sí."
+  },
+  "principleTrust": {
+   "title": "Confianza = información útil",
+   "category": "Principio PHF",
+   "what": "Un dato desactualizado o sin suficiente contexto pierde utilidad.",
+   "objective": "Hacer explícita la confianza.",
+   "value": "Mejores decisiones.",
+   "relevant": "Health Confidence.",
+   "mvp": "Sí."
+  },
+  "principleAutomate": {
+   "title": "Automatizar para simplificar",
+   "category": "Principio PHF",
+   "what": "La automatización solo se justifica cuando reduce esfuerzo o aumenta confiabilidad.",
+   "objective": "Evitar automatización por tecnología.",
+   "value": "Menor complejidad.",
+   "relevant": "Las integraciones avanzadas quedan fuera del MVP.",
+   "mvp": "Aplicar selectivamente."
+  }
+ }
+}

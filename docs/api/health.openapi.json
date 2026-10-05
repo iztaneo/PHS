@@ -428,6 +428,209 @@
         }
       }
     },
+    "/assessments/rules": {
+      "get": {
+        "summary": "Conjunto de reglas PHF vigente",
+        "tags": [
+          "Salud"
+        ],
+        "security": [
+          {
+            "gatewaySignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Valores que aplica el motor: pesos, topes, umbrales y coeficientes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string"
+                    },
+                    "gateThresholds": {
+                      "type": "object",
+                      "properties": {
+                        "projectDeviation": {
+                          "type": "string"
+                        },
+                        "financialDeviation": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "projectDeviation",
+                        "financialDeviation"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Umbrales estrictos: el tope aplica al superarlos."
+                    },
+                    "dimensionWeights": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "number"
+                      },
+                      "description": "Peso de cada dimensión; suman 100."
+                    },
+                    "gateCaps": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "number"
+                      },
+                      "description": "Tope del score cuando la regla crítica está activa."
+                    },
+                    "bands": {
+                      "type": "object",
+                      "properties": {
+                        "healthy": {
+                          "type": "number"
+                        },
+                        "attention": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "healthy",
+                        "attention"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "confidence": {
+                      "type": "object",
+                      "properties": {
+                        "defaultCadenceDays": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "defaultCadenceDays"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "trend": {
+                      "type": "object",
+                      "properties": {
+                        "improving": {
+                          "type": "number"
+                        },
+                        "deteriorating": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "improving",
+                        "deteriorating"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "forecast": {
+                      "type": "object",
+                      "properties": {
+                        "milestone": {
+                          "type": "number"
+                        },
+                        "criticalMilestone": {
+                          "type": "number"
+                        },
+                        "riskPerSeverityPoint": {
+                          "type": "string"
+                        },
+                        "task": {
+                          "type": "number"
+                        },
+                        "renewal": {
+                          "type": "number"
+                        },
+                        "perPointOfDecline": {
+                          "type": "string"
+                        },
+                        "activeDeviationGate": {
+                          "type": "number"
+                        },
+                        "levels": {
+                          "type": "object",
+                          "properties": {
+                            "atRisk": {
+                              "type": "number"
+                            },
+                            "deteriorating": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "atRisk",
+                            "deteriorating"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "defaultCadence": {
+                          "type": "string"
+                        },
+                        "defaultCycles": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "milestone",
+                        "criticalMilestone",
+                        "riskPerSeverityPoint",
+                        "task",
+                        "renewal",
+                        "perPointOfDecline",
+                        "activeDeviationGate",
+                        "levels",
+                        "defaultCadence",
+                        "defaultCycles"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "gateThresholds",
+                    "dimensionWeights",
+                    "gateCaps",
+                    "bands",
+                    "confidence",
+                    "trend",
+                    "forecast"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/assessments/{projectId}/outlook": {
       "get": {
         "summary": "Tendencia entre ciclos y proyección de los próximos",

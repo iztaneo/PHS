@@ -274,6 +274,28 @@ export interface FocusItem {
 }
 export interface HealthCenter { today: string; projects: CenterProject[]; focus: FocusItem[]; incomplete: boolean }
 
+export interface HistoryEntry { id: string; occurredAt: string; category: string; action: string; title: string; detail: string | null; actor: string | null }
+export interface HistoryPage { items: HistoryEntry[]; nextCursor: string | null }
+export interface TimelineItem { kind: string; title: string; date: string; critical: boolean; tab: string }
+export interface Timeline {
+  today: string; horizon: { until: string; cycles: number; cadence: Cadence; assumed: boolean };
+  past: TimelineItem[]; overdue: TimelineItem[]; upcoming: TimelineItem[];
+}
+export interface InactiveProject {
+  id: string; code: string; name: string; status: 'paused' | 'closed'; practiceId: string; practiceName: string; clientName: string; pmName: string;
+  since: string | null; days: number | null; reason: string | null; changedBy: string | null; justificationRequired: boolean;
+  lastJustification: { text: string; at: string; by: string } | null;
+  stopped: { openMilestones: number; openRisks: number; openActions: number; pendingRenewals: number; reviewCycle: boolean };
+}
+export interface RuleSet {
+  version: string; gateThresholds: { projectDeviation: string; financialDeviation: string }; dimensionWeights: Record<string, number>;
+  gateCaps: Record<string, number>; bands: { healthy: number; attention: number }; trend: { improving: number; deteriorating: number };
+  forecast: {
+    milestone: number; criticalMilestone: number; riskPerSeverityPoint: string; task: number; renewal: number; perPointOfDecline: string;
+    activeDeviationGate: number; levels: { atRisk: number; deteriorating: number };
+  };
+}
+
 export interface Responsibilities4 { milestones: number; risks: number; renewals: number; tasks: number }
 
 export type ProjectChanges = Partial<Omit<ProjectInput, 'practiceId' | 'code' | 'clientName'>>;
@@ -423,6 +445,14 @@ export const api = {
     call<Change>('POST', `/api/v1/projects/${id}/changes/${changeId}/decision`, { decision, comment }, key),
   assessment: (id: string) => call<Assessment>('GET', `/api/v1/assessments/${id}`),
   outlook: (id: string) => call<Outlook>('GET', `/api/v1/assessments/${id}/outlook`),
+  history: (projectId: string, filters: { category?: string; from?: string; to?: string; cursor?: string }) => {
+    const params = new URLSearchParams({ projectId });
+    for (const [key, value] of Object.entries(filters)) if (value) params.set(key, value);
+    return call<HistoryPage>('GET', `/api/v1/history?${params}`);
+  },
+  timeline: (projectId: string) => call<Timeline>('GET', `/api/v1/history/timeline?projectId=${projectId}`),
+  inactiveProjects: () => call<InactiveProject[]>('GET', '/api/v1/reports/inactive-projects'),
+  rules: () => call<RuleSet>('GET', '/api/v1/assessments/rules'),
   center: () => call<HealthCenter>('GET', '/api/v1/governance/center'),
   notifications: () => call<Inbox>('GET', '/api/v1/notifications'),
   readNotification: (id: string) => call<Inbox>('POST', `/api/v1/notifications/${id}/read`),

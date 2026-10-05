@@ -1,9 +1,10 @@
-import { Bell, Briefcase, House, ListChecks, LogOut, Menu, ShieldCheck, UserRound, X } from 'lucide-react';
+import { Bell, BookOpen, Briefcase, House, ListChecks, LogOut, Menu, PauseCircle, ShieldCheck, UserRound, X } from 'lucide-react';
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { Admin } from './Admin';
 import { ApiError, api, errorMessage, type Inbox, type SessionUser } from './api';
 import { MyTasks } from './Governance';
 import { Home, Notifications } from './Home';
+import { InactiveProjects, PhfModel } from './Insight';
 import { Projects } from './Projects';
 import { Badge, Button, Card, Empty, Field, Input, Loading, Notice, PageHeader } from './ui';
 
@@ -146,7 +147,7 @@ function PasswordForm({ onChanged, onSessionLost }: { onChanged: () => void; onS
 }
 
 const ROLE_TEXT = { pm: 'PM', lead: 'Líder', director: 'Dirección' } as const;
-type Section = 'home' | 'projects' | 'notifications' | 'tasks' | 'roles' | 'admin';
+type Section = 'home' | 'projects' | 'notifications' | 'tasks' | 'inactive' | 'model' | 'roles' | 'admin';
 
 function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?: string) => void }) {
   const [section, setSection] = useState<Section>('home');
@@ -169,6 +170,8 @@ function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?
     { key: 'projects', label: 'Proyectos', icon: <Briefcase size={18} aria-hidden /> },
     { key: 'notifications', label: 'Notificaciones', icon: <Bell size={18} aria-hidden /> },
     { key: 'tasks', label: 'Mis acciones', icon: <ListChecks size={18} aria-hidden /> },
+    { key: 'inactive', label: 'Pausados y cerrados', icon: <PauseCircle size={18} aria-hidden /> },
+    { key: 'model', label: 'Modelo PHF', icon: <BookOpen size={18} aria-hidden /> },
     { key: 'roles', label: 'Mis roles', icon: <UserRound size={18} aria-hidden /> },
     ...(user.isAdmin ? [{ key: 'admin' as const, label: 'Administración', icon: <ShieldCheck size={18} aria-hidden /> }] : []),
   ];
@@ -227,6 +230,8 @@ function Shell({ user, onSignedOut }: { user: SessionUser; onSignedOut: (notice?
         {section === 'notifications' && <Notifications inbox={inbox} onChange={setInbox} onOpen={open} />}
         {section === 'projects' && <Projects user={user} target={target} />}
         {section === 'tasks' && <MyTasks />}
+        {section === 'inactive' && <InactiveProjects onOpen={open} />}
+        {section === 'model' && <PhfModel />}
         {section === 'roles' && (
           <>
             <PageHeader title="Mis roles" subtitle="Lo que puedes ver y hacer depende de estos roles." />

@@ -1,4 +1,5 @@
 import { Controller, Get, Headers, Inject, NotFoundException, Param, Req, UseGuards } from '@nestjs/common';
+import { RULE_SET_DEFINITION } from '@phs/health-engine';
 import { INTERNAL_AUTH_HEADER } from '@phs/service-kit';
 import { z } from 'zod';
 import { AssessmentsService, type AssessmentView, type OutlookView } from './assessments.service.js';
@@ -8,6 +9,12 @@ import { InternalAuthGuard, type AuthenticatedRequest } from './internal-auth.gu
 @UseGuards(InternalAuthGuard)
 export class AssessmentsController {
   constructor(@Inject(AssessmentsService) private readonly assessments: AssessmentsService) {}
+
+  // The values of the rule set in force, so the help page shows what the engine really applies.
+  @Get('rules')
+  rules() {
+    return RULE_SET_DEFINITION;
+  }
 
   // Same 404 for "does not exist" and "not yours".
   @Get(':projectId')

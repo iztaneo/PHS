@@ -12,8 +12,8 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Contratos de API:** OpenAPI 3.1 por servicio en [docs/api](api/README.md), generados desde `packages/contracts` y verificados por pruebas; Swagger UI local en `/api/docs/`.
 - **Implementado (en revisión, sin aceptar):** todo R1 (acceso, permisos, administración, proyectos, equipo, hitos, línea base) y todo R2 (economía, riesgos, evidencias, cambios aprobados, renovaciones, estado del proyecto con la regla D08, motor completo y evaluación con score). Detalle por historia en el backlog.
 - **R3 construido (en revisión, sin aceptar):** alertas, acciones y causa y plan (BIT-0024); ciclo de revisión, Health Review, validación y festivos (BIT-0025); confianza explicada, tendencia, proyección y proceso programado (BIT-0026). Lo que falta de cada historia está en su estado en el backlog.
-- **R4 en curso (en revisión, sin aceptar):** notificaciones dentro de la aplicación con despacho del outbox (PHS-034) y Health Center de PM, líder y Dirección (PHS-035, PHS-036), BIT-0028.
-- **Todavía no implementado:** de R4, portafolio (PHS-037, requiere D10), timeline e historial (PHS-038), modelo PHF (PHS-039) y consulta de pausados y cerrados (PHS-046); todo R5 (piloto).
+- **R4 construido salvo el portafolio (en revisión, sin aceptar):** notificaciones y Health Center (BIT-0028); historial y línea de tiempo, modelo PHF y consulta de pausados y cerrados (BIT-0030). Lo que falta de cada historia está en su estado en el backlog.
+- **Todavía no implementado:** portafolio de Dirección (PHS-037), que requiere la decisión D10; todo R5 (recorrido integral, usabilidad, accesibilidad y rendimiento, operación del piloto).
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript, React/Vite, NestJS en cada servicio, PostgreSQL 17, Kysely/pg, migraciones SQL/dbmate y Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md); no está instalado y faltan infraestructura, volumen piloto y versiones exactas.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
@@ -24,7 +24,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Datos de demostración:** `seed:demo` carga seis usuarios y cinco proyectos (DEMO-001 a DEMO-005); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** prueba y aceptación del usuario de R1 a R3 y de lo construido de R4; después PHS-038, PHS-039 y PHS-046, y PHS-037 cuando el usuario defina D10. Por confirmar: las interpretaciones marcadas en la tabla de BIT-0025 de DECISIONES, D08 y los supuestos de BIT-0024, BIT-0026 y BIT-0028. Abiertas: D07 y D10.
+- **Siguiente paso funcional:** que el usuario defina D10 para construir el portafolio (PHS-037), y pruebe y acepte R1 a R4; después R5. Por confirmar: las interpretaciones marcadas en la tabla de BIT-0025 de DECISIONES, D08 y los supuestos de BIT-0024, BIT-0026 y BIT-0028. Abiertas: D07 y D10.
 
 ## Cómo se mantiene
 
@@ -1127,6 +1127,44 @@ Prueba del usuario. Después PHS-038, PHS-039 y PHS-046; PHS-037 requiere D10. S
 ### Pendientes y siguiente paso
 
 Revisión del diccionario por el usuario. Después continuar R4 (PHS-038, PHS-039, PHS-046; PHS-037 requiere D10). Siguiente entrada: BIT-0030.
+
+## BIT-0030 — Historial, modelo PHF y pausados y cerrados
+
+**Fecha:** 2026-10-05, America/Mexico_City.
+
+**Objetivo:** construir lo que quedaba de R4 que no depende de D10.
+
+**Relación:** PHS-038, PHS-039, PHS-046; D05, D07, D08; RN-03 a RN-10, RN-17 a RN-19.
+
+**Identificación:** commit con prefijo `BIT-0030`.
+
+### Trabajo realizado
+
+- **Plataforma.** [history.service.ts](../apps/platform/src/history.service.ts): historial del proyecto que une la auditoría de todos los servicios, la apertura y resolución de alertas y la evaluación oficial de cada ciclo con su línea base y reglas; paginación por cursor en orden estable; filtros por tipo y fechas; las cifras económicas solo para quien puede verlas. Línea de tiempo con pasado reciente, lo vencido y lo próximo dentro del horizonte de ciclos.
+- **Proyectos.** `GET /reports/inactive-projects`: pausados y cerrados del alcance del usuario con motivo, antigüedad, justificación de D08 y lo que quedó abierto.
+- **Salud.** `GET /assessments/rules`: el conjunto de reglas que aplica el motor.
+- **Gateway y contratos.** `/api/v1/history` hacia Plataforma y `/api/v1/reports` hacia Proyectos.
+- **Web.** [Insight.tsx](../apps/web/src/Insight.tsx): pestaña "Historial" en el proyecto y pantallas "Pausados y cerrados" y "Modelo PHF" en el menú. [phf-catalog.json](../apps/web/src/phf-catalog.json) contiene el flujo de once etapas y las 66 definiciones extraídas del prototipo.
+
+### Archivos
+
+`apps/platform/src/{history.service,history.controller,app.module}.ts`, `apps/platform/test/history.test.ts`, `apps/projects/src/{projects.service,projects.controller}.ts`, `apps/projects/test/status.int.test.ts`, `apps/health/src/assessments.controller.ts`, `apps/gateway/src/routes.ts`, `packages/contracts/src/{platform,projects,health,gateway}.ts`, `docs/api/*.openapi.json`, `docs/api/README.md`, `apps/web/src/{Insight,App,Projects}.tsx`, `apps/web/src/{api.ts,phf-catalog.json}`, `apps/web/tsconfig.json`, y documentación: backlog, mapa y esta bitácora.
+
+### Decisiones y supuestos
+
+- El usuario pidió seguir con lo demás; sin decisiones nuevas suyas.
+- Supuestos míos: el pasado de la línea de tiempo son 60 días; el historial muestra solo las evaluaciones oficiales de ciclo, no las diarias; el texto de las definiciones es el del prototipo sin cambios.
+- Sin datos de demostración nuevos: las tres pantallas leen lo ya cargado (DEMO-005 está pausado).
+
+### Validación y límites
+
+- `pnpm typecheck` y `pnpm build` sin errores. `pnpm test`: 161 pruebas en 8 paquetes (Plataforma 15, tres nuevas; Proyectos 49, una nueva). `pnpm db:test`: 15 de 15. `pnpm db:dictionary -- --check`: al día.
+- **No comprobado:** las rutas nuevas no se probaron por el gateway en ejecución ni las pantallas en el navegador, porque los servicios se detuvieron al llegar al límite de tiempo de la tarea que los mantenía levantados; la correspondencia entre rutas públicas y contratos sí la verifican las pruebas de contratos.
+- Límites: los anotados en el estado de PHS-038 y PHS-039 en el backlog.
+
+### Pendientes y siguiente paso
+
+D10 para el portafolio. Prueba del usuario. Siguiente entrada: BIT-0031.
 
 ## Plantilla para próximas entradas
 

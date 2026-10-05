@@ -785,6 +785,216 @@
         }
       }
     },
+    "/reports/inactive-projects": {
+      "get": {
+        "summary": "Proyectos pausados y cerrados",
+        "tags": [
+          "Proyectos"
+        ],
+        "security": [
+          {
+            "gatewaySignature": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Proyectos pausados o cerrados al alcance del usuario; primero los que deben justificación, después los más antiguos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "code": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "paused",
+                          "closed"
+                        ]
+                      },
+                      "practiceId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "practiceName": {
+                        "type": "string"
+                      },
+                      "clientName": {
+                        "type": "string"
+                      },
+                      "pmName": {
+                        "type": "string"
+                      },
+                      "since": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Cuándo se pausó o cerró."
+                      },
+                      "days": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Días transcurridos desde entonces."
+                      },
+                      "reason": {
+                        "description": "Motivo registrado al pausar o cerrar.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "changedBy": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "justificationRequired": {
+                        "type": "boolean",
+                        "description": "Lleva 30 días o más sin que el PM describa la situación (D08)."
+                      },
+                      "lastJustification": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "text": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                              },
+                              "by": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "text",
+                              "at",
+                              "by"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "stopped": {
+                        "type": "object",
+                        "properties": {
+                          "openMilestones": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "openRisks": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "openActions": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "pendingRenewals": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "reviewCycle": {
+                            "type": "boolean",
+                            "description": "Tenía ciclo de revisión; mientras siga así no se programan revisiones."
+                          }
+                        },
+                        "required": [
+                          "openMilestones",
+                          "openRisks",
+                          "openActions",
+                          "pendingRenewals",
+                          "reviewCycle"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Lo que quedó detenido."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "code",
+                      "name",
+                      "status",
+                      "practiceId",
+                      "practiceName",
+                      "clientName",
+                      "pmName",
+                      "since",
+                      "days",
+                      "reason",
+                      "changedBy",
+                      "justificationRequired",
+                      "lastJustification",
+                      "stopped"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión válida (`authentication_required`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "Código estable del error, pensado para que el cliente decida el mensaje."
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/projects/{id}": {
       "get": {
         "summary": "Ficha de un proyecto al alcance del usuario",

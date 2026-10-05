@@ -159,6 +159,15 @@ const SCOPED = `
      WHERE (is_pm OR is_team_member OR is_named OR owns_element OR practice_id = ANY($2::uuid[]))
   )`;
 
+export interface InactiveProject {
+  id: string; code: string; name: string; status: 'paused' | 'closed'; practiceId: string; practiceName: string; clientName: string; pmName: string;
+  // When and why it was paused or closed; null for projects that changed state before the status log existed.
+  since: string | null; days: number | null; reason: string | null; changedBy: string | null;
+  justificationRequired: boolean;
+  lastJustification: { text: string; at: string; by: string } | null;
+  stopped: { openMilestones: number; openRisks: number; openActions: number; pendingRenewals: number; reviewCycle: boolean };
+}
+
 function toDetail(row: ProjectRow, memberships: Membership[]): ProjectDetail {
   return {
     id: row.id, code: row.code, name: row.name, status: row.status, justificationRequired: row.justification_required,
@@ -229,6 +238,49 @@ export class ProjectsService {
     );
     const row = found.rows[0];
     return row ? toDetail(row, access.memberships) : null;
+  }
+
+  // Paused and closed projects of the user's scope, with why and since when, whether the
+  // justification of D08 is due, and what was left open when they stopped (PHS-046).
+  async inactive(userId: string): Promise<InactiveProject[]> {
+    const access = await loadAccess(this.pool, userId);
+    if (!access?.active) return [];
+    const found = await this.pool.query<{
+      id: string; code: string; name: string; status: 'paused' | 'closed'; practice_id: string; practice_name: string; client_name: string; pm_name: string;
+      justification_required: boolean; since: Date | null; days: number | null; reason: string | null; changed_by: string | null;
+      justification: string | null; justified_at: Date | null; justified_by: string | null;
+      open_milestones: number; open_risks: number; open_tasks: number; pending_renewals: number; has_review_cycle: boolean;
+    }>(
+      `${SCOPED}
+       SELECT v.id, v.code, v.name, v.status, v.practice_id, v.practice_name, v.client_name, v.pm_name, v.justification_required,
+              t.recorded_at AS since, (now()::date - t.recorded_at::date) AS days, t.reason, tu.display_name AS changed_by,
+              j.reason AS justification, j.recorded_at AS justified_at, ju.display_name AS justified_by,
+              (SELECT count(*)::int FROM phs.milestone m WHERE m.project_id = v.id AND m.status NOT IN ('completed','cancelled')) AS open_milestones,
+              (SELECT count(*)::int FROM phs.risk r WHERE r.project_id = v.id AND r.status IN ('open','mitigating','materialized')) AS open_risks,
+              (SELECT count(*)::int FROM phs.health_task k WHERE k.project_id = v.id AND k.status NOT IN ('completed','cancelled')) AS open_tasks,
+              (SELECT count(*)::int FROM phs.renewal n WHERE n.project_id = v.id AND n.status = 'pending') AS pending_renewals,
+              EXISTS (SELECT 1 FROM phs.review_policy rp WHERE rp.project_id = v.id) AS has_review_cycle
+         FROM visible v
+         LEFT JOIN LATERAL (SELECT l.recorded_at, l.reason, l.recorded_by FROM phs.project_status_log l
+                             WHERE l.project_id = v.id AND l.kind = 'transition' ORDER BY l.recorded_at DESC LIMIT 1) t ON true
+         LEFT JOIN phs.app_user tu ON tu.id = t.recorded_by
+         LEFT JOIN LATERAL (SELECT l.recorded_at, l.reason, l.recorded_by FROM phs.project_status_log l
+                             WHERE l.project_id = v.id AND l.kind = 'justification' AND l.recorded_at >= t.recorded_at
+                             ORDER BY l.recorded_at DESC LIMIT 1) j ON true
+         LEFT JOIN phs.app_user ju ON ju.id = j.recorded_by
+        WHERE v.status IN ('paused', 'closed')
+        ORDER BY v.justification_required DESC, t.recorded_at NULLS FIRST, v.name`,
+      [userId, practicesWithFullView(access.memberships)]);
+    return found.rows.map((r) => ({
+      id: r.id, code: r.code, name: r.name, status: r.status, practiceId: r.practice_id, practiceName: r.practice_name, clientName: r.client_name,
+      pmName: r.pm_name, since: r.since?.toISOString() ?? null, days: r.days, reason: r.reason, changedBy: r.changed_by,
+      justificationRequired: r.justification_required,
+      lastJustification: r.justification ? { text: r.justification, at: r.justified_at!.toISOString(), by: r.justified_by! } : null,
+      stopped: {
+        openMilestones: r.open_milestones, openRisks: r.open_risks, openActions: r.open_tasks, pendingRenewals: r.pending_renewals,
+        reviewCycle: r.has_review_cycle,
+      },
+    }));
   }
 
   async clients(userId: string): Promise<{ id: string; name: string }[]> {

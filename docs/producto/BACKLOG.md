@@ -877,6 +877,8 @@ Criterios de aceptación:
 3. Paginación conserva orden determinista y filtros por tipo/fecha; no recorta a 40/200 registros como el prototipo.
 4. Puede reconstruirse qué baseline y reglas explicaban una evaluación anterior; retención aplica D07 sin eliminar referencias necesarias.
 
+**Estado (BIT-0030):** construida en parte, en revisión. Pestaña "Historial" del proyecto: línea de tiempo con pasado (60 días), vencido hoy y futuro hasta el horizonte de ciclos, con acceso a cada pestaña; historial que combina lo auditado por todos los servicios, las alertas y la evaluación oficial de cada ciclo (con su línea base y sus reglas), con autor, fecha y motivo, filtros por tipo y fechas, y paginación estable sin tope. Falta: la retención (D07 sigue abierta), el enlace al elemento exacto y el detalle de valores antes y después de cada edición (se muestra el motivo y los datos principales).
+
 ### PHS-039 — Publicar ayuda y modelo PHF
 
 Como **usuario**, quiero consultar definiciones y reglas desde la aplicación, para interpretar correctamente los indicadores.
@@ -894,6 +896,8 @@ Criterios de aceptación:
 1. La pantalla conserva el flujo de once etapas y un inventario verificado de elementos de F1/F3 con definición, propósito y aplicación.
 2. Los indicadores enlazan a explicación de la versión vigente y señalan reglas candidatas frente a aprobadas.
 3. La ayuda es navegable por teclado y coincide con el comportamiento implementado; no afirma capacidades pospuestas.
+
+**Estado (BIT-0030):** construida en parte, en revisión. Pantalla "Modelo PHF": las once etapas del prototipo con el lugar de cada una en la aplicación, las reglas vigentes leídas del motor (pesos, topes, umbrales, semáforo, tendencia y proyección) y las 66 definiciones del catálogo del prototipo. Falta: el catálogo se copió del prototipo y solo cinco entradas llevan nota de lo que esta versión hace distinto; no se verificó entrada por entrada contra lo implementado, ni se probó la navegación por teclado. Los indicadores de otras pantallas no enlazan todavía a su definición.
 
 
 ### PHS-046 — Consultar proyectos pausados y cerrados
@@ -915,7 +919,7 @@ Criterios de aceptación:
 3. Indica qué quedó detenido: revisiones sin programar, acciones y riesgos abiertos al momento de pausar o cerrar.
 4. Se puede filtrar por práctica, estado y antigüedad, y abrir el proyecto desde cada renglón.
 
-**Estado (BIT-0025):** propuesta, sin construir.
+**Estado (BIT-0030):** construida, en revisión. Pantalla "Pausados y cerrados": proyectos del alcance del usuario con cliente, PM, fecha, motivo, días transcurridos, quién lo cambió, si deben la justificación de D08 y la última registrada, y lo que quedó abierto (hitos, riesgos, acciones, renovaciones y revisiones sin programar); filtros por estado, práctica y antigüedad, y acceso al proyecto.
 
 ## E09 — Calidad y operación
 

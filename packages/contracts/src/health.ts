@@ -225,6 +225,22 @@ export const holiday = z.object({ day: z.iso.date(), name: z.string() });
 export const holidayQuery = z.object({ year: z.coerce.number().int().min(2000).max(2100) });
 export const addHolidayBody = z.object({ day: z.iso.date(), name: text(120) });
 
+// ---- Rule set in force (PHS-039)
+export const ruleSet = z.object({
+  version: z.string(),
+  gateThresholds: z.object({ projectDeviation: z.string(), financialDeviation: z.string() }).describe('Umbrales estrictos: el tope aplica al superarlos.'),
+  dimensionWeights: z.record(z.string(), z.number()).describe('Peso de cada dimensión; suman 100.'),
+  gateCaps: z.record(z.string(), z.number()).describe('Tope del score cuando la regla crítica está activa.'),
+  bands: z.object({ healthy: z.number(), attention: z.number() }),
+  confidence: z.object({ defaultCadenceDays: z.number() }),
+  trend: z.object({ improving: z.number(), deteriorating: z.number() }),
+  forecast: z.object({
+    milestone: z.number(), criticalMilestone: z.number(), riskPerSeverityPoint: z.string(), task: z.number(), renewal: z.number(),
+    perPointOfDecline: z.string(), activeDeviationGate: z.number(), levels: z.object({ atRisk: z.number(), deteriorating: z.number() }),
+    defaultCadence: z.string(), defaultCycles: z.number(),
+  }),
+});
+
 // ---- Trend and forecast (PHS-028, PHS-029)
 const cut = z.object({
   cycleDueOn: z.iso.date(), effectiveOn: z.iso.date(), score, ruleSetVersion: z.string(),
@@ -305,6 +321,8 @@ export const healthRoutes: RouteContract[] = [
       200: { description: 'Evaluación para la versión actual de los datos y la fecha de hoy en la zona del proyecto. Se calcula y guarda la primera vez que se pide.', schema: assessment },
       401: errors.unauthenticated, 404: errors.notFound,
     } },
+  { method: 'get', path: '/assessments/rules', summary: 'Conjunto de reglas PHF vigente', tag: 'Salud', auth: 'session',
+    responses: { 200: { description: 'Valores que aplica el motor: pesos, topes, umbrales y coeficientes.', schema: ruleSet }, 401: errors.unauthenticated } },
   { method: 'get', path: '/assessments/:projectId/outlook', summary: 'Tendencia entre ciclos y proyección de los próximos', tag: 'Salud', auth: 'session',
     params: { projectId: z.uuid() },
     responses: { 200: { description: 'Tendencia y presión de los compromisos que vencen en el horizonte configurado.', schema: outlook }, 401: errors.unauthenticated, 404: errors.notFound } },

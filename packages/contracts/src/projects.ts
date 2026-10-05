@@ -54,6 +54,22 @@ export const projectPage = z.object({
   pageSize: z.number().int(),
 });
 
+// ---- Paused and closed projects (PHS-046)
+export const inactiveProject = z.object({
+  id: z.uuid(), code: z.string(), name: z.string(), status: z.enum(['paused', 'closed']),
+  practiceId: z.uuid(), practiceName: z.string(), clientName: z.string(), pmName: z.string(),
+  since: z.iso.datetime({ offset: true }).nullable().describe('Cuándo se pausó o cerró.'),
+  days: z.number().int().nullable().describe('Días transcurridos desde entonces.'),
+  reason: z.string().nullable().describe('Motivo registrado al pausar o cerrar.'),
+  changedBy: z.string().nullable(),
+  justificationRequired: z.boolean().describe('Lleva 30 días o más sin que el PM describa la situación (D08).'),
+  lastJustification: z.object({ text: z.string(), at: z.iso.datetime({ offset: true }), by: z.string() }).nullable(),
+  stopped: z.object({
+    openMilestones: z.number().int(), openRisks: z.number().int(), openActions: z.number().int(), pendingRenewals: z.number().int(),
+    reviewCycle: z.boolean().describe('Tenía ciclo de revisión; mientras siga así no se programan revisiones.'),
+  }).describe('Lo que quedó detenido.'),
+});
+
 export const listProjectsQuery = z.object({
   q: z.string().trim().max(100).optional().describe('Busca en nombre y código.'),
   clientId: z.uuid().optional(),
@@ -406,6 +422,8 @@ export const projectsRoutes: RouteContract[] = [
   { method: 'get', path: '/projects', summary: 'Proyectos al alcance del usuario, con búsqueda, filtros y paginación', tag: 'Proyectos', auth: 'session',
     query: listProjectsQuery.shape,
     responses: { 200: { description: 'Página de proyectos que el usuario puede consultar.', schema: projectPage }, 400: errors.invalidRequest, 401: errors.unauthenticated } },
+  { method: 'get', path: '/reports/inactive-projects', summary: 'Proyectos pausados y cerrados', tag: 'Proyectos', auth: 'session',
+    responses: { 200: { description: 'Proyectos pausados o cerrados al alcance del usuario; primero los que deben justificación, después los más antiguos.', schema: z.array(inactiveProject) }, 401: errors.unauthenticated } },
   { method: 'post', path: '/projects', summary: 'Crear proyecto', tag: 'Proyectos', auth: 'session',
     headers: { 'Idempotency-Key': idempotencyKey }, body: createProjectBody,
     responses: {

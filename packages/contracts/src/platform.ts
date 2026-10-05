@@ -44,6 +44,46 @@ export const inbox = z.object({
   items: z.array(notification).describe('Primero lo accionable, por criticidad y plazo; al final lo ya atendido. Solo proyectos que el usuario puede consultar.'),
 });
 
+// ---- History and timeline (PHS-038)
+export const historyCategory = z.enum(['project', 'milestone', 'risk', 'change', 'review', 'alert', 'action', 'evaluation', 'finance', 'renewal', 'evidence']);
+export const historyQuery = z.object({
+  projectId: z.uuid(),
+  category: historyCategory.optional(),
+  from: z.iso.date().optional(),
+  to: z.iso.date().optional().describe('Incluye ese día completo.'),
+  cursor: z.string().max(200).optional().describe('`nextCursor` de la página anterior.'),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+export const historyEntry = z.object({
+  id: z.string(),
+  occurredAt: z.iso.datetime({ offset: true }),
+  category: historyCategory,
+  action: z.string().describe('Acción registrada, por ejemplo `milestone.completed`.'),
+  title: z.string(),
+  detail: z.string().nullable().describe('Motivo, comentario o valores pertinentes. Las cifras económicas solo para quien puede verlas.'),
+  actor: z.string().nullable().describe('null: lo hizo el sistema.'),
+});
+export const historyPage = z.object({
+  items: z.array(historyEntry).describe('Del más reciente al más antiguo, en orden estable.'),
+  nextCursor: z.string().nullable().describe('null: no hay más.'),
+});
+export const timelineQuery = z.object({ projectId: z.uuid() });
+const timelineItem = z.object({
+  kind: z.enum(['milestone', 'risk', 'action', 'renewal', 'review', 'project_end', 'baseline', 'change', 'status']),
+  title: z.string(), date: z.iso.date(), critical: z.boolean(),
+  tab: z.enum(['card', 'milestones', 'risks', 'alerts', 'reviews', 'changes', 'baseline']).describe('Pestaña del proyecto donde está.'),
+});
+export const timeline = z.object({
+  today: z.iso.date(),
+  horizon: z.object({
+    until: z.iso.date(), cycles: z.number().int(), cadence: z.enum(['weekly', 'fortnightly', 'monthly']),
+    assumed: z.boolean().describe('true: el proyecto no tiene ciclo y se usaron dos quincenas.'),
+  }),
+  past: z.array(timelineItem).describe('Lo ocurrido en los últimos 60 días, del más reciente al más antiguo.'),
+  overdue: z.array(timelineItem).describe('Compromisos abiertos con fecha anterior a hoy.'),
+  upcoming: z.array(timelineItem).describe('Compromisos que vencen de hoy al fin del horizonte.'),
+});
+
 // Internal API of the Platform service.
 export const platformRoutes: RouteContract[] = [
   { method: 'get', path: '/health', summary: 'Estado del servicio y de su base de datos', tag: 'Estado', auth: 'none',
@@ -76,4 +116,10 @@ export const platformRoutes: RouteContract[] = [
   { method: 'post', path: '/notifications/:id/read', summary: 'Marcar una notificación como leída', tag: 'Notificaciones', auth: 'session',
     params: { id: z.uuid() },
     responses: { 200: { description: 'Bandeja actualizada.', schema: inbox }, 401: errors.unauthenticated, 404: errors.notFound } },
+  { method: 'get', path: '/history', summary: 'Historial del proyecto', tag: 'Historial', auth: 'session',
+    query: historyQuery.shape,
+    responses: { 200: { description: 'Cambios, revisiones, riesgos, hitos, acciones, alertas y evaluaciones oficiales, con autor, fecha y motivo. Paginado sin límite total.', schema: historyPage }, 400: errors.invalidRequest, 401: errors.unauthenticated, 404: errors.notFound } },
+  { method: 'get', path: '/history/timeline', summary: 'Línea de tiempo del proyecto', tag: 'Historial', auth: 'session',
+    query: timelineQuery.shape,
+    responses: { 200: { description: 'Pasado reciente, lo vencido hoy y lo que vence dentro del horizonte de ciclos.', schema: timeline }, 400: errors.invalidRequest, 401: errors.unauthenticated, 404: errors.notFound } },
 ];

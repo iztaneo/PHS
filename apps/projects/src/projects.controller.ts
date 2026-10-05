@@ -58,6 +58,11 @@ export class ProjectsController {
     return run(this.projects.update(actor(request), parsed.data, parse(updateProjectBody, body)));
   }
 
+  @Get('reports/inactive-projects')
+  inactive(@Req() request: AuthenticatedRequest) {
+    return this.projects.inactive(request.internal.userId);
+  }
+
   @Get('clients')
   clients(@Req() request: AuthenticatedRequest) {
     return this.projects.clients(request.internal.userId);

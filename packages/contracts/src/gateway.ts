@@ -69,9 +69,9 @@ function proxied(routes: RouteContract[], select: (path: string) => boolean, pre
 export const publicRoutes: RouteContract[] = [
   ...gatewayOwnRoutes.filter((route) => route.path !== '/health'),
   ...proxied(identityRoutes, (path) => path.startsWith('/admin/')),
-  ...proxied(platformRoutes, (path) => path.startsWith('/evidence') || path.startsWith('/notifications')),
+  ...proxied(platformRoutes, (path) => ['/evidence', '/notifications', '/history'].some((prefix) => path.startsWith(prefix))),
   ...proxied(healthRoutes, (path) => path.startsWith('/assessments/')),
   // Events and actions of the Health service are published under /governance.
   ...proxied(healthRoutes, (path) => !path.startsWith('/assessments/') && path !== '/health', '/api/v1/governance'),
-  ...proxied(projectsRoutes, (path) => ['/projects', '/catalog/', '/clients', '/people'].some((prefix) => path.startsWith(prefix))),
+  ...proxied(projectsRoutes, (path) => ['/projects', '/catalog/', '/clients', '/people', '/reports/'].some((prefix) => path.startsWith(prefix))),
 ];
