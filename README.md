@@ -16,7 +16,7 @@ El repositorio contiene la aplicación (web, gateway y cuatro servicios: Identid
 - [Decisiones pendientes](docs/producto/DECISIONES.md).
 - [Diseño de interfaz](docs/producto/DISENO-UI.md).
 - [Reglas del motor PHF, versión 1](docs/producto/REGLAS-PHF-v1.md).
-- [Arquitectura propuesta](docs/ARQUITECTURA-PHS.md).
+- [Arquitectura vigente e inventario de componentes construidos](docs/ARQUITECTURA.md). El [diagnóstico y la propuesta inicial](docs/ARQUITECTURA-PHS.md) se conservan como antecedente.
 - [Stack tecnológico propuesto](docs/STACK-TECNOLOGICO.md).
 - [Decisión técnica ADR-001](docs/adr/001-stack-mvp.md) y [ADR-002: microservicios](docs/adr/002-microservicios.md).
 - [Mapa pantalla → servicio → tablas → historias](docs/MAPA-TRAZABILIDAD.md).

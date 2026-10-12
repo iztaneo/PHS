@@ -1,6 +1,8 @@
 # PHS — Diagnóstico y arquitectura inicial
 
-Estado: propuesta para discusión, basada en los documentos y el código existentes. No constituye una aplicación implementada ni una validación de negocio del PHF.
+> **Documento histórico.** Es el diagnóstico del prototipo y la propuesta inicial de arquitectura (octubre de 2026). La aplicación ya está construida: la arquitectura vigente y el inventario de componentes están en [ARQUITECTURA.md](ARQUITECTURA.md). Lo que sigue se conserva sin actualizar, salvo las notas fechadas.
+
+Estado al escribirse: propuesta para discusión, basada en los documentos y el código existentes. No constituye una aplicación implementada ni una validación de negocio del PHF.
 
 ## 1. Material revisado
 

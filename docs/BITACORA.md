@@ -6,6 +6,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 
 - **Producto:** Project Health System, para gobernar la salud de proyectos y servicios mediante PHF.
 - **Disponible:** prototipo HTML, diagnóstico, arquitectura propuesta, diseño PostgreSQL, migraciones 001–007 aplicadas con dbmate, 001–015 (38 tablas), pruebas de integridad, especificación funcional, backlog y plan de entregas.
+- **Arquitectura vigente:** [ARQUITECTURA.md](ARQUITECTURA.md) describe el sistema como está construido, con el inventario de componentes (BIT-0042). [ARQUITECTURA-PHS.md](ARQUITECTURA-PHS.md) queda como diagnóstico histórico.
 - **Aplicación ejecutable:** monorepo pnpm con `apps/web`, `apps/gateway`, los cuatro servicios (`identity`, `projects`, `health`, `platform`) y los paquetes `service-kit`, `contracts` y `health-engine`; ver README para arrancarlo.
 - **Interfaz:** dirección visual clara, limpia y ejecutiva, responsiva y con menú lateral, decidida por el usuario; sistema de diseño en [DISENO-UI.md](producto/DISENO-UI.md) (BIT-0017).
 - **Diccionario de datos:** [DICCIONARIO-DATOS.md](DICCIONARIO-DATOS.md), con diagramas entidad-relación por módulo y el contenido de los catálogos, generado desde la base con `pnpm db:dictionary` (BIT-0029, BIT-0038).
@@ -1572,6 +1573,43 @@ Consideró un contenedor único para compartir y, tras ver lo que implicaba (ima
 ### Pendientes y siguiente paso
 
 Revisar la corrida de integración continua. Después AT-16 y D07. Siguiente entrada: BIT-0042.
+
+## BIT-0042 — Arquitectura vigente e inventario de componentes
+
+**Fecha:** 2026-10-12, America/Mexico_City.
+
+**Objetivo:** al usuario le comentaron que la arquitectura no se encontraba y que no estaban listados los componentes ya construidos; dejar esa información en un solo documento.
+
+**Relación:** PHS-003; ADR-001, ADR-002. Solo documentación.
+
+**Identificación:** commit con prefijo `BIT-0042`.
+
+### Hallazgo
+
+La información existía pero repartida: el diagrama en un documento titulado "Diagnóstico y arquitectura inicial", marcado como propuesta y enlazado desde el README como "Arquitectura propuesta", con una tabla de 30 de las 38 tablas; lo implementado, en ADR-002; lo construido, como notas por entrada en el mapa de trazabilidad y en el estado de cada historia. No había un documento que dijera qué existe hoy.
+
+### Trabajo realizado
+
+- [ARQUITECTURA.md](ARQUITECTURA.md): vista general con diagrama; inventario de componentes (gateway, cuatro servicios con sus módulos, archivos, tablas e historias; tres paquetes compartidos; secciones y pestañas de la web); cómo se comunican (petición, identidad firmada, permisos, idempotencia, concurrencia, outbox y proceso programado); tecnologías en uso; formas de ejecución; niveles de prueba; estado por entrega y límites conocidos; e índice de dónde está cada tema.
+- [ARQUITECTURA-PHS.md](ARQUITECTURA-PHS.md) y [STACK-TECNOLOGICO.md](STACK-TECNOLOGICO.md): aviso inicial de que son la propuesta original y enlace al documento vigente. No se reescribieron.
+- README: enlaza la arquitectura vigente.
+- [AGENTS.md](../AGENTS.md): el documento vigente se actualiza en el mismo commit cuando cambia un servicio, módulo, paquete o pantalla.
+
+### Archivos
+
+`docs/ARQUITECTURA.md`, `docs/ARQUITECTURA-PHS.md`, `docs/STACK-TECNOLOGICO.md`, `README.md`, `AGENTS.md` y esta bitácora.
+
+### Validación y límites
+
+- El inventario se tomó del código: archivos de cada servicio, prefijos de `apps/gateway/src/routes.ts`, número de rutas de `docs/api` (78 públicas; 12, 35, 24 y 10 internas), tablas por servicio según los permisos de la base, y secciones de la web. Se comprobó que todos los enlaces y los archivos citados existen.
+- `pnpm test`: 165 pruebas aprobadas; 15 archivos de pruebas SQL. Sin cambios de código.
+- A diferencia del diccionario de datos y de los contratos de API, este documento **se mantiene a mano**: nada lo compara contra el código, así que puede quedar desactualizado si no se respeta la regla de AGENTS.md.
+- Los diagramas están en Mermaid y no se renderizaron en un visor.
+- El mapa de trazabilidad conserva su tabla original con notas por entrada; no se reorganizó.
+
+### Pendientes y siguiente paso
+
+Revisión del documento por quien hizo el comentario. Siguen pendientes AT-16 y D07 para cerrar PHS-040. Siguiente entrada: BIT-0043.
 
 ## Plantilla para próximas entradas
 

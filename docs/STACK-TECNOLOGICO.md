@@ -1,5 +1,7 @@
 # Stack tecnológico PHS
 
+> **Propuesta inicial.** Las tecnologías que quedaron en uso, con sus versiones, están en la sección 4 de [ARQUITECTURA.md](ARQUITECTURA.md). Este documento conserva el análisis original y menciona opciones que no se adoptaron.
+
 Fecha: 2026-10-03, America/Mexico_City. Estado: selección técnica para el MVP; **TypeScript/React/NestJS confirmados por el usuario el 2026-10-03 y la identidad del MVP se valida en la base de datos** (ver §6 y BIT-0005). Texto original de la propuesta: no se ha instalado ni se ha validado todavía la combinación de dependencias. PostgreSQL está confirmado por el usuario. Se solicitó información sobre restricciones del equipo; al redactar no hay preferencia adicional confirmada.
 
 La decisión y sus alternativas se resumen en [ADR-001](adr/001-stack-mvp.md). Completa la parte de selección de tecnologías de PHS-003; quedan contratos, proveedor de identidad, infraestructura y pruebas de compatibilidad antes de dar esa historia por terminada.
