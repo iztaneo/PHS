@@ -28,7 +28,7 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Datos de demostración:** `seed:demo` carga seis usuarios y seis proyectos (DEMO-001 a DEMO-006); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021). Única excepción a cargarlos mediante los servicios: los dos ciclos pasados de DEMO-006 (BIT-0033).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** MVP funcional según el nuevo backlog ([BACKLOG-MVP.md](producto/BACKLOG-MVP.md), BIT-0043), sin la infraestructura de Azure. Siete incrementos; el primero es I1, acceso por código de un solo uso y usuarios. Pendiente recibir el documento de arquitectura (ADR-01 a 16) y el documento maestro PHF (BR-01 a 19) que el backlog cita.
+- **Siguiente paso funcional:** MVP funcional según el nuevo backlog ([BACKLOG-MVP.md](producto/BACKLOG-MVP.md), BIT-0043), sin la infraestructura de Azure y conservando el inicio de sesión con contraseña (BIT-0044). Siete incrementos; el primero es I1, usuarios y sesiones. Pendiente recibir el documento de arquitectura (ADR-01 a 16) y el documento maestro PHF (BR-01 a 19) que el backlog cita.
 
 ## Cómo se mantiene
 
@@ -1649,6 +1649,39 @@ Registradas en [DECISIONES.md](producto/DECISIONES.md), sección "Nuevo backlog"
 ### Pendientes y siguiente paso
 
 Recibir los documentos fuente. Empezar I1: acceso por código de un solo uso y usuarios. Siguiente entrada: BIT-0044.
+
+## BIT-0044 — Se conserva el inicio de sesión con contraseña
+
+**Fecha:** 2026-11-26, America/Mexico_City.
+
+**Objetivo:** registrar que el acceso por código de un solo uso queda para después del MVP.
+
+**Relación:** épica E02 del nuevo backlog; D06; BIT-0043.
+
+**Identificación:** commit con prefijo `BIT-0044`.
+
+### Decisión del usuario
+
+Conservar el inicio de sesión actual y dejar el código de un solo uso para después, porque solo afecta el acceso. Sustituye la respuesta dada en BIT-0043, donde se había elegido adoptarlo.
+
+### Trabajo realizado
+
+- [scripts/backlog-mvp.py](../scripts/backlog-mvp.py): nuevo estado "Pospuesto"; ocho piezas de E02 pasan a ese estado (AUT-01 a 04 y 07 a 10). AUT-05 (bloqueo por intentos) queda como hecho con la contraseña y AUT-06 (cerrar sesiones) sigue en I1. PLT-10 pasa a I6 por el reloj simulado; el correo se resolverá con un buzón de prueba local cuando lo pidan los avisos a usuarios.
+- I1 pasa a llamarse "Usuarios y sesiones" y queda con 11 piezas.
+- [BACKLOG-MVP.md](producto/BACKLOG-MVP.md) regenerado: 26 hecho, 40 parcial, 29 nuevo, 17 cambia, 8 pospuesto, 8 fuera.
+- [DECISIONES.md](producto/DECISIONES.md): fila de acceso corregida.
+
+### Archivos
+
+`scripts/backlog-mvp.py`, `docs/producto/BACKLOG-MVP.md`, `docs/producto/DECISIONES.md` y esta bitácora.
+
+### Validación y límites
+
+Solo documentación. El generador comprobó que las 128 piezas siguen clasificadas.
+
+### Pendientes y siguiente paso
+
+Empezar I1: usuarios y sesiones. Siguiente entrada: BIT-0045.
 
 ## Plantilla para próximas entradas
 

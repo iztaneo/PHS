@@ -8,8 +8,9 @@ OUT = 'docs/producto/BACKLOG-MVP.md'
 
 # Estado frente a lo construido al 2026-11-26 (BIT-0043):
 #   Hecho: lo construido lo cubre, salvo detalles; Parcial: existe una parte; Nuevo: no existe;
-#   Cambia: existe pero el nuevo backlog pide otro comportamiento; Fuera: infraestructura, fuera del MVP.
-# Incrementos del MVP funcional: I1 acceso y usuarios, I2 roles y permisos, I3 catálogos y parámetros,
+#   Cambia: existe pero el nuevo backlog pide otro comportamiento; Fuera: infraestructura, fuera del MVP;
+#   Pospuesto: funcional, pero el usuario decidió hacerlo después del MVP.
+# Incrementos del MVP funcional: I1 usuarios y sesiones, I2 roles y permisos, I3 catálogos y parámetros,
 # I4 clientes, proyectos y línea base, I5 hitos, riesgos, revisiones y salud, I6 alertas, acciones y
 # cambios, I7 Health Center, historial y auditoría. "—": no requiere trabajo en el MVP.
 C = {
@@ -23,19 +24,19 @@ C = {
  'PLT-07': ('Fuera', '—', 'Azure Service Bus. Hoy el outbox lo despacha Plataforma.'),
  'PLT-08': ('Hecho', '—', 'Outbox en PostgreSQL con despacho y reintentos (BIT-0028).'),
  'PLT-09': ('Fuera', '—', 'Conectores de Azure. Hoy PostgreSQL y carpeta local.'),
- 'PLT-10': ('Nuevo', 'I1', 'Se necesita para el MVP: envío de correo (en local, un buzón de prueba) y reloj del sistema simulable.'),
+ 'PLT-10': ('Nuevo', 'I6', 'Reloj del sistema simulable para el MVP. El envío de correo se hace con un buzón de prueba local cuando lo pidan los avisos de usuarios.'),
  'PLT-11': ('Fuera', '—', 'OpenTelemetry y Azure Monitor.'),
  'PLT-12': ('Parcial', 'I7', 'Auditoría en la misma transacción en todos los servicios. Faltan rol, IP de origen, enmascarado declarado y la consulta (HC-06).'),
  'PLT-13': ('Parcial', '—', 'CI en GitHub Actions con compilación, pruebas, e2e y Docker. El despliegue queda fuera del MVP.'),
  # E02 Autenticación OTP
- 'AUT-01': ('Cambia', 'I1', 'Hoy se entra con contraseña. Pasa a código por correo con lista blanca de dominios.'),
- 'AUT-02': ('Nuevo', 'I1', ''), 'AUT-03': ('Cambia', 'I1', ''), 'AUT-04': ('Nuevo', 'I1', ''),
- 'AUT-05': ('Parcial', 'I1', 'Hoy hay bloqueo por contraseñas fallidas; pasa a códigos fallidos.'),
- 'AUT-06': ('Parcial', 'I1', 'Hoy hay cierre de sesión; falta cerrar todas las sesiones.'),
- 'AUT-07': ('Nuevo', 'I1', 'Canal de correo detrás de una interfaz.'),
- 'AUT-08': ('Nuevo', 'I1', ''),
- 'AUT-09': ('Cambia', 'I1', 'Hoy: cookie de sesión opaca validada por el gateway. Pasa a token de identidad y refresh con rotación.'),
- 'AUT-10': ('Cambia', 'I1', 'Pantalla de acceso en dos pasos.'),
+ 'AUT-01': ('Pospuesto', '—', 'Hoy se entra con contraseña. Pasa a código por correo con lista blanca de dominios. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña.'),
+ 'AUT-02': ('Pospuesto', '—', 'Acceso por código de un solo uso. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña.'), 'AUT-03': ('Pospuesto', '—', 'Acceso por código de un solo uso. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña.'), 'AUT-04': ('Pospuesto', '—', 'Acceso por código de un solo uso. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña.'),
+ 'AUT-05': ('Hecho', 'I1', 'Bloqueo por contraseñas fallidas; con el acceso por código pasará a códigos fallidos. Se agregan el desbloqueo por administrador y su correo.'),
+ 'AUT-06': ('Parcial', 'I1', 'Hay cierre de sesión con la sesión actual; falta cerrar todas las sesiones.'),
+ 'AUT-07': ('Pospuesto', '—', 'Canal de correo detrás de una interfaz. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña.'),
+ 'AUT-08': ('Pospuesto', '—', 'Acceso por código de un solo uso. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña.'),
+ 'AUT-09': ('Pospuesto', '—', 'Hoy: cookie de sesión opaca validada por el gateway. Pasa a token de identidad y refresh con rotación. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña.'),
+ 'AUT-10': ('Pospuesto', '—', 'Pantalla de acceso en dos pasos. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña.'),
  # E03 Autorización RBAC
  'RBA-01': ('Cambia', 'I2', 'Hoy las reglas de D05 están en el código. Pasan a roles, permisos y ámbitos como datos.'),
  'RBA-02': ('Nuevo', 'I2', ''), 'RBA-03': ('Cambia', 'I2', 'Hoy: roles pm, lead y director por práctica.'),
@@ -47,7 +48,7 @@ C = {
  'USR-02': ('Parcial', 'I1', 'Hay lista; faltan filtros y paginación.'),
  'USR-03': ('Parcial', 'I1', 'Falta historial por campo y control de versión.'),
  'USR-04': ('Parcial', 'I1', 'Hay desactivar y reactivar; faltan motivo, advertencia de proyectos y asignaciones suspendidas.'),
- 'USR-05': ('Parcial', 'I1', 'Hay restablecer contraseña; pasa a desbloquear y cerrar sesiones.'),
+ 'USR-05': ('Parcial', 'I1', 'Hay restablecer contraseña; faltan desbloquear y cerrar sesiones.'),
  'USR-06': ('Nuevo', 'I1', ''), 'USR-07': ('Nuevo', 'I1', ''),
  'USR-08': ('Parcial', 'I1', 'Tabla de usuarios existente; faltan campos, historial y versión.'),
  'USR-09': ('Nuevo', 'I1', ''),
@@ -131,7 +132,7 @@ C = {
  'HC-09': ('Nuevo', 'I7', 'Reinicio de ambiente de prueba.'),
 }
 INC = {
- 'I1': 'Acceso por código y usuarios', 'I2': 'Roles, permisos y menú configurables', 'I3': 'Catálogos y parámetros del PHF',
+ 'I1': 'Usuarios y sesiones', 'I2': 'Roles, permisos y menú configurables', 'I3': 'Catálogos y parámetros del PHF',
  'I4': 'Clientes, proyectos y línea base con aprobación', 'I5': 'Hitos, riesgos, revisiones y salud',
  'I6': 'Alertas, reloj simulado, acciones y cambios', 'I7': 'Health Center, historial y auditoría',
 }
@@ -151,7 +152,8 @@ out = ['# Backlog del MVP funcional', '',
  '| Hecho | Lo construido lo cubre; puede requerir ajustes menores. Nada está aceptado todavía. |',
  '| Parcial | Existe una parte. |', '| Nuevo | No existe. |',
  '| Cambia | Existe, pero el nuevo backlog pide otro comportamiento; manda el nuevo backlog. |',
- '| Fuera | Infraestructura de Azure: fuera del MVP funcional por decisión del usuario. |', '',
+ '| Fuera | Infraestructura de Azure: fuera del MVP funcional por decisión del usuario. |',
+ '| Pospuesto | Funcional, pero se hará después del MVP por decisión del usuario. |', '',
  '## Incrementos del MVP funcional', '', '| Incremento | Contenido | Piezas |', '| --- | --- | --- |']
 for k, name in INC.items():
     n = [key(r) for r in items if C[key(r)][1] == k]

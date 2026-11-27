@@ -4,7 +4,7 @@ Generado por `scripts/backlog-mvp.py` a partir del export de Jira [fuentes/PHS-J
 
 Este backlog sustituye a [BACKLOG.md](BACKLOG.md) como referencia de trabajo (BIT-0043). Las decisiones que lo enmarcan están en [DECISIONES.md](DECISIONES.md), sección "Nuevo backlog (2026-11-26)".
 
-**128 piezas** en 14 épicas: 41 parcial, 33 nuevo, 25 hecho, 21 cambia, 8 fuera.
+**128 piezas** en 14 épicas: 40 parcial, 29 nuevo, 26 hecho, 17 cambia, 8 fuera, 8 pospuesto.
 
 | Estado | Significado |
 | --- | --- |
@@ -13,17 +13,18 @@ Este backlog sustituye a [BACKLOG.md](BACKLOG.md) como referencia de trabajo (BI
 | Nuevo | No existe. |
 | Cambia | Existe, pero el nuevo backlog pide otro comportamiento; manda el nuevo backlog. |
 | Fuera | Infraestructura de Azure: fuera del MVP funcional por decisión del usuario. |
+| Pospuesto | Funcional, pero se hará después del MVP por decisión del usuario. |
 
 ## Incrementos del MVP funcional
 
 | Incremento | Contenido | Piezas |
 | --- | --- | --- |
-| I1 | Acceso por código y usuarios | 20: PLT-10, AUT-01, AUT-02, AUT-03, AUT-04, AUT-05, AUT-06, AUT-07, AUT-08, AUT-09, AUT-10, USR-01, USR-02, USR-03, USR-04, USR-05, USR-06, USR-07, USR-08, USR-09 |
+| I1 | Usuarios y sesiones | 11: AUT-05, AUT-06, USR-01, USR-02, USR-03, USR-04, USR-05, USR-06, USR-07, USR-08, USR-09 |
 | I2 | Roles, permisos y menú configurables | 11: RBA-01, RBA-02, RBA-03, RBA-04, RBA-05, RBA-06, RBA-07, RBA-08, RBA-09, RBA-10, HC-08 |
 | I3 | Catálogos y parámetros del PHF | 10: CAT-01, CAT-02, CAT-03, CAT-04, CAT-05, CAT-06, CAT-07, CAT-08, CAT-09, HLT-08 |
 | I4 | Clientes, proyectos y línea base con aprobación | 17: CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-06, CLI-07, CLI-08, PRJ-01, PRJ-02, PRJ-03, PRJ-04, PRJ-05, PRJ-06, PRJ-07, PRJ-08, PRJ-09 |
 | I5 | Hitos, riesgos, revisiones y salud | 25: HYR-01, HYR-02, HYR-03, HYR-04, HYR-05, HYR-06, HYR-07, HYR-08, HYR-09, HYR-10, REV-01, REV-02, REV-03, REV-04, REV-05, REV-06, REV-07, REV-08, HLT-01, HLT-02, HLT-03, HLT-04, HLT-05, HLT-06, HLT-07 |
-| I6 | Alertas, reloj simulado, acciones y cambios | 25: PLT-06, EXP-01, EXP-02, EXP-03, EXP-04, EXP-05, EXP-06, EXP-07, EXP-08, TSK-01, TSK-02, TSK-03, TSK-04, TSK-05, TSK-06, TSK-07, TSK-08, CHG-01, CHG-02, CHG-03, CHG-04, CHG-05, CHG-06, CHG-07, CHG-08 |
+| I6 | Alertas, reloj simulado, acciones y cambios | 26: PLT-06, PLT-10, EXP-01, EXP-02, EXP-03, EXP-04, EXP-05, EXP-06, EXP-07, EXP-08, TSK-01, TSK-02, TSK-03, TSK-04, TSK-05, TSK-06, TSK-07, TSK-08, CHG-01, CHG-02, CHG-03, CHG-04, CHG-05, CHG-06, CHG-07, CHG-08 |
 | I7 | Health Center, historial y auditoría | 10: PLT-12, REV-09, HC-01, HC-02, HC-03, HC-04, HC-05, HC-06, HC-07, HC-09 |
 
 Se conservan además, aunque el nuevo backlog no los menciona: causa y plan validados por el líder (D04), portafolio de Dirección (D10), pausados y cerrados con justificación a 30 días (D08), días festivos, renovaciones, economía y la ayuda del modelo PHF.
@@ -43,7 +44,7 @@ Base técnica del PHS: infraestructura Azure con Bicep, librería phs-platform c
 | PLT-07 Azure Service Bus y conector IMessageBus | Tarea | Highest | Fuera | — | Azure Service Bus. Hoy el outbox lo despacha Plataforma. |
 | PLT-08 Transactional outbox y relay | Tarea | High | Hecho | — | Outbox en PostgreSQL con despacho y reintentos (BIT-0028). |
 | PLT-09 Conectores de datos: PostgreSQL, Mongo, Blob, Redis | Tarea | High | Fuera | — | Conectores de Azure. Hoy PostgreSQL y carpeta local. |
-| PLT-10 Conector de correo y reloj del sistema | Tarea | Medium | Nuevo | I1 | Se necesita para el MVP: envío de correo (en local, un buzón de prueba) y reloj del sistema simulable. |
+| PLT-10 Conector de correo y reloj del sistema | Tarea | Medium | Nuevo | I6 | Reloj del sistema simulable para el MVP. El envío de correo se hace con un buzón de prueba local cuando lo pidan los avisos de usuarios. |
 | PLT-11 Observabilidad con OpenTelemetry y Azure Monitor | Tarea | High | Fuera | — | OpenTelemetry y Azure Monitor. |
 | PLT-12 Auditoría transversal de escrituras | Tarea | High | Parcial | I7 | Auditoría en la misma transacción en todos los servicios. Faltan rol, IP de origen, enmascarado declarado y la consulta (HC-06). |
 | PLT-13 Pipeline CI/CD con GitHub Actions y OIDC | Tarea | Highest | Parcial | — | CI en GitHub Actions con compilación, pruebas, e2e y Docker. El despliegue queda fuera del MVP. |
@@ -54,16 +55,16 @@ Servicio Identity del PHS: acceso sin contraseña con código de un solo uso env
 
 | Pieza | Tipo | Prioridad | Estado | Incremento | Nota |
 | --- | --- | --- | --- | --- | --- |
-| AUT-01 Solicitar código de acceso con mi correo | Historia | Highest | Cambia | I1 | Hoy se entra con contraseña. Pasa a código por correo con lista blanca de dominios. |
-| AUT-02 Recibir el código por correo | Historia | Highest | Nuevo | I1 |  |
-| AUT-03 Verificar el código y entrar | Historia | Highest | Cambia | I1 |  |
-| AUT-04 Reenviar el código | Historia | High | Nuevo | I1 |  |
-| AUT-05 Bloqueo por intentos fallidos | Historia | Highest | Parcial | I1 | Hoy hay bloqueo por contraseñas fallidas; pasa a códigos fallidos. |
-| AUT-06 Cerrar sesión y revocar sesiones | Historia | High | Parcial | I1 | Hoy hay cierre de sesión; falta cerrar todas las sesiones. |
-| AUT-07 Puerto IOtpChannel y canal de correo | Tarea | Highest | Nuevo | I1 | Canal de correo detrás de una interfaz. |
-| AUT-08 Almacén de OTP con hash, vigencia y un solo uso | Tarea | Highest | Nuevo | I1 |  |
-| AUT-09 Emisión, rotación y validación de tokens | Tarea | Highest | Cambia | I1 | Hoy: cookie de sesión opaca validada por el gateway. Pasa a token de identidad y refresh con rotación. |
-| AUT-10 Pantallas de acceso en la SPA | Historia | High | Cambia | I1 | Pantalla de acceso en dos pasos. |
+| AUT-01 Solicitar código de acceso con mi correo | Historia | Highest | Pospuesto | — | Hoy se entra con contraseña. Pasa a código por correo con lista blanca de dominios. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña. |
+| AUT-02 Recibir el código por correo | Historia | Highest | Pospuesto | — | Acceso por código de un solo uso. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña. |
+| AUT-03 Verificar el código y entrar | Historia | Highest | Pospuesto | — | Acceso por código de un solo uso. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña. |
+| AUT-04 Reenviar el código | Historia | High | Pospuesto | — | Acceso por código de un solo uso. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña. |
+| AUT-05 Bloqueo por intentos fallidos | Historia | Highest | Hecho | I1 | Bloqueo por contraseñas fallidas; con el acceso por código pasará a códigos fallidos. Se agregan el desbloqueo por administrador y su correo. |
+| AUT-06 Cerrar sesión y revocar sesiones | Historia | High | Parcial | I1 | Hay cierre de sesión con la sesión actual; falta cerrar todas las sesiones. |
+| AUT-07 Puerto IOtpChannel y canal de correo | Tarea | Highest | Pospuesto | — | Canal de correo detrás de una interfaz. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña. |
+| AUT-08 Almacén de OTP con hash, vigencia y un solo uso | Tarea | Highest | Pospuesto | — | Acceso por código de un solo uso. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña. |
+| AUT-09 Emisión, rotación y validación de tokens | Tarea | Highest | Pospuesto | — | Hoy: cookie de sesión opaca validada por el gateway. Pasa a token de identidad y refresh con rotación. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña. |
+| AUT-10 Pantallas de acceso en la SPA | Historia | High | Pospuesto | — | Pantalla de acceso en dos pasos. Pospuesto por decisión del usuario (BIT-0044): se conserva el acceso con contraseña. |
 
 ## E03 Autorización RBAC
 
@@ -92,7 +93,7 @@ ABC de cuentas del PHS: alta por administrador, edición, baja lógica y reactiv
 | USR-02 Buscar y listar usuarios | Historia | High | Parcial | I1 | Hay lista; faltan filtros y paginación. |
 | USR-03 Editar los datos de un usuario | Historia | High | Parcial | I1 | Falta historial por campo y control de versión. |
 | USR-04 Desactivar y reactivar un usuario | Historia | Highest | Parcial | I1 | Hay desactivar y reactivar; faltan motivo, advertencia de proyectos y asignaciones suspendidas. |
-| USR-05 Desbloquear y cerrar sesiones de un usuario | Historia | High | Parcial | I1 | Hay restablecer contraseña; pasa a desbloquear y cerrar sesiones. |
+| USR-05 Desbloquear y cerrar sesiones de un usuario | Historia | High | Parcial | I1 | Hay restablecer contraseña; faltan desbloquear y cerrar sesiones. |
 | USR-06 Ver la ficha completa con roles e historial | Historia | High | Nuevo | I1 |  |
 | USR-07 Editar mi propio perfil | Historia | Medium | Nuevo | I1 |  |
 | USR-08 Modelo de usuarios y puerto IUserDirectory | Tarea | Highest | Parcial | I1 | Tabla de usuarios existente; faltan campos, historial y versión. |
