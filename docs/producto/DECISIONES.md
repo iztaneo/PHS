@@ -15,6 +15,20 @@ Las decisiones de negocio siguen **pendientes**, salvo D01, D09 y las confirmaci
 | D09 | Evidencias: formatos, tamaño, expiración, adjuntos posteriores a validación y contenido sensible. | Texto y PNG/JPEG/WebP; límite inicial sugerido 5 MB por imagen. Evidencia del envío queda fijada; incorporación posterior identificada como adenda. **Confirmado 2026-10-04:** imágenes, PDF y Office; 10 MB; adendas; retiro con motivo. Pendiente: expiración y restricción adicional de acceso. | Dueño de producto + responsable técnico | PHS-017, 023, 024, 042 |
 | D10 | Promedio de portafolio, exclusión de cerrados, datos incompletos, monedas y uso de provisional/oficial. | Media simple solo sobre evaluaciones oficiales disponibles; mostrar cobertura/frescura; agrupar importes por moneda. Confirmar si requiere ponderación comercial. | Dirección + finanzas | PHS-037 |
 
+## Nuevo backlog (2026-11-26, BIT-0043)
+
+El usuario entregó un nuevo conjunto de requerimientos (export de Jira, 14 épicas y 128 historias y tareas; ver [BACKLOG-MVP.md](BACKLOG-MVP.md)). Cita como fuente un "documento Arquitectura del PHS" (ADR-01 a ADR-16) y un "documento maestro PHF" (BR-01 a BR-19) que no están en el repositorio. Decisiones del usuario sobre cómo adoptarlo:
+
+| Tema | Decisión |
+| --- | --- |
+| Alcance | Primero un MVP funcional. Toda la infraestructura de Azure (épica E01: Bicep, Front Door, APIM, AKS, Service Bus, Cosmos DB, Redis, Key Vault, OpenTelemetry) queda fuera por ahora. La arquitectura base es casi la misma; lo que cambia son las tecnologías, y eso se aborda después. |
+| Acceso | Código de un solo uso por correo, sin contraseña (épica E02). Se retira la contraseña. En local el correo va a un buzón de prueba. Sustituye D06 en lo que toca a contraseñas. |
+| Conflictos con decisiones anteriores | Manda el nuevo backlog. Entre otras: nadie aprueba su propia línea base, cambio ni revisión (sustituye la autoaprobación del piloto); el cierre de un hito exige evidencia en imagen (sustituye D09 en ese punto); acción automática solo en alertas críticas (sustituye D04 en ese punto); periodicidades de revisión desde catálogo, mensual = 30 días (sustituye D03 en ese punto); roles, permisos y menú configurables (sustituye las reglas fijas de D05). |
+| Modelo de salud | Se conservan las fórmulas actuales (D01, reglas phf-v1); sus pesos, topes y umbrales pasan a ser parámetros editables y el modelo se marca como provisional. No se adoptan las fórmulas provisionales del nuevo backlog (tope único 59, desviación en días, tendencia contra promedio). |
+| Lo que el nuevo backlog no menciona | Se conserva: causa y plan validados por el líder (D04), portafolio de Dirección (D10), pausados y cerrados con justificación a 30 días (D08), días festivos, renovaciones, economía y la ayuda del modelo PHF. |
+
+Pendiente: recibir los dos documentos fuente; pueden obligar a ajustar esta clasificación.
+
 ## Decisiones confirmadas
 
 Confirmadas por el usuario (dueño del proyecto, único desarrollador y aprobador) el 2026-10-03, America/Mexico_City. Registro en BIT-0005.

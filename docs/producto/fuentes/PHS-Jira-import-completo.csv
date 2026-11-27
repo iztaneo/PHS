@@ -1,0 +1,899 @@
+"Issue Type","Summary","Description","Issue ID","Parent","Priority","Labels","Labels","Labels","Labels","Labels","Blocks","Blocks","Blocks","Blocks","Blocks","Blocks","Blocks","Blocks","Blocks","Blocks","Blocks","Blocks"
+"Epic","E01 Plataforma técnica","Base técnica del PHS: infraestructura Azure con Bicep, librería phs-platform con puertos e inyección de dependencias, mensajería por IMessageBus (Service Bus hoy), outbox, conectores de datos, observabilidad OpenTelemetry, auditoría transversal y pipeline CI/CD. Todo componente se consume por interfaz y es sustituible implementando el puerto.
+
+Fuente: documento Arquitectura del PHS, ADR-01 a ADR-16 y sección 10.","100","","Highest","phs","mvp","plataforma","","","","","","","","","","","","","",""
+"Task","PLT-01 Infraestructura base con Bicep por ambiente","Como ingeniero de plataforma, quiero provisionar los recursos de Azure con Bicep parametrizado por ambiente, para que dev, test y prod sean idénticos en estructura y reproducibles.
+
+h3. Criterios de aceptación
+* Dado un parámetro environment (dev, test, prod), cuando ejecuto el despliegue, entonces se crea rg-phs-<env> con VNet, subredes front, apim, aks, data, integration y NSG asociados.
+* Dado el mismo template, cuando lo ejecuto dos veces sin cambios, entonces la segunda ejecución no modifica recursos (what-if sin cambios).
+* Dado cualquier recurso creado, cuando lo consulto, entonces tiene los tags project=phs, environment=<env> y owner.
+* Dado el repositorio, cuando lo reviso, entonces los módulos viven en infra/modules y los parámetros en infra/params/<env>.bicepparam sin secretos en texto plano.","101","100","Highest","phs","mvp","plataforma","infra","","102","103","104","107","113","","","","","","",""
+"Task","PLT-02 Perímetro: Front Door, WAF, App Service y APIM","Como ingeniero de plataforma, quiero que todo el tráfico externo entre por Front Door Premium con WAF y llegue solo a App Service y APIM, para que la SPA y las APIs queden protegidas y nunca expuestas de forma directa.
+
+h3. Criterios de aceptación
+* Dado un request a la raíz del dominio, cuando llega a App Service, entonces el header X-Azure-FDID coincide con el id de Front Door; sin ese header responde 403.
+* Dado un request a /api/**, cuando llega a APIM, entonces la política de entrada valida X-Azure-FDID y rechaza con 403 cualquier otro origen.
+* Dado un payload de inyección SQL o XSS (OWASP CRS), cuando pasa por el WAF en modo prevención, entonces se bloquea con 403 y queda en Log Analytics.
+* Dado un request a /api/projects sin JWT o con JWT expirado, cuando APIM aplica validate-jwt, entonces responde 401 con cuerpo RFC 9457 sin llegar al backend.
+* Dado APIM, cuando reviso su configuración, entonces es Standard v2 con VNet y expone /api/identity, /api/authz, /api/projects, /api/health, /api/tasks, /api/history como APIs separadas con OpenAPI 3.","102","100","Highest","phs","mvp","plataforma","infra","","","","","","","","","","","","",""
+"Task","PLT-03 Clúster AKS, ACR y workload identity","Como ingeniero de plataforma, quiero un clúster AKS privado con registro de contenedores e identidades de carga de trabajo, para que cada servicio acceda a Azure sin secretos en el código.
+
+h3. Criterios de aceptación
+* Dado el clúster, cuando lo inspecciono, entonces tiene API server privado, node pool system separado del pool apps, autoscaling y acceso a ACR por identidad administrada.
+* Dado un servicio desplegado, cuando necesita Key Vault o Service Bus, entonces usa workload identity (OIDC) y no existe ningún secreto en ConfigMaps ni variables de entorno.
+* Dado un namespace por servicio (identity, authorization, project-core, health-engine, notifications-tasks, history-audit), cuando reviso sus políticas, entonces una NetworkPolicy solo permite tráfico desde APIM y entre servicios declarados.
+* Dado un job batch, cuando se ejecuta, entonces corre en Container Instances con la misma imagen y la misma identidad federada del servicio dueño.","103","100","Highest","phs","mvp","plataforma","infra","","111","113","","","","","","","","","",""
+"Task","PLT-04 Bases de datos, Blob y Redis con private endpoints","Como ingeniero de plataforma, quiero los almacenes de datos administrados y accesibles solo por red privada, para que ningún dato del PHS sea alcanzable desde internet.
+
+h3. Criterios de aceptación
+* Dado PostgreSQL Flexible Server, cuando reviso su configuración, entonces tiene acceso público deshabilitado, private endpoint en la subred data, backup de 7 días en dev/test y 35 en prod, y un esquema por servicio con su propio rol.
+* Dado Cosmos DB for MongoDB vCore, cuando reviso su configuración, entonces existe la base phs_history con assessment_snapshots, review_snapshots, entity_history, health_events, audit_log y notifications_archive, con TTL de 5 años en audit_log y 12 meses en notifications_archive.
+* Dado Blob Storage, cuando reviso el contenedor evidence, entonces no tiene acceso público, las subidas usan SAS de corta duración, el máximo por archivo es 10 MB y hay regla de ciclo de vida a tier cool a los 90 días.
+* Dado Azure Cache for Redis, cuando reviso su configuración, entonces solo acepta TLS 1.2, está en private endpoint y es Basic en dev/test y Standard en prod.","104","100","Highest","phs","mvp","plataforma","infra","datos","108","109","","","","","","","","","",""
+"Task","PLT-05 Librería phs-platform: puertos e inyección de dependencias","Como desarrollador de cualquier servicio del PHS, quiero una librería compartida que defina las interfaces de infraestructura y el mecanismo de composición, para que mi código de negocio dependa solo de puertos y cualquier tecnología sea sustituible implementando la interfaz.
+
+h3. Criterios de aceptación
+* Dado el paquete phs-platform, cuando lo consulto, entonces define con contrato documentado los puertos IMessageBus, IOutboxRelay, IRepository, IUnitOfWork, IDocumentStore, IBlobStorage, ICache, IDistributedLock, IEmailSender, IIdentityProvider, IAuthorizationClient, IClock, ITelemetry, IHealthScoreCalculator e IConfigurationSource.
+* Dado cada puerto, cuando reviso su definición, entonces no referencia ningún tipo, SDK ni paquete de un proveedor concreto.
+* Dado cada puerto, cuando ejecuto su suite de contrato contra una implementación, entonces la misma suite valida sin cambios el conector Azure y el conector en memoria.
+* Dado cada puerto, cuando reviso la librería, entonces existe una implementación InMemory que pasa la suite y se usa en pruebas unitarias.
+* Dado un servicio, cuando arranca, entonces su CompositionRoot es el único lugar donde se resuelven implementaciones concretas, leyendo el proveedor desde configuración (ejemplo: messaging.provider=azure-servicebus).
+* Dado un cambio de proveedor en configuración, cuando reinicio el servicio, entonces arranca y pasa sus pruebas de humo sin recompilar código de negocio.
+* Dado un proveedor no registrado, cuando el servicio arranca, entonces falla rápido con un error que nombra el puerto y el proveedor desconocido.","105","100","Highest","phs","mvp","plataforma","di","","106","107","109","110","111","207","809","","","","",""
+"Task","PLT-06 Configuración por capas y feature flags","Como operador del PHS, quiero que toda configuración se resuelva por capas y se pueda cambiar sin redespliegue, para que reglas, proveedores y flags se ajusten por ambiente de forma segura.
+
+h3. Criterios de aceptación
+* Dado un parámetro definido en varias capas, cuando el servicio lo resuelve, entonces aplica defaults, luego App Configuration por etiqueta de ambiente, luego Key Vault, luego variables de entorno, ganando la última.
+* Dado un cambio en App Configuration, cuando se actualiza la sentinel key, entonces los servicios recargan en menos de 60 segundos sin reiniciar.
+* Dado un secreto, cuando lo busco, entonces solo existe en Key Vault y se obtiene por referencia, nunca por valor en App Configuration.
+* Dado los flags SelfRegistration, EnvironmentReset, SimulatedClock, DailyDigest y EntraIdLogin, cuando los consulto, entonces existen en App Configuration con valor por ambiente y se leen por IConfigurationSource.
+* Dado el arranque de un servicio, cuando falta un parámetro obligatorio, entonces falla antes de aceptar tráfico y registra qué clave falta.","106","100","High","phs","mvp","plataforma","config","","209","1106","1409","","","","","","","","",""
+"Task","PLT-07 Azure Service Bus y conector IMessageBus","Como desarrollador, quiero publicar y consumir eventos a través de IMessageBus con Azure Service Bus como implementación, para que los servicios se comuniquen de forma asíncrona y el broker sea reemplazable.
+
+h3. Criterios de aceptación
+* Dado el namespace, cuando lo inspecciono, entonces existen los topics projects, health, tasks, identity y audit, las colas clock y mail, y cada suscripción tiene DLQ con máximo de 10 entregas.
+* Dado un evento publicado con IMessageBus.publish(topic, envelope), cuando lo consume otro servicio, entonces el envelope contiene message_id, type, version, occurred_at, correlation_id, causation_id, tenant y payload, y llega con sesión igual al project_id cuando lo trae.
+* Dado dos eventos del mismo project_id, cuando se consumen, entonces llegan en orden de publicación.
+* Dado un mensaje que falla 10 veces, cuando se agota el reintento, entonces queda en DLQ y se emite la métrica phs.messaging.deadletter con topic y tipo.
+* Dado la suite de contrato de IMessageBus, cuando la ejecuto contra el conector Azure y contra el conector en memoria, entonces ambas pasan sin cambios.
+* Dado el conector Azure, cuando reviso su código, entonces el SDK de Service Bus solo aparece dentro del paquete phs-platform-azure-servicebus.
+* Dado un consumidor que recibe el mismo message_id dos veces, cuando lo procesa, entonces descarta la segunda por idempotencia y la registra como duplicado.","107","100","Highest","phs","mvp","plataforma","mensajeria","","108","110","112","309","507","607","1005","","","","",""
+"Task","PLT-08 Transactional outbox y relay","Como desarrollador, quiero que los eventos se guarden en la misma transacción que el cambio de estado y se publiquen después, para que nunca se pierda un evento ni se publique uno de una transacción fallida.
+
+h3. Criterios de aceptación
+* Dado una escritura con eventos asociados, cuando la transacción se confirma, entonces los eventos quedan en la tabla outbox del esquema del servicio con estado pending.
+* Dado una transacción que falla, cuando se revierte, entonces no existe registro en outbox ni mensaje en el broker.
+* Dado registros pending, cuando corre IOutboxRelay, entonces los publica por IMessageBus, marca published_at y reintenta los fallidos con backoff exponencial hasta 5 veces.
+* Dado el relay, cuando se cae a mitad de un lote, entonces al reiniciar no publica dos veces los ya marcados y retoma los pendientes.
+* Dado un registro pending con más de 5 minutos, cuando corre la verificación, entonces se emite la alerta phs.outbox.lag.","108","100","High","phs","mvp","plataforma","mensajeria","","708","810","1208","","","","","","","","",""
+"Task","PLT-09 Conectores de datos: PostgreSQL, Mongo, Blob, Redis","Como desarrollador, quiero implementaciones Azure de los puertos de persistencia, caché y archivos, para que los servicios accedan a datos solo a través de interfaces.
+
+h3. Criterios de aceptación
+* Dado IRepository e IUnitOfWork sobre PostgreSQL, cuando ejecuto varias escrituras en una unidad de trabajo, entonces se confirman o revierten juntas y las migraciones se versionan en el repositorio.
+* Dado IDocumentStore sobre Cosmos DB for MongoDB, cuando inserto y consulto en phs_history, entonces la suite de contrato pasa, incluidos filtros por rango de fechas y paginación.
+* Dado IBlobStorage, cuando solicito subir una evidencia, entonces recibo una URL SAS válida 10 minutos, el archivo queda en evidence/<project_id>/<uuid> y uno mayor a 10 MB se rechaza antes de subir.
+* Dado ICache e IDistributedLock sobre Redis, cuando guardo un valor con TTL y tomo un lock, entonces el valor expira en el tiempo indicado y un segundo proceso no obtiene el lock hasta que se libera o expira.
+* Dado cada conector, cuando reviso sus dependencias, entonces el SDK del proveedor vive en su paquete phs-platform-azure-* y no aparece en servicios de negocio.
+* Dado cada conector, cuando ejecuto las suites de contrato, entonces pasan para la implementación Azure y para la implementación en memoria.","109","100","High","phs","mvp","plataforma","datos","","112","208","301","408","506","606","707","907","1107","1207","",""
+"Task","PLT-10 Conector de correo y reloj del sistema","Como desarrollador, quiero enviar correo por IEmailSender y obtener la hora por IClock, para que el envío sea reemplazable y la fecha operativa pueda simularse en pruebas.
+
+h3. Criterios de aceptación
+* Dado un mensaje en la cola mail, cuando lo procesa el worker, entonces lo envía por Azure Communication Services vía IEmailSender y registra message_id y estado.
+* Dado un envío fallido, cuando se reintenta 3 veces sin éxito, entonces va a DLQ y se emite la métrica phs.mail.failed.
+* Dado IClock, cuando SimulatedClock está apagado, entonces devuelve la hora real UTC; cuando está encendido, devuelve la fecha operativa simulada publicada por el Clock Service en la cola clock.
+* Dado el flag SimulatedClock en prod, cuando se intenta encender, entonces la configuración lo rechaza y lo registra.
+* Dado el conector de correo en memoria, cuando se usa en pruebas, entonces captura los mensajes y pasa la misma suite de contrato que el conector Azure.","110","100","Medium","phs","mvp","plataforma","","","207","409","908","1101","1106","","","","","","",""
+"Task","PLT-11 Observabilidad con OpenTelemetry y Azure Monitor","Como operador, quiero trazas, métricas y logs correlacionados de todos los servicios, para que pueda diagnosticar un problema de extremo a extremo.
+
+h3. Criterios de aceptación
+* Dado un request que entra por APIM, atraviesa dos servicios y un evento de Service Bus, cuando lo busco en Application Insights, entonces aparece como una sola traza con el mismo trace_id y el correlation_id del envelope.
+* Dado cualquier servicio, cuando emite logs, entonces son JSON con timestamp, level, service, trace_id, span_id y message, y nunca contienen tokens, OTP ni datos personales.
+* Dado el clúster, cuando lo inspecciono, entonces el OpenTelemetry Collector corre como DaemonSet y exporta a Azure Monitor; los servicios emiten por ITelemetry sin referenciar el SDK de Azure Monitor.
+* Dado Log Analytics, cuando reviso la retención, entonces es 30 días en dev/test y 90 en prod.
+* Dado los umbrales mínimos, cuando ocurre error 5xx mayor al 2% en 5 minutos, latencia p95 mayor a 2 segundos, mensajes en DLQ o lag de outbox, entonces se dispara una alerta al grupo de acción del equipo.","111","100","High","phs","mvp","plataforma","observabilidad","","909","","","","","","","","","","",""
+"Task","PLT-12 Auditoría transversal de escrituras","Como administrador del PHS, quiero que absolutamente toda escritura (altas, bajas, cambios y configuraciones) genere un registro de auditoría inmutable consumido por eventos, para que se pueda reconstruir quién hizo qué y cuándo en cualquier módulo del sistema.
+
+h3. Criterios de aceptación: productores (todos los servicios)
+* Dado un comando de escritura en cualquier servicio, cuando se confirma, entonces publica un evento audit.<servicio>.<acción> por el outbox con actor_id, actor_role, entity_type, entity_id, action, before, after, occurred_at, correlation_id y source_ip.
+* Dado un cambio de configuración, feature flag o catálogo, cuando se guarda, entonces también produce su evento de auditoría; no hay escrituras exentas.
+* Dado un valor sensible en before o after (OTP, token, contraseña), cuando se audita, entonces aparece enmascarado.
+* Dado los logs técnicos, cuando reviso el broker, entonces no circulan por Service Bus; solo la auditoría de negocio lo hace.
+
+h3. Criterios de aceptación: consumidor (History and Audit)
+* Dado el topic audit, cuando lo inspecciono, entonces History and Audit es el único suscriptor que escribe en audit_log, por IMessageBus, sin que ningún otro servicio escriba ahí directamente.
+* Dado mensajes en la suscripción, cuando el consumidor los recibe, entonces los acumula en lotes de hasta 100 mensajes o 2 segundos (lo que ocurra primero, ambos configurables) y los persiste con una sola inserción masiva por IDocumentStore.
+* Dado un lote persistido con éxito, cuando se confirma, entonces se completan todos sus mensajes en el broker; si la inserción falla, ninguno se completa y el lote se reintenta.
+* Dado un message_id ya presente en audit_log, cuando llega de nuevo por reintento, entonces se ignora por índice único y la inserción del resto del lote sigue adelante.
+* Dado el flujo completo, cuando mido latencia, entonces un evento es consultable en audit_log en menos de 5 segundos desde su publicación (p95).
+* Dado un registro en audit_log, cuando cualquier componente intenta modificarlo o borrarlo, entonces la operación se rechaza; solo el TTL de 5 años lo elimina.
+* Dado una caída de Cosmos DB, cuando el consumidor no puede escribir, entonces los mensajes permanecen en la suscripción sin completar y se emite phs.audit.lag cuando el backlog supera 1.000 mensajes o 60 segundos.
+* Dado audit_log, cuando reviso sus índices, entonces existen por occurred_at, actor_id, entity_type + entity_id y correlation_id, para soportar la consulta de la épica 14.","112","100","High","phs","mvp","plataforma","auditoria","","506","606","1406","","","","","","","","",""
+"Task","PLT-13 Pipeline CI/CD con GitHub Actions y OIDC","Como desarrollador, quiero que cada cambio se construya, pruebe y despliegue de forma automática y trazable, para que llegue a producción solo lo que pasó por calidad y con una imagen inmutable.
+
+h3. Criterios de aceptación
+* Dado un pull request, cuando se abre, entonces el pipeline ejecuta compilación, pruebas unitarias, suites de contrato y análisis de dependencias, y bloquea el merge si algo falla.
+* Dado un merge a main, cuando el pipeline construye, entonces publica en ACR una imagen por servicio etiquetada con el SHA del commit y nunca con latest.
+* Dado el despliegue, cuando se autentica contra Azure, entonces usa federación OIDC de GitHub sin secretos de larga duración en el repositorio.
+* Dado una imagen desplegada en dev, cuando se promueve a test y a prod, entonces es la misma imagen por SHA y prod requiere aprobación manual en un environment protegido.
+* Dado un cambio de infraestructura, cuando se abre el pull request, entonces el pipeline publica el what-if de Bicep como comentario y la infraestructura se despliega antes que las aplicaciones.
+* Dado un despliegue fallido en AKS, cuando falla el health check, entonces se hace rollback automático a la versión anterior y se notifica al equipo.","113","100","Highest","phs","mvp","plataforma","cicd","","","","","","","","","","","","",""
+"Epic","E02 Autenticación OTP","Servicio Identity del PHS: acceso sin contraseña con código de un solo uso enviado por correo, bloqueo por intentos, token de identidad ES256 de 15 minutos sin roles y refresh token de 8 horas con rotación. El canal de entrega se abstrae en IOtpChannel para incorporar SMS, WhatsApp o authenticator sin cambiar el flujo. La autorización (roles) es responsabilidad de la épica 3.
+
+Fuente: documento Arquitectura del PHS, ADR-04, ADR-05, ADR-06 y sección 5.","200","","Highest","phs","mvp","identidad","","","","","","","","","","","","","",""
+"Story","AUT-01 Solicitar código de acceso con mi correo","Como usuario del PHS, quiero escribir mi correo y pedir un código de acceso, para entrar sin contraseña.
+
+h3. Criterios de aceptación
+* Dado un correo con dominio en la lista blanca y un usuario activo, cuando solicito el código, entonces responde 202 con challenge_id y vigencia en segundos, y encola el envío.
+* Dado un correo con dominio fuera de la lista blanca, cuando solicito el código, entonces responde 202 con el mismo cuerpo genérico y no envía nada.
+* Dado un usuario dado de baja lógica o bloqueado, cuando solicita el código, entonces responde 202 genérico, no envía código y publica identity.login.failed con motivo inactive o locked.
+* Dado un correo con formato inválido, cuando lo envío, entonces responde 400 RFC 9457 con el campo señalado.
+* Dado más de 5 solicitudes del mismo correo en 15 minutos (configurable), cuando llega la sexta, entonces responde 429 con retry_after.","201","200","Highest","phs","mvp","identidad","","","203","204","210","","","","","","","","",""
+"Story","AUT-02 Recibir el código por correo","Como usuario, quiero recibir el código en mi bandeja en menos de un minuto, para completar el acceso sin esperar.
+
+h3. Criterios de aceptación
+* Dado un challenge creado, cuando el worker de correo lo procesa, entonces el mensaje llega con asunto configurable, el código de 6 dígitos, la vigencia y la advertencia de no compartirlo, en español.
+* Dado el envío, cuando mido el tiempo entre solicitud y entrega en dev, entonces el p95 es menor a 60 segundos.
+* Dado un fallo de envío agotados los reintentos, cuando lo consulto, entonces el challenge queda marcado delivery_failed y el usuario puede pedir reenvío.
+* Dado el cuerpo del correo, cuando lo reviso, entonces no contiene enlaces de inicio de sesión, solo el código.","202","200","Highest","phs","mvp","identidad","","","","","","","","","","","","","",""
+"Story","AUT-03 Verificar el código y entrar","Como usuario, quiero capturar el código y entrar al sistema, para empezar a trabajar.
+
+h3. Criterios de aceptación
+* Dado un challenge_id vigente y el código correcto, cuando lo verifico, entonces responde 200 con token de identidad y refresh token, marca el challenge como usado y publica identity.login.succeeded.
+* Dado el mismo código una segunda vez, cuando lo verifico, entonces responde 401 otp_already_used.
+* Dado un código expirado (más de 10 minutos, configurable), cuando lo verifico, entonces responde 401 otp_expired y el challenge queda inutilizable.
+* Dado un código incorrecto, cuando lo verifico, entonces responde 401 otp_invalid, incrementa el contador de intentos y publica identity.login.failed.
+* Dado la verificación, cuando mido el tiempo de respuesta, entonces es constante sin importar si el código es correcto (comparación en tiempo constante).","203","200","Highest","phs","mvp","identidad","","","205","210","","","","","","","","","",""
+"Story","AUT-04 Reenviar el código","Como usuario, quiero pedir un nuevo código si el anterior no llegó, para no quedarme fuera.
+
+h3. Criterios de aceptación
+* Dado un challenge vigente, cuando pido reenvío después de 30 segundos (configurable), entonces se invalida el código anterior, se genera uno nuevo con el mismo challenge_id y se encola el envío.
+* Dado un reenvío antes de 30 segundos, cuando lo pido, entonces responde 429 con retry_after.
+* Dado 3 reenvíos del mismo challenge (configurable), cuando pido el cuarto, entonces responde 429 y el challenge se cierra; el usuario debe iniciar desde el correo.","204","200","High","phs","mvp","identidad","","","210","","","","","","","","","","",""
+"Story","AUT-05 Bloqueo por intentos fallidos","Como administrador del PHS, quiero que una cuenta se bloquee tras varios códigos incorrectos, para frenar intentos de adivinación.
+
+h3. Criterios de aceptación
+* Dado 5 códigos incorrectos acumulados en 15 minutos para el mismo usuario (configurables), cuando ocurre el quinto, entonces la cuenta pasa a locked_until igual a ahora más 30 minutos (configurable) y se publica identity.account.locked.
+* Dado una cuenta bloqueada, cuando solicita código o verifica, entonces responde 202 genérico o 401 account_locked respectivamente, sin enviar correo.
+* Dado que pasa el tiempo de bloqueo, cuando el usuario vuelve a solicitar código, entonces el flujo funciona normalmente y el contador queda en cero.
+* Dado un administrador, cuando desbloquea la cuenta desde el módulo de usuarios, entonces locked_until se limpia y se audita el desbloqueo.
+* Dado un bloqueo, cuando ocurre, entonces el usuario recibe un correo informativo de que su cuenta fue bloqueada temporalmente.","205","200","Highest","phs","mvp","identidad","seguridad","","405","","","","","","","","","","",""
+"Story","AUT-06 Cerrar sesión y revocar sesiones","Como usuario, quiero cerrar sesión en este dispositivo o en todos, para que nadie use mi acceso.
+
+h3. Criterios de aceptación
+* Dado un refresh token vigente, cuando cierro sesión, entonces ese refresh token queda revocado, responde 204 y publica identity.session.revoked.
+* Dado la opción cerrar todas las sesiones, cuando la ejecuto, entonces todos los refresh tokens del usuario quedan revocados y los tokens de identidad vigentes expiran en máximo 15 minutos.
+* Dado un refresh token revocado, cuando se intenta renovar, entonces responde 401 refresh_revoked.
+* Dado un administrador, cuando revoca las sesiones de otro usuario desde el módulo de usuarios, entonces aplica el mismo comportamiento y se audita con el actor_id del administrador.","206","200","High","phs","mvp","identidad","","","405","","","","","","","","","","",""
+"Task","AUT-07 Puerto IOtpChannel y canal de correo","Como desarrollador, quiero que el envío de OTP pase por un puerto IOtpChannel, para que SMS, WhatsApp o authenticator se agreguen implementando la interfaz sin cambiar el flujo.
+
+h3. Criterios de aceptación
+* Dado phs-platform, cuando lo consulto, entonces define IOtpChannel con operaciones send(challenge) y capabilities(), sin referencias a proveedores.
+* Dado EmailOtpChannel, cuando se usa, entonces delega en IEmailSender y no conoce Azure Communication Services.
+* Dado la configuración identity.otp.channel=email, cuando arranca el servicio, entonces el CompositionRoot resuelve EmailOtpChannel; un valor desconocido falla rápido.
+* Dado un InMemoryOtpChannel, cuando corren las pruebas, entonces captura los challenges enviados y pasa la misma suite de contrato que el canal de correo.
+* Dado el contrato del puerto, cuando lo reviso, entonces admite que un usuario tenga un canal preferido registrado, aunque en el MVP solo exista email.","207","200","Highest","phs","mvp","identidad","di","","201","202","","","","","","","","","",""
+"Task","AUT-08 Almacén de OTP con hash, vigencia y un solo uso","Como desarrollador, quiero que los códigos se guarden con hash y expiren solos, para que un acceso a la base o al caché no exponga códigos vivos.
+
+h3. Criterios de aceptación
+* Dado un código generado, cuando se almacena en ICache, entonces se guarda el hash (Argon2id o HMAC-SHA256 con clave de Key Vault), nunca el código en claro, con TTL igual a la vigencia.
+* Dado la generación, cuando la reviso, entonces usa un generador criptográficamente seguro y produce 6 dígitos con ceros a la izquierda permitidos.
+* Dado un challenge, cuando se verifica correctamente, entonces se elimina del caché en la misma operación.
+* Dado los logs y la auditoría, cuando busco el código, entonces nunca aparece en claro.
+* Dado una caída de Redis, cuando se solicita un código, entonces responde 503 RFC 9457 y emite la métrica phs.identity.cache.unavailable.","208","200","Highest","phs","mvp","identidad","seguridad","","202","","","","","","","","","","",""
+"Task","AUT-09 Emisión, rotación y validación de tokens","Como desarrollador, quiero emitir tokens firmados con llaves rotables, para que APIM y los servicios validen identidad sin llamar a Identity en cada request.
+
+h3. Criterios de aceptación
+* Dado un login exitoso, cuando se emite el token de identidad, entonces es un JWT ES256 con iss, sub, email, iat, exp a 15 minutos y jti, sin claims de roles.
+* Dado el refresh token, cuando lo reviso, entonces es opaco, de 8 horas, se almacena con hash en PostgreSQL y se rota en cada renovación (el anterior queda revocado).
+* Dado un refresh token rotado que se reutiliza, cuando se detecta, entonces se revoca toda la familia de tokens del usuario y se publica identity.session.revoked con motivo reuse_detected.
+* Dado el endpoint JWKS, cuando APIM lo consulta, entonces publica las llaves públicas vigentes con kid; al rotar la llave privada, la anterior sigue publicada hasta que expire el último token firmado con ella.
+* Dado la llave privada, cuando busco dónde vive, entonces solo existe en Key Vault y el servicio firma por referencia.","209","200","Highest","phs","mvp","identidad","seguridad","","203","206","307","","","","","","","","",""
+"Story","AUT-10 Pantallas de acceso en la SPA","Como usuario, quiero una pantalla de acceso clara en dos pasos, para entrar sin instrucciones.
+
+h3. Criterios de aceptación
+* Dado la ruta raíz sin sesión, cuando la abro, entonces veo un formulario con un solo campo de correo y un botón de continuar, con la estética definida (fondo claro, minimalista).
+* Dado que envié el correo, cuando pasa a la segunda pantalla, entonces veo seis casillas de captura, cuenta regresiva de vigencia, enlace de reenvío deshabilitado hasta los 30 segundos y la opción de volver a cambiar el correo.
+* Dado que pego el código completo, cuando se completan los seis dígitos, entonces se envía automáticamente sin pulsar un botón.
+* Dado un error otp_invalid, otp_expired o account_locked, cuando ocurre, entonces el mensaje en pantalla es específico y en español, sin códigos técnicos.
+* Dado un login exitoso, cuando entra, entonces la SPA guarda el refresh token en cookie HttpOnly Secure SameSite=Strict y el token de identidad solo en memoria.
+* Dado el token de identidad por expirar, cuando faltan 2 minutos, entonces la SPA renueva en segundo plano sin interrumpir al usuario.","210","200","High","phs","mvp","identidad","frontend","","","","","","","","","","","","",""
+"Epic","E03 Autorización RBAC","Servicio Authorization del PHS: roles, permisos y asignaciones por ámbito (global, práctica, proyecto) como datos 100% configurables, token de acceso con roles por ámbito, menús dinámicos construidos desde los permisos, y puerto IAuthorizationClient para que los servicios verifiquen sin leer claims a mano. Los cuatro roles iniciales se siembran como datos editables.
+
+Fuente: documento Arquitectura del PHS, ADR-05, ADR-07 y sección 5.","300","","Highest","phs","mvp","autorizacion","","","","","","","","","","","","","",""
+"Task","RBA-01 Modelo de roles, permisos y ámbitos","Como desarrollador, quiero un modelo de datos donde roles, permisos y asignaciones sean registros editables, para que ninguna regla de acceso quede escrita en código.
+
+h3. Criterios de aceptación
+* Dado el esquema authorization, cuando lo reviso, entonces existen las tablas permissions (clave recurso:acción, descripción, módulo), roles (código, nombre, descripción, is_system), role_permissions, role_assignments (user_id, role_id, scope_type, scope_id, vigencia) y menu_items.
+* Dado la migración inicial, cuando se ejecuta, entonces siembra los roles pm, practice_lead, director y phs_admin con is_system=true y los permisos base de todos los módulos del MVP, documentados en permissions.seed.
+* Dado scope_type, cuando lo consulto, entonces solo admite global, practice y project, y una asignación global no lleva scope_id.
+* Dado una búsqueda de permisos de un usuario, cuando la ejecuto, entonces devuelve la unión de los permisos de todos sus roles vigentes, agrupados por ámbito, en menos de 50 ms con 1.000 asignaciones.
+* Dado cualquier escritura en estas tablas, cuando se confirma, entonces publica un evento audit.authorization.* por el outbox.","301","300","Highest","phs","mvp","autorizacion","datos","","302","303","304","307","","","","","","","",""
+"Story","RBA-02 Administrar roles y sus permisos","Como administrador del PHS, quiero crear roles y elegir sus permisos desde una pantalla, para adaptar el acceso sin pedir cambios de código.
+
+h3. Criterios de aceptación
+* Dado la pantalla de roles, cuando la abro con permiso role:manage, entonces veo la lista de roles con número de permisos y usuarios asignados.
+* Dado un rol nuevo, cuando lo creo con código, nombre y descripción, entonces queda guardado sin permisos y aparece en la lista.
+* Dado un rol, cuando edito sus permisos, entonces veo los permisos agrupados por módulo con casillas, guardo y el cambio publica authz.role.changed.
+* Dado un rol con usuarios asignados, cuando intento eliminarlo, entonces el sistema lo impide y me indica cuántas asignaciones vigentes tiene.
+* Dado un rol is_system, cuando intento cambiar su código o eliminarlo, entonces el sistema lo impide; sus permisos sí pueden editarse.
+* Dado un cambio de permisos, cuando lo guardo, entonces los usuarios con ese rol reciben los nuevos permisos en su siguiente renovación de token, máximo 15 minutos.","302","300","Highest","phs","mvp","autorizacion","","","310","","","","","","","","","","",""
+"Story","RBA-03 Asignar roles a usuarios por ámbito","Como administrador del PHS, quiero asignar a un usuario uno o varios roles indicando el ámbito, para que un PM solo vea sus proyectos y un líder toda su práctica.
+
+h3. Criterios de aceptación
+* Dado un usuario activo, cuando le asigno un rol, entonces elijo ámbito global, practice o project y, para los dos últimos, el identificador correspondiente.
+* Dado una asignación duplicada (mismo usuario, rol y ámbito), cuando la intento guardar, entonces responde 409 y no crea un registro nuevo.
+* Dado una asignación, cuando la retiro, entonces se marca ended_at y no se borra físicamente; el historial sigue consultable.
+* Dado una asignación con fecha de fin, cuando llega esa fecha, entonces deja de considerarse vigente sin intervención manual.
+* Dado cualquier alta o baja de asignación, cuando se confirma, entonces publica authz.assignment.changed con user_id.","303","300","Highest","phs","mvp","autorizacion","","","306","310","406","","","","","","","","",""
+"Story","RBA-04 Definir el menú y ligarlo a permisos","Como administrador del PHS, quiero configurar los ítems de navegación y el permiso que los habilita, para que el menú se ajuste sin redesplegar la SPA.
+
+h3. Criterios de aceptación
+* Dado la tabla menu_items, cuando la reviso, entonces cada ítem tiene clave, etiqueta, ruta, ícono, orden, ítem padre opcional y el permiso requerido.
+* Dado la pantalla de menú, cuando la abro con menu:manage, entonces puedo crear, editar, reordenar y ocultar ítems, y asignar el permiso que los habilita.
+* Dado un ítem sin permiso asignado, cuando lo guardo, entonces el sistema lo rechaza: todo ítem exige un permiso.
+* Dado un cambio en el menú, cuando lo guardo, entonces publica authz.menu.changed y la SPA lo refleja en la siguiente carga.
+* Dado la migración inicial, cuando se ejecuta, entonces siembra el menú base del MVP con las rutas de las catorce épicas, cada una ligada a su permiso de lectura.","304","300","High","phs","mvp","autorizacion","menu","","305","","","","","","","","","","",""
+"Story","RBA-05 Ver solo el menú que me corresponde","Como usuario del PHS, quiero que la barra lateral muestre solo lo que puedo usar, para no encontrarme opciones que me den error.
+
+h3. Criterios de aceptación
+* Dado un usuario autenticado, cuando la SPA solicita /api/authz/me/menu, entonces recibe solo los ítems cuyo permiso está en alguno de sus ámbitos, ya ordenados y anidados.
+* Dado un usuario sin ningún permiso de menú, cuando entra, entonces ve una pantalla que indica que no tiene módulos asignados y a quién contactar.
+* Dado una ruta escrita a mano en el navegador, cuando el usuario no tiene el permiso, entonces la SPA muestra acceso no autorizado y el backend responde 403 en cualquier caso.
+* Dado un cambio de asignaciones, cuando el usuario renueva token, entonces el menú se vuelve a pedir y refleja el cambio sin recargar la página.","305","300","High","phs","mvp","autorizacion","menu","frontend","1408","","","","","","","","","","",""
+"Story","RBA-06 Consultar quién tiene acceso a qué","Como administrador del PHS, quiero ver qué usuarios tienen un rol o un permiso y en qué ámbito, para responder una revisión de acceso en minutos.
+
+h3. Criterios de aceptación
+* Dado un rol, cuando consulto sus asignaciones, entonces veo usuario, ámbito, fecha de alta y quién lo asignó.
+* Dado un permiso, cuando lo consulto, entonces veo qué roles lo incluyen y cuántos usuarios lo tienen vigente.
+* Dado un usuario, cuando consulto su acceso efectivo, entonces veo la lista de permisos resultante por ámbito y de qué rol proviene cada uno.
+* Dado cualquiera de estas consultas, cuando la exporto, entonces obtengo un CSV con las mismas columnas.","306","300","Medium","phs","mvp","autorizacion","","","","","","","","","","","","","",""
+"Task","RBA-07 Token de acceso con roles por ámbito","Como desarrollador, quiero emitir un token de acceso que lleve los roles del usuario por ámbito, para que APIM y los servicios autoricen sin consultar la base en cada request.
+
+h3. Criterios de aceptación
+* Dado un token de identidad válido, cuando se solicita /api/authz/token, entonces responde 200 con un JWT ES256 de 15 minutos que contiene sub, roles como lista de pares role, scope_type, scope_id y un claim perm_version.
+* Dado un token de identidad expirado o revocado, cuando se solicita el token de acceso, entonces responde 401.
+* Dado un usuario con más de 200 asignaciones, cuando se emite el token, entonces los roles de ámbito project se reemplazan por una referencia y el detalle se consulta por IAuthorizationClient, para que el token no exceda 8 KB.
+* Dado APIM, cuando recibe un request a cualquier /api/* distinto de identity y de la propia emisión de token, entonces valida firma y expiración del token de acceso con el JWKS de Authorization.
+* Dado un cambio de asignaciones, cuando el usuario renueva, entonces perm_version cambia y los servicios con caché la invalidan.","307","300","Highest","phs","mvp","autorizacion","seguridad","","305","308","","","","","","","","","",""
+"Task","RBA-08 Puerto IAuthorizationClient y verificación en servicios","Como desarrollador de un servicio de negocio, quiero verificar permisos a través de IAuthorizationClient, para que el motor de autorización sea reemplazable y ningún servicio lea claims a mano.
+
+h3. Criterios de aceptación
+* Dado phs-platform, cuando lo consulto, entonces define IAuthorizationClient con can(subject, permission, scope) y permissionsOf(subject, scope), sin referencias al formato del token.
+* Dado la implementación HttpAuthorizationClient, cuando un servicio verifica un permiso, entonces resuelve primero desde los claims del token y solo llama a /api/authz/check cuando el token trae la referencia por exceso de asignaciones.
+* Dado un servicio con el decorador RequiresPermission(""project:update"", scope=project), cuando llega un request sin ese permiso en ese ámbito, entonces responde 403 RFC 9457 antes de ejecutar la lógica.
+* Dado InMemoryAuthorizationClient, cuando corren las pruebas, entonces permite declarar permisos por sujeto y pasa la misma suite de contrato que la implementación HTTP.
+* Dado una decisión denegada, cuando ocurre, entonces se registra con subject, permission, scope y trace_id, sin publicar auditoría por cada denegación.","308","300","Highest","phs","mvp","autorizacion","di","","309","","","","","","","","","","",""
+"Task","RBA-09 Caché de decisiones e invalidación por eventos","Como desarrollador, quiero cachear los permisos efectivos de un usuario y vaciarlos cuando cambian, para que la autorización sea rápida y nunca quede desactualizada más de unos segundos.
+
+h3. Criterios de aceptación
+* Dado permissionsOf de un usuario, cuando se resuelve por primera vez, entonces se guarda en ICache con clave por user_id y perm_version y TTL de 15 minutos.
+* Dado un evento authz.assignment.changed o authz.role.changed, cuando lo consume Authorization, entonces incrementa perm_version del usuario afectado y elimina su entrada de caché en menos de 5 segundos.
+* Dado una caída de Redis, cuando se verifica un permiso, entonces el servicio resuelve contra la base de datos y emite phs.authz.cache.unavailable, sin denegar por error de caché.
+* Dado la suite de contrato de ICache, cuando la ejecuto, entonces la lógica de invalidación pasa con el conector Redis y con el conector en memoria.","309","300","High","phs","mvp","autorizacion","","","","","","","","","","","","","",""
+"Story","RBA-10 Protección del administrador inicial y del rol de administración","Como administrador del PHS, quiero que el sistema nunca se quede sin alguien que pueda administrarlo, para no perder el control del acceso por un error.
+
+h3. Criterios de aceptación
+* Dado la migración inicial, cuando se ejecuta, entonces asigna phs_admin en ámbito global al correo configurado en identity.bootstrap_admin.
+* Dado la última asignación vigente de phs_admin global, cuando intento retirarla, entonces el sistema lo impide con un mensaje claro.
+* Dado el rol phs_admin, cuando intento retirarle los permisos role:manage o assignment:manage, entonces el sistema lo impide.
+* Dado un administrador, cuando se asigna o retira el rol phs_admin a cualquier usuario, entonces el evento de auditoría lleva severidad high y notifica a los demás administradores.","310","300","High","phs","mvp","autorizacion","seguridad","","","","","","","","","","","","",""
+"Epic","E04 Usuarios","ABC de cuentas del PHS: alta por administrador, edición, baja lógica y reactivación (nunca borrado físico), desbloqueo y revocación de sesiones, ficha con roles e historial, y puerto IUserDirectory para que Identity y los demás servicios consulten usuarios sin acoplarse al esquema. El correo es la identidad única e inmutable de la cuenta.
+
+Fuente: documento Arquitectura del PHS, ADR-06 y sección 5; documento maestro PHF, BR-01.","400","","Highest","phs","mvp","usuarios","","","","","","","","","","","","","",""
+"Story","USR-01 Dar de alta un usuario","Como administrador del PHS, quiero registrar a una persona con su correo y datos básicos, para que pueda entrar al sistema.
+
+h3. Criterios de aceptación
+* Dado el formulario de alta con permiso user:create, cuando capturo correo, nombre, apellidos, puesto y práctica, entonces el usuario se crea en estado active y responde 201 con su user_id.
+* Dado un correo ya registrado, aunque esté inactivo, cuando intento darlo de alta, entonces responde 409 y me ofrece ir a la ficha existente.
+* Dado un correo con dominio fuera de la lista blanca, cuando intento el alta, entonces responde 422 indicando el dominio no permitido.
+* Dado un alta exitosa, cuando se confirma, entonces publica users.created y la auditoría registra el actor_id del administrador.
+* Dado el alta, cuando termino, entonces el sistema me ofrece asignar roles de inmediato (enlace a la pantalla de asignaciones) sin obligarme a hacerlo.","401","400","Highest","phs","mvp","usuarios","","","402","403","404","405","406","407","409","","","","",""
+"Story","USR-02 Buscar y listar usuarios","Como administrador del PHS, quiero buscar usuarios por nombre o correo y filtrarlos por estado, práctica y rol, para encontrar a alguien en segundos.
+
+h3. Criterios de aceptación
+* Dado la lista de usuarios, cuando la abro, entonces veo nombre, correo, práctica, estado, roles resumidos y última entrada, paginada de 25 en 25.
+* Dado un texto en el buscador, cuando escribo al menos 3 caracteres, entonces filtra por nombre, apellidos o correo sin distinguir mayúsculas ni acentos.
+* Dado los filtros de estado, práctica y rol, cuando los combino, entonces se aplican juntos y la URL conserva los filtros para compartirla.
+* Dado la lista, cuando la ordeno por cualquier columna, entonces el orden se mantiene al paginar.
+* Dado 1.000 usuarios, cuando consulto la lista con filtros, entonces responde en menos de 300 ms.","402","400","High","phs","mvp","usuarios","","","","","","","","","","","","","",""
+"Story","USR-03 Editar los datos de un usuario","Como administrador del PHS, quiero corregir nombre, puesto, práctica o teléfono de un usuario, para mantener el directorio al día.
+
+h3. Criterios de aceptación
+* Dado la ficha de un usuario con permiso user:update, cuando edito sus datos y guardo, entonces los cambios se reflejan de inmediato y responde 200.
+* Dado el campo correo, cuando intento modificarlo, entonces está deshabilitado: el correo es inmutable y un cambio de correo implica alta nueva y baja de la anterior.
+* Dado cualquier edición, cuando se confirma, entonces se guarda en el historial del usuario con campo, valor anterior, valor nuevo, fecha y autor.
+* Dado una edición concurrente, cuando dos administradores guardan sobre la misma versión, entonces el segundo recibe 409 con los datos vigentes para revisarlos.","403","400","High","phs","mvp","usuarios","","","","","","","","","","","","","",""
+"Story","USR-04 Desactivar y reactivar un usuario","Como administrador del PHS, quiero dar de baja lógica a un usuario y poder reactivarlo, para que nadie pierda acceso por error ni se borre su historial.
+
+h3. Criterios de aceptación
+* Dado un usuario active, cuando lo desactivo indicando un motivo, entonces pasa a inactive, se revocan todas sus sesiones y publica users.deactivated.
+* Dado un usuario inactive, cuando solicita un código de acceso, entonces Identity no envía nada y registra el intento.
+* Dado un usuario inactive, cuando lo reactivo, entonces vuelve a active, conserva sus asignaciones de rol previas marcadas como suspendidas para que el administrador las confirme o retire, y publica users.reactivated.
+* Dado un usuario que es responsable de proyectos activos, cuando intento desactivarlo, entonces el sistema me advierte cuántos proyectos quedarían sin responsable y exige confirmar.
+* Dado cualquier usuario, cuando busco una opción de borrado físico, entonces no existe en la interfaz ni en la API.","404","400","Highest","phs","mvp","usuarios","","","","","","","","","","","","","",""
+"Story","USR-05 Desbloquear y cerrar sesiones de un usuario","Como administrador del PHS, quiero ver si una cuenta está bloqueada por intentos fallidos, desbloquearla y cerrar sus sesiones, para atender a un usuario sin esperar a que pase el tiempo de castigo.
+
+h3. Criterios de aceptación
+* Dado un usuario con locked_until vigente, cuando abro su ficha, entonces veo el estado locked, la hora de fin del bloqueo y el botón de desbloquear.
+* Dado el botón de desbloquear con permiso user:unlock, cuando lo pulso, entonces Identity limpia locked_until, el contador queda en cero y la acción se audita.
+* Dado un usuario, cuando pulso cerrar todas sus sesiones con permiso user:revoke_sessions, entonces Identity revoca sus refresh tokens y la ficha muestra la fecha de la última revocación.
+* Dado un desbloqueo, cuando se ejecuta, entonces el usuario recibe un correo informando que su cuenta fue desbloqueada por un administrador.","405","400","High","phs","mvp","usuarios","seguridad","","","","","","","","","","","","",""
+"Story","USR-06 Ver la ficha completa con roles e historial","Como administrador del PHS, quiero ver en un solo lugar los datos del usuario, sus roles por ámbito y su historial de cambios, para entender su situación sin ir a tres pantallas.
+
+h3. Criterios de aceptación
+* Dado la ficha, cuando la abro, entonces veo tres bloques: datos, roles y ámbitos (consultados a Authorization) e historial.
+* Dado el bloque de roles, cuando tengo permiso assignment:manage, entonces puedo agregar o retirar asignaciones desde la ficha, invocando la API de Authorization.
+* Dado el historial, cuando lo consulto, entonces muestra altas, ediciones, desactivaciones, reactivaciones, desbloqueos y revocaciones, con fecha y autor, del más reciente al más antiguo.
+* Dado la ficha, cuando la consulto, entonces muestra la fecha del último acceso exitoso tomada de los eventos de Identity.","406","400","High","phs","mvp","usuarios","","","","","","","","","","","","","",""
+"Story","USR-07 Editar mi propio perfil","Como usuario del PHS, quiero actualizar mi nombre para mostrar y mi teléfono, para que mis datos sean correctos sin pedírselo a un administrador.
+
+h3. Criterios de aceptación
+* Dado mi perfil, cuando lo abro, entonces puedo editar nombre para mostrar y teléfono; correo, práctica, puesto y estado aparecen solo en lectura.
+* Dado un cambio, cuando lo guardo, entonces se audita con mi propio actor_id y aparece en mi historial.
+* Dado mi perfil, cuando lo consulto, entonces veo mis roles y ámbitos vigentes en lectura, sin poder modificarlos.","407","400","Medium","phs","mvp","usuarios","","","","","","","","","","","","","",""
+"Task","USR-08 Modelo de usuarios y puerto IUserDirectory","Como desarrollador, quiero un esquema de usuarios con historial y un puerto IUserDirectory, para que Identity y los demás servicios consulten usuarios sin conocer la base de datos.
+
+h3. Criterios de aceptación
+* Dado el esquema users, cuando lo reviso, entonces existen las tablas users (user_id, email único e inmutable, nombre, apellidos, display_name, puesto, práctica, teléfono, status, version, fechas) y user_history (campo, antes, después, actor_id, fecha).
+* Dado phs-platform, cuando lo consulto, entonces define IUserDirectory con findByEmail, findById, isActive y search, sin tipos de la base de datos.
+* Dado la implementación HttpUserDirectory, cuando Identity la usa, entonces consulta /api/users con credencial de servicio, e InMemoryUserDirectory pasa la misma suite de contrato.
+* Dado una consulta findByEmail, cuando se ejecuta, entonces responde en menos de 20 ms con índice único por correo normalizado a minúsculas.
+* Dado cualquier escritura, cuando se confirma, entonces incrementa version y publica el evento correspondiente por el outbox.","408","400","Highest","phs","mvp","usuarios","di","","401","","","","","","","","","","",""
+"Task","USR-09 Correo de bienvenida y eventos de usuario","Como desarrollador, quiero que el alta y los cambios de estado disparen correos y eventos, para que el usuario sepa cómo entrar y el resto del sistema reaccione.
+
+h3. Criterios de aceptación
+* Dado users.created, cuando se consume, entonces se encola en mail un correo de bienvenida con el enlace al PHS y la explicación del acceso por código, en español.
+* Dado users.deactivated, cuando se consume, entonces Identity revoca las sesiones del usuario y Authorization marca sus asignaciones como suspendidas.
+* Dado users.reactivated, cuando se consume, entonces el usuario recibe un correo informando que su acceso fue restablecido.
+* Dado cualquier correo de esta épica, cuando se envía, entonces pasa por IEmailSender y la plantilla es editable desde configuración sin redespliegue.","409","400","Medium","phs","mvp","usuarios","","","","","","","","","","","","","",""
+"Epic","E05 Catálogos y configuración del PHF","Catálogos maestros (prácticas, periodicidades de revisión, severidades, categorías de riesgo, criticidades de hito, motivos de cambio) y parámetros numéricos del PHF (umbrales de desviación, ventanas de anticipación, tolerancias) editables desde la interfaz, versionados y auditados. Puerto ICatalogProvider con caché e invalidación por eventos. El PHF se configura, no se programa.
+
+Fuente: documento maestro PHF, secciones 8.4, 11 y 24; documento Arquitectura del PHS, sección 10.","500","","Highest","phs","mvp","catalogos","","","","","","","","","","","","","",""
+"Story","CAT-01 Administrar el catálogo de prácticas","Como administrador del PHS, quiero dar de alta y mantener las prácticas de la organización, para que usuarios y proyectos se asocien a una práctica real y no a un texto libre.
+
+h3. Criterios de aceptación
+* Dado la pantalla de prácticas con permiso catalog:manage, cuando creo una práctica con código, nombre y líder (usuario activo), entonces queda en estado active y aparece en los selectores de usuarios y proyectos.
+* Dado una práctica con usuarios o proyectos asociados, cuando intento desactivarla, entonces el sistema me indica cuántos hay y exige confirmar; nunca se borra físicamente.
+* Dado una práctica inactive, cuando abro un selector de práctica, entonces no aparece como opción, pero los registros que ya la referencian la siguen mostrando.
+* Dado un cambio de líder de práctica, cuando lo guardo, entonces publica catalog.practice.changed; la asignación del rol practice_lead sigue siendo manual en el MVP.","501","500","Highest","phs","mvp","catalogos","","","","","","","","","","","","","",""
+"Story","CAT-02 Administrar periodicidades de revisión","Como administrador del PHS, quiero definir las periodicidades que un proyecto puede elegir para sus Health Reviews, para que el ciclo de revisión sea configurable sin tocar código.
+
+h3. Criterios de aceptación
+* Dado el catálogo de periodicidades, cuando lo consulto, entonces cada entrada tiene código, nombre, intervalo en días, días de anticipación por defecto y estado.
+* Dado la semilla, cuando reviso el catálogo, entonces existen diaria (1), semanal (7), cada dos semanas (14), cada tres semanas (21), mensual (30) y bimestral (60).
+* Dado una periodicidad nueva, cuando la creo con un intervalo entre 1 y 180 días, entonces se acepta; fuera de ese rango responde 422.
+* Dado una periodicidad usada por proyectos activos, cuando la desactivo, entonces esos proyectos la conservan y solo deja de ofrecerse para proyectos nuevos.","502","500","Highest","phs","mvp","catalogos","revisiones","","","","","","","","","","","","",""
+"Story","CAT-03 Administrar severidades, categorías de riesgo, criticidades y motivos de cambio","Como administrador del PHS, quiero mantener los catálogos cortos que usan hitos, riesgos, alertas y cambios, para que las opciones de los formularios reflejen el vocabulario de la práctica.
+
+h3. Criterios de aceptación
+* Dado cualquiera de los cuatro catálogos, cuando lo abro con catalog:manage, entonces puedo crear, editar, reordenar y desactivar entradas con código, nombre, descripción y orden.
+* Dado el catálogo de severidades, cuando lo reviso, entonces cada entrada tiene además color y peso numérico, y la semilla trae info, warning y critical.
+* Dado el catálogo de criticidades de hito, cuando lo reviso, entonces la semilla trae low, medium, high y critical.
+* Dado una entrada referenciada por registros existentes, cuando intento borrarla, entonces solo puedo desactivarla, y los registros existentes la siguen mostrando.
+* Dado cualquier cambio en estos catálogos, cuando se guarda, entonces publica config.changed con el nombre del catálogo.","503","500","High","phs","mvp","catalogos","","","","","","","","","","","","","",""
+"Story","CAT-04 Configurar los parámetros numéricos del PHF","Como líder de práctica, quiero ajustar los umbrales y ventanas del framework desde una pantalla, para que las reglas de salud reflejen el acuerdo de la práctica y no una constante de código.
+
+h3. Criterios de aceptación
+* Dado la pantalla de configuración del PHF con permiso phf_config:manage, cuando la abro, entonces veo cada parámetro con nombre, descripción, valor vigente, unidad, rango permitido y fecha desde la que aplica.
+* Dado la semilla, cuando reviso los parámetros, entonces existen al menos: schedule.deviation_threshold_pct = 10, finance.deviation_threshold_pct = 3, milestone.upcoming_window_days = 14, review.overdue_tolerance_days = 2, expectation.lookahead_cycles = 2, evidence.max_size_mb = 10.
+* Dado un parámetro, cuando intento guardar un valor fuera de su rango o con tipo incorrecto, entonces responde 422 indicando el rango.
+* Dado un cambio guardado, cuando lo confirmo, entonces aplica a las evaluaciones que se calculen a partir de ese momento; las evaluaciones ya guardadas conservan el valor con el que se calcularon.
+* Dado un cambio guardado, cuando se confirma, entonces publica config.changed con la clave del parámetro, el valor anterior y el nuevo, y queda auditado.","504","500","Highest","phs","mvp","catalogos","phf","","505","1008","","","","","","","","","",""
+"Story","CAT-05 Consultar el historial de cambios de configuración","Como líder de práctica, quiero ver quién cambió qué parámetro o catálogo y cuándo, para explicar por qué una evaluación cambió de color.
+
+h3. Criterios de aceptación
+* Dado la pantalla de configuración, cuando abro el historial de un parámetro, entonces veo cada versión con valor, autor, fecha y motivo opcional, de la más reciente a la más antigua.
+* Dado un catálogo, cuando abro su historial, entonces veo altas, ediciones, reordenamientos y desactivaciones con el mismo detalle.
+* Dado el historial, cuando lo filtro por rango de fechas o autor, entonces responde en menos de 500 ms.","505","500","Medium","phs","mvp","catalogos","","","","","","","","","","","","","",""
+"Task","CAT-06 Modelo de catálogos y parámetros versionados","Como desarrollador, quiero un esquema donde cada catálogo y cada parámetro conserve su historial de versiones, para que ningún valor del PHF se pierda al cambiarlo.
+
+h3. Criterios de aceptación
+* Dado el esquema catalog, cuando lo reviso, entonces existen las tablas practices, review_frequencies, severities, risk_categories, milestone_criticalities, change_reasons, project_statuses, milestone_statuses, risk_statuses, task_statuses, change_statuses, initiative_types, team_roles, contract_statuses, phf_parameters y phf_parameter_versions.
+* Dado phf_parameters, cuando lo reviso, entonces cada fila tiene clave única, tipo (int, decimal, bool, text), unidad, mínimo, máximo, valor vigente, version y effective_from.
+* Dado una escritura en cualquier parámetro, cuando se confirma, entonces inserta una fila en phf_parameter_versions con el valor anterior, el nuevo, actor_id, fecha y motivo, en la misma unidad de trabajo.
+* Dado cualquier catálogo, cuando lo reviso, entonces tiene code único, is_active, sort_order y nunca borrado físico.
+* Dado cualquier escritura, cuando se confirma, entonces publica audit.catalog.* por el outbox.","506","500","Highest","phs","mvp","catalogos","datos","","501","502","503","504","507","508","509","707","808","907","1207","1307"
+"Task","CAT-07 Puerto ICatalogProvider con caché e invalidación","Como desarrollador de cualquier servicio, quiero leer catálogos y parámetros por ICatalogProvider, para que Health Engine o Project Core no consulten la base de catálogos ni conozcan su esquema.
+
+h3. Criterios de aceptación
+* Dado phs-platform, cuando lo consulto, entonces define ICatalogProvider con getParameter(key), getCatalog(name) y getEntry(name, code), con tipos propios y sin SDK de proveedor.
+* Dado HttpCatalogProvider, cuando un servicio pide un valor, entonces lo resuelve de ICache con TTL de 10 minutos y solo llama a /api/catalog cuando no está en caché.
+* Dado un evento config.changed, cuando lo consume cualquier servicio, entonces invalida la entrada afectada en menos de 5 segundos.
+* Dado una caída del servicio de catálogos, cuando un servicio pide un valor que tiene en caché, entonces lo usa aunque esté vencido y emite phs.catalog.stale; si no lo tiene, usa el valor por defecto declarado por la épica consumidora y lo registra.
+* Dado InMemoryCatalogProvider, cuando corren las pruebas, entonces permite declarar valores y pasa la misma suite de contrato que la implementación HTTP.","507","500","Highest","phs","mvp","catalogos","di","","","","","","","","","","","","",""
+"Task","CAT-08 Semilla inicial con los valores del documento maestro","Como desarrollador, quiero que la migración inicial siembre todos los catálogos y parámetros con los valores de referencia del PHF, para que el sistema sea operable desde el primer despliegue.
+
+h3. Criterios de aceptación
+* Dado la migración inicial, cuando se ejecuta en un ambiente vacío, entonces siembra las periodicidades, severidades, criticidades, categorías de riesgo (técnico, cliente, equipo, alcance, financiero, externo), motivos de cambio y los parámetros de CAT-04.
+* Dado la semilla, cuando se ejecuta dos veces, entonces la segunda no duplica ni sobrescribe valores ya editados por un administrador.
+* Dado cada valor sembrado, cuando reviso el archivo de semilla, entonces tiene un comentario con la sección del documento maestro de la que proviene o la marca provisional cuando el documento no lo define.
+* Dado el ambiente de prueba, cuando se ejecuta el reinicio (flag EnvironmentReset), entonces los catálogos vuelven exactamente a la semilla.","508","500","High","phs","mvp","catalogos","","","","","","","","","","","","","",""
+"Story","CAT-09 Administrar catálogos de estados, tipos de iniciativa, roles de equipo y estatus de contrato","Como administrador del PHS, quiero configurar desde el inicio todos los catálogos que usará el framework, aunque algunas épicas todavía no los exploten, para tener una visión completa del PHF y no depender de valores fijos en código.
+
+h3. Criterios de aceptación
+* Dado la pantalla de catálogos, cuando la abro con catalog:manage, entonces veo los catálogos de estados de proyecto, estados de hito, estados de riesgo, estados de acción, estados de solicitud de cambio, tipos de iniciativa, roles de equipo y estatus de contrato, con el mismo ABC de CAT-03.
+* Dado cualquier catálogo de estados, cuando reviso una entrada, entonces tiene además una bandera is_terminal y una bandera is_initial, con exactamente una entrada inicial por catálogo.
+* Dado la semilla, cuando reviso los estados, entonces existen al menos: proyecto planning, executing, closing, closed; hito pending, in_progress, done, overdue; riesgo open, mitigating, mitigated, materialized; acción pending, in_progress, blocked, done; cambio requested, under_review, approved, rejected.
+* Dado la semilla, cuando reviso los demás, entonces tipos de iniciativa trae project, service, technical_assignment; roles de equipo trae pm, lead, tech_lead, member; estatus de contrato trae active, renewal_pending, expired.
+* Dado una entrada de estado que los servicios usan en sus transiciones, cuando intento desactivarla, entonces el sistema lo impide mientras existan registros en ese estado y lo explica.
+* Dado cualquier cambio en estos catálogos, cuando se guarda, entonces publica config.changed y queda auditado como el resto.","509","500","High","phs","mvp","catalogos","","","606","","","","","","","","","","",""
+"Epic","E06 Clientes y contactos","Cliente y contactos como entidades maestras de Project Core, matriz de escalación por cliente y estatus básico de contrato. Un contacto siempre nace en el catálogo del cliente; el proyecto solo lo vincula. Baja lógica en todo, eventos clients.* y auditoría conforme a PLT-12. Prerrequisito de la épica 07.","600","","Highest","phs","mvp","clientes","","","","","","","","","","","","","",""
+"Story","CLI-01 Dar de alta y editar un cliente","Como administrador del PHS o líder de práctica, quiero registrar y mantener los datos del cliente, para que los proyectos lo referencien de forma homogénea.
+
+h3. Criterios de aceptación
+* Dado el permiso client:manage, cuando capturo código, razón social, nombre corto, práctica y estatus de contrato, entonces el cliente se crea en estado active y el código es único e inmutable.
+* Dado un cliente existente, cuando edito sus datos, entonces el sistema aplica control de concurrencia optimista y responde 409 si la versión cambió.
+* Dado un cliente, cuando asigno un responsable interno de la cuenta, entonces debe ser un usuario activo obtenido por IUserDirectory.
+* Dado cualquier alta o edición, cuando se guarda, entonces se emite clients.client.created o clients.client.updated y queda auditado con before y after.","601","600","Highest","phs","mvp","clientes","","","603","","","","","","","","","","",""
+"Story","CLI-02 Buscar y listar clientes","Como usuario con client:read, quiero buscar clientes por nombre, código, práctica o estatus, para ubicarlos rápidamente al crear proyectos.
+
+h3. Criterios de aceptación
+* Dado el listado, cuando escribo al menos dos caracteres, entonces la búsqueda cubre código, razón social y nombre corto, sin distinguir acentos ni mayúsculas.
+* Dado filtros por práctica, estatus de contrato y estado, cuando los combino, entonces se aplican en conjunto y la URL conserva los filtros.
+* Dado el listado, cuando hay más de 25 resultados, entonces se pagina y la respuesta p95 es menor a 500 ms.
+* Dado un usuario con rol de ámbito práctica, cuando lista, entonces solo ve clientes de sus prácticas; el administrador ve todos.","602","600","High","phs","mvp","clientes","","","","","","","","","","","","","",""
+"Story","CLI-03 Administrar los contactos de un cliente","Como PM o líder, quiero registrar a las personas del cliente dentro de su catálogo, para vincularlas a proyectos sin duplicar datos.
+
+h3. Criterios de aceptación
+* Dado un cliente, cuando agrego un contacto con nombre, puesto y correo, entonces se crea dentro del cliente y el correo es único por cliente.
+* Dado un contacto, cuando lo marco como principal, entonces el anterior principal deja de serlo; siempre hay a lo más uno.
+* Dado un contacto vinculado a proyectos o a la matriz de escalación, cuando intento desactivarlo, entonces el sistema advierte en qué está referido y pide confirmación; nunca lo borra físicamente.
+* Dado el flujo de alta de proyecto (épica 07), cuando el PM necesita un contacto nuevo, entonces lo crea desde este mismo formulario en el cliente y luego lo vincula; no existe captura de contacto exclusiva del proyecto.
+* Dado cualquier cambio, cuando se guarda, entonces emite clients.contact.* y queda auditado.","603","600","Highest","phs","mvp","clientes","","","604","605","","","","","","","","","",""
+"Story","CLI-04 Definir la matriz de escalación del cliente","Como líder de práctica, quiero definir los niveles de escalación con el cliente, para que los proyectos la hereden y las alertas sepan a quién acudir.
+
+h3. Criterios de aceptación
+* Dado un cliente, cuando defino niveles 1..n, entonces cada nivel tiene un contacto del cliente, un rol de escalación (operational, tactical, executive) y horas de respuesta esperadas.
+* Dado la matriz, cuando guardo, entonces los niveles son consecutivos sin huecos y un contacto no puede repetirse en dos niveles.
+* Dado un contacto desactivado, cuando aparece en la matriz, entonces la ficha lo señala como pendiente de reemplazo.
+* Dado la matriz guardada, cuando un proyecto se crea para ese cliente, entonces la hereda como valor inicial (la sobreescritura por proyecto se implementa en la épica 07).","604","600","High","phs","mvp","clientes","","","605","703","","","","","","","","","",""
+"Story","CLI-05 Consultar la ficha del cliente con su historial","Como usuario con client:read, quiero ver en una sola pantalla los datos, contactos, matriz y proyectos de un cliente, para entender la relación completa.
+
+h3. Criterios de aceptación
+* Dado la ficha, cuando la abro, entonces muestra datos generales, contactos activos e inactivos (colapsados), matriz de escalación y la lista de proyectos asociados con su salud actual (vacía hasta la épica 07).
+* Dado la pestaña de historial, cuando la consulto, entonces lista cronológicamente los cambios de cliente, contactos y matriz, con actor y fecha, leídos de audit_log vía History and Audit.
+* Dado la ficha, cuando el cliente está inactivo, entonces se muestra una franja visible y las acciones de edición se deshabilitan salvo reactivar.","605","600","Medium","phs","mvp","clientes","","","","","","","","","","","","","",""
+"Task","CLI-06 Modelo de clientes, contactos y escalación","Tarea técnica para Project Core.
+
+h3. Criterios de aceptación
+* Dado el esquema projects, cuando corre la migración, entonces existen clients, client_contacts, escalation_levels y client_history, con row_version, created_by, updated_at e is_active.
+* Dado clients, cuando reviso sus claves, entonces code es único, practice_id referencia a catalog.practices y contract_status_id a catalog.contract_statuses.
+* Dado client_contacts, cuando reviso restricciones, entonces (client_id, email) es único e is_primary solo puede ser verdadero en una fila por cliente (índice parcial).
+* Dado escalation_levels, cuando reviso restricciones, entonces (client_id, level) y (client_id, contact_id) son únicos.
+* Dado el repositorio, cuando se implementa, entonces usa IRelationalStore de phs-platform y pasa la suite de contrato del puerto.","606","600","Highest","phs","mvp","clientes","","","601","602","607","608","707","","","","","","",""
+"Task","CLI-07 Puerto IClientDirectory con caché","Tarea técnica en phs-platform.
+
+h3. Criterios de aceptación
+* Dado el puerto IClientDirectory, cuando se define, entonces expone getClient(id), searchClients(filter), getContacts(clientId), getEscalationMatrix(clientId) y devuelve DTOs sin exponer entidades de persistencia.
+* Dado la implementación HTTP para otros servicios, cuando consulta a Project Core vía APIM, entonces cachea por 5 minutos en ICache e invalida al recibir cualquier clients.*.
+* Dado una implementación falsa en memoria, cuando se usa en pruebas, entonces pasa la misma suite de contrato que la real.","607","600","Highest","phs","mvp","clientes","","","","","","","","","","","","","",""
+"Task","CLI-08 Eventos clients.* y desactivación lógica","Tarea técnica en Project Core.
+
+h3. Criterios de aceptación
+* Dado cualquier escritura, cuando se confirma la transacción, entonces el evento sale por el outbox (PLT-08) al topic projects con event_type clients.client.created|updated|deactivated|reactivated y clients.contact.created|updated|deactivated, más clients.escalation.updated.
+* Dado un cliente con proyectos activos, cuando se intenta desactivar, entonces la API responde 409 con la lista de proyectos; solo se permite si todos están cerrados.
+* Dado la reactivación, cuando ocurre, entonces no reactiva automáticamente sus contactos; cada uno se reactiva de forma explícita.
+* Dado cada evento, cuando se publica, entonces también se publica el evento de auditoría audit.projects.<acción> según PLT-12.","608","600","High","phs","mvp","clientes","","","","","","","","","","","","","",""
+"Epic","E07 Proyectos y baseline","Alta de proyectos ligados a cliente y práctica, equipo, contactos y matriz de escalación heredada, baseline en borrador aprobada por el líder de práctica y congelada como versión inmutable. Estados del proyecto desde catálogo, puerto IProjectDirectory y eventos projects.*.","700","","Highest","phs","mvp","proyectos","","","","","","","","","","","","","",""
+"Story","PRJ-01 Dar de alta un proyecto","Como PM, quiero registrar mi proyecto con sus datos estructurales, para que el sistema sepa qué se está gestionando.
+
+h3. Criterios de aceptación
+* Dado el permiso project:create, cuando capturo código, nombre, cliente activo, práctica, tipo de iniciativa, PM, fechas de inicio y fin y descripción del alcance, entonces el proyecto se crea en el estado inicial del catálogo de estados de proyecto y el código es único.
+* Dado el formulario, cuando el cliente está inactivo o la fecha de fin es anterior a la de inicio, entonces no se permite guardar y se señala el campo.
+* Dado el alta, cuando se guarda, entonces el creador recibe el rol pm con ámbito del proyecto y se emite projects.project.created, auditado.","701","700","Highest","phs","mvp","proyectos","","","702","703","704","","","","","","","","",""
+"Story","PRJ-02 Administrar el equipo del proyecto","Como PM, quiero registrar a los integrantes y su rol, para que la baseline y las acciones tengan responsables reales.
+
+h3. Criterios de aceptación
+* Dado un proyecto, cuando agrego un integrante, entonces debe ser un usuario activo con un rol de equipo del catálogo y fecha de inicio de asignación.
+* Dado un integrante, cuando lo retiro, entonces queda con fecha de fin y no se borra.
+* Dado una baseline aprobada, cuando el equipo actual difiere del comprometido, entonces la ficha muestra la diferencia; el equipo comprometido solo cambia por control de cambios.","702","700","High","phs","mvp","proyectos","","","","","","","","","","","","","",""
+"Story","PRJ-03 Vincular contactos y ajustar la matriz de escalación","Como PM, quiero asociar a las personas del cliente que participan en mi proyecto, para saber a quién acudir.
+
+h3. Criterios de aceptación
+* Dado un proyecto nuevo, cuando se crea, entonces hereda la matriz de escalación del cliente como copia editable.
+* Dado la matriz del proyecto, cuando cambio un nivel, entonces solo elijo contactos activos del cliente; si necesito uno nuevo, lo creo en el cliente (CLI-03) sin salir del flujo.
+* Dado un contacto vinculado, cuando lo asocio, entonces indico su rol en el proyecto y el vínculo queda auditado.","703","700","High","phs","mvp","proyectos","","","","","","","","","","","","","",""
+"Story","PRJ-04 Definir la baseline inicial en borrador","Como PM, quiero capturar los compromisos del proyecto, para que la salud se mida contra algo concreto.
+
+h3. Criterios de aceptación
+* Dado un proyecto sin baseline aprobada, cuando capturo fecha de inicio, fecha comprometida de fin, alcance, esfuerzo en horas, referencia económica y equipo comprometido, entonces se guarda como borrador editable.
+* Dado el borrador, cuando lo envío a aprobación, entonces debe tener al menos un hito con responsable y fecha dentro del rango (BR-05).
+* Dado un borrador enviado, cuando está en aprobación, entonces el PM ya no puede editarlo salvo que el líder lo devuelva.","704","700","Highest","phs","mvp","proyectos","","","705","801","","","","","","","","","",""
+"Story","PRJ-05 Aprobar o devolver la baseline","Como líder de práctica, quiero aprobar la baseline propuesta, para que los compromisos sean oficiales.
+
+h3. Criterios de aceptación
+* Dado una baseline enviada, cuando la apruebo con baseline:approve, entonces se congela como versión 1 inmutable con la foto de hitos y equipo, fecha y aprobador, y se emite projects.baseline.approved.
+* Dado que soy el mismo PM que la propuso, cuando intento aprobarla, entonces el sistema lo impide.
+* Dado que la devuelvo, cuando escribo el comentario obligatorio, entonces vuelve a borrador y el PM recibe una notificación en el portal.","705","700","Highest","phs","mvp","proyectos","","","706","901","","","","","","","","","",""
+"Story","PRJ-06 Cambiar el estado del proyecto","Como PM o líder, quiero mover el proyecto entre estados, para reflejar en qué etapa está.
+
+h3. Criterios de aceptación
+* Dado el catálogo de estados de proyecto, cuando cambio el estado, entonces registro motivo y queda en el historial con actor y fecha.
+* Dado un proyecto sin baseline aprobada, cuando intento pasarlo a ejecución, entonces el sistema lo impide (BR-02).
+* Dado un estado terminal, cuando el proyecto lo alcanza, entonces se suspenden revisiones y alertas futuras y el proyecto queda en consulta.","706","700","High","phs","mvp","proyectos","","","","","","","","","","","","","",""
+"Task","PRJ-07 Modelo de proyectos, equipo y versiones de baseline","Tarea técnica para Project Core.
+
+h3. Criterios de aceptación
+* Dado el esquema projects, cuando corre la migración, entonces existen projects, project_members, project_contacts, project_escalation_levels, baselines, baseline_versions y project_status_history.
+* Dado baseline_versions, cuando una versión está aprobada, entonces la base de datos impide modificarla y el número de versión es consecutivo por proyecto.
+* Dado el repositorio, cuando se implementa, entonces usa IRelationalStore de phs-platform y pasa la suite de contrato.","707","700","Highest","phs","mvp","proyectos","","","701","708","808","1304","1307","","","","","","",""
+"Task","PRJ-08 Puerto IProjectDirectory y eventos projects.*","Tarea técnica en Project Core y phs-platform.
+
+h3. Criterios de aceptación
+* Dado IProjectDirectory, cuando se define, entonces expone getProject, getCurrentBaseline, getBaselineVersion y listProjectsFor(userId) y devuelve DTOs.
+* Dado cualquier escritura, cuando se confirma, entonces sale por outbox projects.project.created|updated|status_changed, projects.baseline.submitted|approved|returned y projects.member.*, más su evento de auditoría.
+* Dado otros servicios, cuando consultan, entonces cachean 5 minutos en ICache e invalidan con projects.*.","708","700","Highest","phs","mvp","proyectos","","","709","1001","1101","1407","","","","","","","",""
+"Story","PRJ-09 Consultar mis proyectos y la ficha del proyecto","Como PM o líder, quiero ver mis proyectos y entrar a cada uno, para operar desde un solo lugar.
+
+h3. Criterios de aceptación
+* Dado mi usuario, cuando abro Proyectos, entonces veo solo los proyectos donde tengo un rol por ámbito; si no hay ninguno, veo un estado vacío con la acción de crear proyecto.
+* Dado la ficha, cuando la abro, entonces muestra datos generales, cliente, equipo, matriz de escalación y baseline vigente con su versión y estado.
+* Dado el listado, cuando filtro por estado, cliente o práctica, entonces se aplica y pagina de 25 en 25.","709","700","High","phs","mvp","proyectos","","","","","","","","","","","","","",""
+"Epic","E08 Hitos y riesgos","Hitos con fecha comprometida y pronosticada, cierre con evidencia ligera, riesgos con probabilidad e impacto en escala baja, media y alta, historial completo, materialización y matriz de exposición. Eventos milestones.* y risks.*.","800","","Highest","phs","mvp","hitos","riesgos","","","","","","","","","","","","",""
+"Story","HYR-01 Registrar hitos","Como PM, quiero registrar los hitos de mi proyecto, para que el sistema sepa qué debe cumplirse y cuándo.
+
+h3. Criterios de aceptación
+* Dado un proyecto, cuando registro un hito con nombre, entregable, fecha comprometida, responsable y criticidad, entonces se crea en el estado inicial del catálogo de estados de hito (BR-05).
+* Dado la fecha comprometida, cuando cae fuera del rango de la baseline vigente, entonces se rechaza.
+* Dado una baseline aprobada, cuando intento agregar, eliminar o cambiar la fecha comprometida de un hito, entonces el sistema me lleva a solicitar un control de cambios.","801","800","Highest","phs","mvp","hitos","riesgos","","705","802","803","","","","","","","","",""
+"Story","HYR-02 Actualizar avance y fecha pronosticada de un hito","Como PM, quiero actualizar rápido el estado de un hito sin hacer una revisión completa, para mantener la información al día.
+
+h3. Criterios de aceptación
+* Dado un hito, cuando cambio su estado o su fecha pronosticada, entonces se guarda sin tocar la fecha comprometida y queda una fila en el historial con valores anteriores y nuevos.
+* Dado una fecha pronosticada posterior a la comprometida, cuando la guardo, entonces el hito se marca como desfasado y se emite milestones.milestone.forecast_slipped.
+* Dado la ficha del proyecto, cuando actualizo un hito desde ella, entonces lo logro en tres interacciones o menos.","802","800","Highest","phs","mvp","hitos","riesgos","","","","","","","","","","","","",""
+"Story","HYR-03 Cerrar un hito con evidencia","Como PM, quiero marcar un hito como cumplido con un soporte sencillo, para que su cumplimiento sea verificable.
+
+h3. Criterios de aceptación
+* Dado un hito, cuando lo marco cumplido, entonces debo agregar evidencia: texto, imagen o captura de pantalla.
+* Dado un archivo, cuando no es PNG o JPG o supera evidence.max_size_mb, entonces se rechaza con un mensaje claro.
+* Dado el cierre, cuando se guarda, entonces se registra la fecha real de cumplimiento y se emite milestones.milestone.completed.","803","800","High","phs","mvp","hitos","riesgos","","","","","","","","","","","","",""
+"Story","HYR-04 Registrar riesgos","Como PM, quiero registrar los riesgos de mi proyecto, para darles seguimiento formal.
+
+h3. Criterios de aceptación
+* Dado un proyecto, cuando registro un riesgo con descripción, categoría, origen, probabilidad, impacto, responsable, fecha límite de mitigación y estrategia, entonces se crea en el estado inicial del catálogo de estados de riesgo.
+* Dado probabilidad e impacto, cuando los capturo, entonces uso la escala baja, media o alta y el sistema calcula la exposición.
+* Dado el registro, cuando se guarda, entonces se emite risks.risk.created, auditado.","804","800","Highest","phs","mvp","hitos","riesgos","","805","807","","","","","","","","","",""
+"Story","HYR-05 Actualizar un riesgo conservando su historial","Como PM, quiero actualizar un riesgo sin perder cómo evolucionó, para explicar su situación actual.
+
+h3. Criterios de aceptación
+* Dado un riesgo, cuando cambio probabilidad, impacto, fecha límite, estrategia o estado, entonces se guarda una actualización con valores anteriores y nuevos, actor, fecha y comentario (BR-06).
+* Dado la ficha del riesgo, cuando abro su historial, entonces veo la evolución completa en orden cronológico.
+* Dado un riesgo mitigado, cuando consulto la lista, entonces sigue existiendo y aparece al filtrar por estado.","805","800","Highest","phs","mvp","hitos","riesgos","","806","","","","","","","","","","",""
+"Story","HYR-06 Materializar un riesgo","Como PM, quiero registrar que un riesgo ya ocurrió, para que el sistema lo trate como un hecho que afecta la salud.
+
+h3. Criterios de aceptación
+* Dado un riesgo abierto o en mitigación, cuando lo marco como materializado, entonces describo el impacto real y se emite risks.risk.materialized.
+* Dado un riesgo materializado, cuando lo edito, entonces ya no puedo reducir su probabilidad; solo cerrarlo o reabrirlo con comentario.
+* Dado un riesgo materializado de exposición alta, cuando se guarda, entonces el sistema ofrece crear una acción correctiva.","806","800","High","phs","mvp","hitos","riesgos","","","","","","","","","","","","",""
+"Story","HYR-07 Ver la exposición de riesgos del proyecto","Como PM o líder, quiero ver de un vistazo dónde se concentra el riesgo, para priorizar.
+
+h3. Criterios de aceptación
+* Dado un proyecto, cuando abro Riesgos, entonces veo una matriz de probabilidad por impacto con el número de riesgos abiertos en cada celda.
+* Dado una celda, cuando la selecciono, entonces la lista se filtra a esos riesgos.
+* Dado la lista, cuando hay riesgos con mitigación vencida, entonces aparecen resaltados y primero.","807","800","Medium","phs","mvp","hitos","riesgos","","","","","","","","","","","","",""
+"Task","HYR-08 Modelo de hitos, riesgos e historial","Tarea técnica para Project Core.
+
+h3. Criterios de aceptación
+* Dado el esquema projects, cuando corre la migración, entonces existen milestones, milestone_updates, milestone_evidence, risks y risk_updates.
+* Dado milestone_updates y risk_updates, cuando se escribe, entonces son de solo inserción.
+* Dado el repositorio, cuando se implementa, entonces usa IRelationalStore y pasa la suite de contrato.","808","800","Highest","phs","mvp","hitos","riesgos","","801","804","810","","","","","","","","",""
+"Task","HYR-09 Almacenamiento de evidencias","Tarea técnica en phs-platform y Project Core.
+
+h3. Criterios de aceptación
+* Dado una evidencia, cuando se sube, entonces se guarda en Blob Storage mediante el puerto de archivos de phs-platform, nunca con el SDK directo.
+* Dado la descarga, cuando un usuario autorizado la pide, entonces recibe un enlace temporal de corta duración.
+* Dado una implementación falsa en memoria, cuando se usa en pruebas, entonces pasa la misma suite de contrato.","809","800","High","phs","mvp","hitos","riesgos","","803","904","1204","","","","","","","","",""
+"Task","HYR-10 Eventos milestones.* y risks.*","Tarea técnica en Project Core.
+
+h3. Criterios de aceptación
+* Dado cualquier escritura, cuando se confirma, entonces sale por outbox milestones.milestone.created|updated|forecast_slipped|completed y risks.risk.created|updated|materialized|closed.
+* Dado cada evento, cuando se publica, entonces incluye project_id como clave de sesión para conservar el orden por proyecto.
+* Dado cada evento, cuando se publica, entonces también sale su evento de auditoría según PLT-12.","810","800","Highest","phs","mvp","hitos","riesgos","","","","","","","","","","","","",""
+"Epic","E09 Revisiones","Health Review periódica y adaptativa por proyecto: ciclo configurable, calendario con IClock, formulario por dimensiones con compromisos precargados, bloqueo de sin novedades ante vencidos, evidencia, validación por el líder con versiones, vencidas y omitidas, y métrica de duración.","900","","Highest","phs","mvp","revisiones","","","","","","","","","","","","","",""
+"Story","REV-01 Configurar el ciclo de revisión del proyecto","Como PM, quiero definir cada cuánto reviso la salud de mi proyecto, para que el sistema sepa cuándo esperar mi revisión.
+
+h3. Criterios de aceptación
+* Dado un proyecto con baseline aprobada, cuando elijo una periodicidad del catálogo y un día de referencia, entonces se activa el ciclo con el PM como responsable y el líder de la práctica como validador por defecto (BR-07).
+* Dado el ciclo activo, cuando lo consulto, entonces veo las próximas tres fechas calculadas.
+* Dado un cambio de periodicidad, cuando lo guardo, entonces aplica desde la siguiente revisión y no altera las ya enviadas.","901","900","Highest","phs","mvp","revisiones","","","902","","","","","","","","","","",""
+"Story","REV-02 Ejecutar una Health Review rápida","Como PM, quiero actualizar la salud de mi proyecto en un par de minutos, para no descuidar la operación con el cliente.
+
+h3. Criterios de aceptación
+* Dado una revisión pendiente, cuando la abro, entonces veo precargados los hitos vencidos y próximos, los riesgos con mitigación vencida o próxima y mis acciones abiertas (BR-09).
+* Dado cada dimensión (cronograma, hitos, riesgos, cliente, finanzas, alcance), cuando no hay cambios, entonces la confirmo con un toque; solo se piden detalles si marco que hubo cambio.
+* Dado el envío, cuando se guarda, entonces se emite reviews.review.submitted, se dispara el recálculo de salud y la revisión queda pendiente de validación.","902","900","Highest","phs","mvp","revisiones","","","903","904","905","909","","","","","","","",""
+"Story","REV-03 Impedir sin novedades con compromisos vencidos","Como líder de práctica, quiero que una revisión no pueda ignorar lo que ya venció, para que la salud no se vea artificialmente bien.
+
+h3. Criterios de aceptación
+* Dado hitos o riesgos vencidos sin actualizar, cuando el PM marca sin novedades, entonces no puede enviar hasta actualizar cada elemento.
+* Dado esa actualización, cuando se hace desde el formulario de revisión, entonces se registra igual que desde la ficha del hito o riesgo.
+* Dado la revisión enviada, cuando la consulta el líder, entonces ve qué elementos se actualizaron dentro de ella.","903","900","Highest","phs","mvp","revisiones","","","","","","","","","","","","","",""
+"Story","REV-04 Adjuntar evidencia y comentarios a la revisión","Como PM, quiero respaldar lo que reporto con un texto o una imagen, para dar confianza a la información.
+
+h3. Criterios de aceptación
+* Dado una dimensión con cambios, cuando agrego evidencia, entonces acepto texto e imágenes PNG o JPG hasta evidence.max_size_mb.
+* Dado la revisión, cuando agrego un comentario general, entonces queda visible para el líder y en el historial.
+* Dado una revisión sin evidencia en dimensiones con cambio, cuando se envía, entonces se permite pero se marca para el cálculo de confianza.","904","900","High","phs","mvp","revisiones","","","","","","","","","","","","","",""
+"Story","REV-05 Validar o pedir corrección como líder","Como líder de práctica, quiero validar las revisiones de mis proyectos, para asegurar que la información es confiable.
+
+h3. Criterios de aceptación
+* Dado una revisión enviada en mi práctica, cuando la valido, entonces queda validada, se emite reviews.review.validated y se guarda su foto en review_snapshots.
+* Dado que pido corrección, cuando escribo el comentario obligatorio, entonces vuelve al PM con notificación y el reenvío crea una nueva versión conservando la anterior.
+* Dado que soy el autor de la revisión, cuando intento validarla, entonces el sistema lo impide.","905","900","Highest","phs","mvp","revisiones","","","1403","","","","","","","","","","",""
+"Story","REV-06 Registrar revisiones vencidas y omitidas","Como líder, quiero saber qué revisiones no se hicieron a tiempo, para intervenir.
+
+h3. Criterios de aceptación
+* Dado una revisión programada, cuando pasan review.overdue_tolerance_days sin envío, entonces se emite reviews.review.overdue.
+* Dado una revisión vencida, cuando llega la siguiente fecha programada, entonces la anterior queda como omitida en el historial y la nueva cubre el periodo completo.
+* Dado una revisión enviada pero no validada, cuando pasa la misma tolerancia, entonces se emite reviews.review.validation_overdue.","906","900","High","phs","mvp","revisiones","","","1003","","","","","","","","","","",""
+"Task","REV-07 Modelo de ciclos, revisiones y versiones","Tarea técnica para Health Engine.
+
+h3. Criterios de aceptación
+* Dado el esquema health, cuando corre la migración, entonces existen review_cycles, scheduled_reviews, health_reviews, review_versions, review_answers y review_evidence.
+* Dado una revisión validada, cuando se escribe su foto en review_snapshots mediante IDocumentStore, entonces la foto es inmutable.
+* Dado el repositorio, cuando se implementa, entonces usa los puertos de phs-platform y pasa sus suites de contrato.","907","900","Highest","phs","mvp","revisiones","","","901","908","","","","","","","","","",""
+"Task","REV-08 Programador de revisiones con IClock","Tarea técnica para Health Engine.
+
+h3. Criterios de aceptación
+* Dado el evento diario del reloj, cuando se procesa, entonces se generan las scheduled_reviews de los próximos ciclos de cada proyecto activo.
+* Dado una ejecución repetida, cuando corre dos veces el mismo día, entonces no duplica revisiones.
+* Dado un reloj simulado, cuando se adelanta la fecha, entonces el programador genera y vence revisiones según la nueva fecha.","908","900","Highest","phs","mvp","revisiones","","","902","906","1101","","","","","","","","",""
+"Task","REV-09 Métrica de duración de la revisión","Tarea técnica en la SPA y Health Engine.
+
+h3. Criterios de aceptación
+* Dado una revisión, cuando se envía, entonces se registra el tiempo desde que se abrió hasta que se envió como phs.review.duration_seconds.
+* Dado la métrica, cuando se consulta en Azure Monitor, entonces muestra mediana y percentil 90 por semana.
+* Dado el indicador de esfuerzo del documento maestro, cuando se revisa el MVP, entonces esta métrica es su fuente.","909","900","Medium","phs","mvp","revisiones","","","","","","","","","","","","","",""
+"Epic","E10 Evaluación de salud","Score de salud provisional detrás del puerto IHealthScorer, Health Gates, confianza separada del score, tendencia, recálculo por eventos, evaluación explicada, fotos inmutables y parámetros editables. Fórmula y umbrales son provisionales hasta cerrar el modelo de salud.","1000","","Highest","phs","mvp","salud","","","","","","","","","","","","","",""
+"Task","HLT-01 Puerto IHealthScorer y calculadora provisional","Tarea técnica en Health Engine.
+
+h3. Criterios de aceptación
+* Dado el puerto IHealthScorer, cuando se define, entonces recibe el contexto del proyecto y devuelve score de 0 a 100, aporte por dimensión, gates aplicados y model_version.
+* Dado la implementación provisional, cuando calcula, entonces pondera las seis dimensiones con los pesos health.weight.* y declara model_version provisional-1.
+* Dado otra implementación, cuando se registra en el CompositionRoot, entonces sustituye a la provisional sin cambiar a sus consumidores.","1001","1000","Highest","phs","mvp","salud","","","1002","1003","1005","1007","","","","","","","",""
+"Task","HLT-02 Health Gates","Tarea técnica en Health Engine.
+
+h3. Criterios de aceptación
+* Dado una desviación de cronograma mayor a schedule.deviation_threshold_pct, una financiera mayor a finance.deviation_threshold_pct, un hito crítico vencido, un riesgo materializado de exposición alta o una revisión vencida, cuando se evalúa, entonces el score queda topado en health.gate_cap y el gate se lista como motivo.
+* Dado la desviación de cronograma, cuando se calcula provisionalmente, entonces es el retraso en días del hito más atrasado entre la duración de la baseline vigente; la financiera compara la referencia económica de la baseline contra la última cifra reportada.
+* Dado un gate que se activa, cuando ocurre, entonces se emite health.gate.triggered.","1002","1000","Highest","phs","mvp","salud","","","1006","","","","","","","","","","",""
+"Task","HLT-03 Calcular la confianza de la información","Tarea técnica en Health Engine.
+
+h3. Criterios de aceptación
+* Dado un proyecto, cuando se evalúa, entonces la confianza considera antigüedad de la última revisión frente a su periodicidad, hitos cumplidos sin evidencia, riesgos sin actualizar en más de dos ciclos e inconsistencias abiertas.
+* Dado esos factores, cuando se combinan, entonces el resultado es alta, media o baja según health.confidence.*.
+* Dado la evaluación, cuando se presenta, entonces la confianza aparece junto al score y nunca modifica su valor (BR-12).","1003","1000","Highest","phs","mvp","salud","","","1006","","","","","","","","","","",""
+"Task","HLT-04 Calcular la tendencia","Tarea técnica en Health Engine.
+
+h3. Criterios de aceptación
+* Dado al menos dos evaluaciones previas, cuando se evalúa, entonces compara el score actual con el promedio de las últimas health.trend.window evaluaciones.
+* Dado una diferencia mayor o igual a health.trend.delta, cuando es positiva o negativa, entonces la tendencia es mejorando o empeorando; en otro caso, estable.
+* Dado menos de dos evaluaciones, cuando se evalúa, entonces la tendencia se muestra como sin datos suficientes.","1004","1000","High","phs","mvp","salud","","","1006","","","","","","","","","","",""
+"Task","HLT-05 Recálculo automático por eventos","Tarea técnica en Health Engine.
+
+h3. Criterios de aceptación
+* Dado los eventos reviews.review.submitted|validated, milestones.*, risks.*, projects.baseline.approved, changes.change.approved y el evento diario del reloj, cuando llegan, entonces se recalcula la salud del proyecto.
+* Dado varios eventos del mismo proyecto, cuando llegan juntos, entonces se procesan en orden por sesión de project_id y se coalescen en un solo cálculo.
+* Dado un evento, cuando se procesa, entonces la nueva evaluación está disponible en menos de 10 segundos en p95 y se emite health.assessment.updated.","1005","1000","Highest","phs","mvp","salud","","","1306","1407","","","","","","","","","",""
+"Story","HLT-06 Ver la evaluación explicada","Como PM o líder, quiero entender por qué mi proyecto tiene la salud que tiene, para saber qué corregir.
+
+h3. Criterios de aceptación
+* Dado la ficha del proyecto, cuando la abro, entonces veo score, color según health.band.*, tendencia y confianza.
+* Dado el desglose, cuando lo expando, entonces veo el aporte de cada dimensión y los gates activos con su motivo y la entidad que lo causó.
+* Dado la evaluación, cuando se muestra, entonces lleva una etiqueta visible de modelo provisional mientras model_version empiece con provisional.","1006","1000","Highest","phs","mvp","salud","","","","","","","","","","","","","",""
+"Story","HLT-07 Guardar la foto de cada evaluación","Como líder, quiero que cada evaluación quede guardada tal como se calculó, para entender cómo evolucionó el proyecto.
+
+h3. Criterios de aceptación
+* Dado una evaluación, cuando se calcula, entonces se guarda en assessment_snapshots con score, dimensiones, gates, confianza, tendencia, entradas usadas, model_version y fecha (BR-15).
+* Dado una foto guardada, cuando se intenta modificar, entonces no es posible.
+* Dado un cambio de parámetros, cuando ocurre, entonces las fotos anteriores conservan los valores con que se calcularon.","1007","1000","Highest","phs","mvp","salud","","","1004","1405","","","","","","","","","",""
+"Story","HLT-08 Configurar los parámetros del modelo de salud","Como administrador del PHS, quiero ajustar pesos y umbrales del modelo, para calibrarlo sin cambiar código.
+
+h3. Criterios de aceptación
+* Dado el catálogo de parámetros, cuando corre la semilla, entonces existen health.weight.* (seis pesos que suman 100), health.gate_cap 59, health.band.green_min 80, health.band.yellow_min 60, health.trend.window 3, health.trend.delta 5 y health.confidence.*, todos marcados como provisionales.
+* Dado que edito los pesos, cuando no suman 100, entonces no se permite guardar.
+* Dado un cambio, cuando se guarda, entonces aplica hacia adelante, emite config.changed y queda auditado.","1008","1000","High","phs","mvp","salud","","","1001","","","","","","","","","","",""
+"Epic","E11 Motor de expectativas y alertas","Expectation Engine sobre compromisos registrados, Health Events tipificados e idempotentes que se cierran solos cuando desaparece la condición, campana de alertas en el portal, reglas contra repetición y fecha operativa simulada para pruebas.","1100","","Highest","phs","mvp","alertas","","","","","","","","","","","","","",""
+"Task","EXP-01 Motor de expectativas","Tarea técnica en Health Engine.
+
+h3. Criterios de aceptación
+* Dado el evento diario del reloj, cuando se procesa, entonces el motor evalúa para cada proyecto activo los hitos, fechas de mitigación, revisiones y acciones dentro de la ventana de anticipación.
+* Dado un cambio relevante, cuando llega su evento, entonces el motor reevalúa solo ese proyecto.
+* Dado un proyecto en estado terminal, cuando corre el motor, entonces lo omite.","1101","1100","Highest","phs","mvp","alertas","","","1102","1206","1306","","","","","","","","",""
+"Task","EXP-02 Generar Health Events","Tarea técnica en Health Engine y Notifications and Tasks.
+
+h3. Criterios de aceptación
+* Dado una condición detectada, cuando corresponde, entonces se genera uno de estos eventos: milestone.upcoming, milestone.overdue, risk.mitigation_due, risk.mitigation_overdue, risk.materialized, review.due, review.overdue, review.validation_overdue, task.overdue, gate.triggered, review.inconsistency.
+* Dado un evento, cuando se crea, entonces tiene clave idempotente, severidad según catálogo, proyecto, entidad de origen y descripción legible.
+* Dado que la condición desaparece, cuando el motor reevalúa, entonces el evento se cierra automáticamente con la fecha de cierre.","1102","1100","Highest","phs","mvp","alertas","","","1105","1201","","","","","","","","","",""
+"Story","EXP-03 Campana de alertas en el portal","Como PM o líder, quiero ver en la campana lo que requiere mi atención, para no depender del correo.
+
+h3. Criterios de aceptación
+* Dado notificaciones no leídas, cuando veo el encabezado, entonces la campana muestra el número de no leídas.
+* Dado la campana, cuando la abro, entonces veo la lista ordenada por severidad y fecha, agrupada por proyecto.
+* Dado una notificación, cuando la selecciono, entonces me lleva a la entidad que la originó.","1103","1100","Highest","phs","mvp","alertas","","","1104","","","","","","","","","","",""
+"Story","EXP-04 Atender una alerta","Como PM, quiero actuar directamente desde una alerta, para resolverla en el momento.
+
+h3. Criterios de aceptación
+* Dado una notificación, cuando la abro, entonces puedo marcarla leída, ir a actualizar la entidad o crear una acción correctiva prellenada.
+* Dado que la marco leída, cuando la condición sigue vigente, entonces el evento permanece abierto y visible en el Health Center.
+* Dado todas mis notificaciones, cuando elijo marcar todas como leídas, entonces se marcan sin cerrar ningún evento.","1104","1100","Highest","phs","mvp","alertas","","","","","","","","","","","","","",""
+"Task","EXP-05 Evitar alertas repetitivas","Tarea técnica en Notifications and Tasks.
+
+h3. Criterios de aceptación
+* Dado un evento abierto, cuando el motor lo vuelve a detectar, entonces no crea otra notificación.
+* Dado un evento cuya severidad sube, cuando se actualiza, entonces sí genera una nueva notificación.
+* Dado más de notification.group_threshold notificaciones del mismo proyecto en un día, cuando se generan, entonces se agrupan en una sola entrada expandible.","1105","1100","High","phs","mvp","alertas","","","","","","","","","","","","","",""
+"Story","EXP-06 Simular la fecha operativa","Como administrador del PHS en un ambiente de pruebas, quiero adelantar la fecha del sistema, para validar vencimientos y alertas sin esperar días reales.
+
+h3. Criterios de aceptación
+* Dado el flag SimulatedClock activo, cuando adelanto o fijo la fecha, entonces todos los servicios usan esa fecha a través de IClock y se dispara el evento diario por cada día adelantado.
+* Dado una fecha simulada, cuando navego el portal, entonces un indicador discreto muestra la fecha operativa.
+* Dado el ambiente de producción, cuando se intenta activar el flag, entonces la configuración lo rechaza.","1106","1100","High","phs","mvp","alertas","","","","","","","","","","","","","",""
+"Task","EXP-07 Modelo de eventos y notificaciones","Tarea técnica en Notifications and Tasks.
+
+h3. Criterios de aceptación
+* Dado el esquema notifications, cuando corre la migración, entonces existen health_events con clave idempotente única y notifications por usuario.
+* Dado un evento, cuando se crea o cierra, entonces también se escribe en health_events del historial mediante History and Audit.
+* Dado notificaciones con más de 12 meses, cuando corre el job de archivado, entonces pasan a notifications_archive.","1107","1100","Highest","phs","mvp","alertas","","","1102","1108","1407","","","","","","","","",""
+"Task","EXP-08 Entrega de notificaciones al portal","Tarea técnica en Notifications and Tasks y la SPA.
+
+h3. Criterios de aceptación
+* Dado un usuario conectado, cuando pasan 60 segundos o la pestaña recupera el foco, entonces la SPA consulta /api/tasks/notifications y actualiza la campana.
+* Dado un evento, cuando se genera, entonces se crea una notificación para el responsable de la entidad y para el PM; los eventos críticos también para el líder de la práctica.
+* Dado la consulta, cuando responde, entonces el p95 es menor a 300 ms.","1108","1100","Highest","phs","mvp","alertas","","","1103","","","","","","","","","","",""
+"Epic","E12 Acciones correctivas","Health Tasks con responsable y fecha, creadas desde eventos o manualmente, con seguimiento por estados, bitácora, cierre con evidencia y detección de vencidas. Cerrar una acción no cierra su evento y viceversa.","1200","","Highest","phs","mvp","acciones","","","","","","","","","","","","","",""
+"Story","TSK-01 Crear una acción desde un evento","Como PM, quiero convertir una alerta en una acción con responsable y fecha, para que el problema se atienda.
+
+h3. Criterios de aceptación
+* Dado un evento o alerta, cuando elijo crear acción, entonces el formulario viene prellenado con proyecto, evento de origen, responsable sugerido, prioridad según severidad y fecha límite sugerida.
+* Dado un evento de severidad crítica, cuando se genera, entonces se crea automáticamente una acción asignada al PM, que él puede reasignar o ajustar.
+* Dado la acción, cuando se guarda, entonces debe tener responsable activo y fecha límite (BR-14).","1201","1200","Highest","phs","mvp","acciones","","","1203","1205","","","","","","","","","",""
+"Story","TSK-02 Crear una acción manual","Como PM o líder, quiero registrar una acción aunque no venga de una alerta, para dar seguimiento a cualquier compromiso.
+
+h3. Criterios de aceptación
+* Dado la ficha de un proyecto, revisión, hito o riesgo, cuando creo una acción, entonces queda vinculada a esa entidad.
+* Dado el formulario, cuando capturo descripción, responsable, prioridad y fecha límite, entonces se crea en el estado inicial del catálogo.
+* Dado que el responsable no es integrante del proyecto, cuando guardo, entonces el sistema advierte pero lo permite.","1202","1200","High","phs","mvp","acciones","","","","","","","","","","","","","",""
+"Story","TSK-03 Dar seguimiento a una acción","Como responsable de una acción, quiero actualizar su avance, para que todos sepan en qué va.
+
+h3. Criterios de aceptación
+* Dado una acción, cuando cambio su estado, entonces queda en la bitácora con actor, fecha y comentario.
+* Dado que la marco bloqueada, cuando guardo, entonces el motivo del bloqueo es obligatorio y se notifica al PM.
+* Dado un cambio de responsable, cuando se guarda, entonces el nuevo responsable recibe notificación.","1203","1200","Highest","phs","mvp","acciones","","","1204","","","","","","","","","","",""
+"Story","TSK-04 Cerrar una acción con evidencia","Como responsable, quiero cerrar la acción explicando cómo se resolvió, para que el cierre sea verificable.
+
+h3. Criterios de aceptación
+* Dado una acción, cuando la completo, entonces debo escribir la resolución y puedo adjuntar una imagen.
+* Dado que el evento de origen sigue abierto, cuando cierro la acción, entonces el sistema advierte que la condición todavía no desaparece y permite cerrar de todos modos.
+* Dado una acción completada, cuando se necesita reabrir, entonces se reabre con comentario obligatorio.","1204","1200","Highest","phs","mvp","acciones","","","","","","","","","","","","","",""
+"Story","TSK-05 Consultar mis acciones y las del proyecto","Como PM o responsable, quiero ver mis pendientes ordenados por urgencia, para saber qué hacer primero.
+
+h3. Criterios de aceptación
+* Dado mi usuario, cuando abro Mis acciones, entonces veo primero las vencidas, luego las próximas a vencer, y puedo filtrar por proyecto, estado y prioridad.
+* Dado la ficha de un proyecto, cuando abro Acciones, entonces veo todas las del proyecto con su responsable.
+* Dado una acción, cuando la abro, entonces veo su evento de origen, la entidad vinculada y la bitácora completa.","1205","1200","Highest","phs","mvp","acciones","","","","","","","","","","","","","",""
+"Task","TSK-06 Detectar acciones vencidas","Tarea técnica en Health Engine y Notifications and Tasks.
+
+h3. Criterios de aceptación
+* Dado una acción abierta, cuando pasa su fecha límite según IClock, entonces el motor de expectativas genera task.overdue.
+* Dado una acción vencida, cuando se genera el evento, entonces se notifica al responsable y al PM.
+* Dado que la acción se completa o cambia su fecha límite, cuando se reevalúa, entonces el evento se cierra.","1206","1200","High","phs","mvp","acciones","","","","","","","","","","","","","",""
+"Task","TSK-07 Modelo de acciones y su bitácora","Tarea técnica en Notifications and Tasks.
+
+h3. Criterios de aceptación
+* Dado el esquema tasks, cuando corre la migración, entonces existen health_tasks, task_updates y task_links.
+* Dado task_updates, cuando se escribe, entonces es de solo inserción.
+* Dado el repositorio, cuando se implementa, entonces usa IRelationalStore y pasa la suite de contrato.","1207","1200","Highest","phs","mvp","acciones","","","1201","1202","1206","1208","","","","","","","",""
+"Task","TSK-08 Eventos tasks.* y auditoría","Tarea técnica en Notifications and Tasks.
+
+h3. Criterios de aceptación
+* Dado cualquier escritura, cuando se confirma, entonces sale por outbox tasks.task.created|updated|blocked|completed|reopened.
+* Dado cada evento, cuando se publica, entonces lleva project_id como clave de sesión.
+* Dado cada evento, cuando se publica, entonces sale también su evento de auditoría según PLT-12.","1208","1200","High","phs","mvp","acciones","","","1407","","","","","","","","","","",""
+"Epic","E13 Control de cambios","Solicitud de cambios con motivo, justificación e impacto, comparativo contra la baseline vigente, aprobación o rechazo por el líder, baseline vN+1 inmutable en una sola transacción, consulta de versiones y recálculo de expectativas y salud.","1300","","Highest","phs","mvp","cambios","","","","","","","","","","","","","",""
+"Story","CHG-01 Solicitar un control de cambios","Como PM, quiero solicitar formalmente un cambio a los compromisos, para distinguir una modificación aceptada de una desviación.
+
+h3. Criterios de aceptación
+* Dado un proyecto con baseline aprobada, cuando creo una solicitud con motivo, justificación y al menos un impacto, entonces se crea en el estado inicial del catálogo de estados de cambio.
+* Dado un hito afectado, cuando lo incluyo, entonces indico la nueva fecha comprometida o que se elimina; los hitos nuevos llevan nombre, fecha, responsable y criticidad.
+* Dado la solicitud, cuando la envío, entonces el líder recibe una notificación y se emite changes.change.requested.","1301","1300","Highest","phs","mvp","cambios","","","1302","1308","","","","","","","","","",""
+"Story","CHG-02 Ver el impacto contra la baseline vigente","Como PM o líder, quiero ver lado a lado lo vigente y lo propuesto, para entender el cambio antes de decidir.
+
+h3. Criterios de aceptación
+* Dado una solicitud, cuando la abro, entonces veo cada campo de la baseline vigente junto al valor propuesto, con las diferencias resaltadas.
+* Dado cambios de fecha, cuando se muestran, entonces se indica la variación en días y en porcentaje de la duración.
+* Dado cambios en hitos, cuando se muestran, entonces se distinguen agregados, modificados y eliminados.","1302","1300","Highest","phs","mvp","cambios","","","1303","","","","","","","","","","",""
+"Story","CHG-03 Aprobar o rechazar un cambio","Como líder de práctica, quiero decidir sobre una solicitud, para que la baseline solo cambie con aprobación.
+
+h3. Criterios de aceptación
+* Dado una solicitud enviada, cuando la apruebo con change:approve, entonces queda aprobada con decisión, fecha y aprobador, y se dispara la nueva versión de baseline.
+* Dado que la rechazo, cuando escribo el motivo obligatorio, entonces queda rechazada, la baseline no cambia y el PM recibe notificación.
+* Dado que soy el solicitante, cuando intento aprobarla, entonces el sistema lo impide.","1303","1300","Highest","phs","mvp","cambios","","","1304","","","","","","","","","","",""
+"Task","CHG-04 Generar la nueva versión de baseline","Tarea técnica en Project Core.
+
+h3. Criterios de aceptación
+* Dado un cambio aprobado, cuando se procesa, entonces en una sola transacción se crea la versión N+1 como copia de la N con los cambios aplicados, se actualizan hitos y se escriben los eventos en el outbox.
+* Dado la versión anterior, cuando se crea la nueva, entonces la anterior queda intacta y consultable (BR-04).
+* Dado la publicación, cuando se confirma, entonces salen changes.change.approved y projects.baseline.versioned con el número de versión.","1304","1300","Highest","phs","mvp","cambios","","","1305","1306","","","","","","","","","",""
+"Story","CHG-05 Consultar y comparar versiones de baseline","Como PM, líder o director, quiero ver cómo cambiaron los compromisos del proyecto, para explicar su evolución.
+
+h3. Criterios de aceptación
+* Dado un proyecto, cuando abro Baseline, entonces veo la lista de versiones con fecha, aprobador y cambio que la originó.
+* Dado dos versiones, cuando las comparo, entonces veo sus diferencias campo por campo y en hitos.
+* Dado cualquier versión, cuando la abro, entonces es de solo lectura.","1305","1300","High","phs","mvp","cambios","","","","","","","","","","","","","",""
+"Task","CHG-06 Recalcular expectativas y salud con la nueva baseline","Tarea técnica en Health Engine y Notifications and Tasks.
+
+h3. Criterios de aceptación
+* Dado projects.baseline.versioned, cuando llega, entonces el motor de expectativas reevalúa el proyecto con los compromisos nuevos.
+* Dado hitos eliminados, cuando se reevalúa, entonces sus eventos abiertos se cierran con motivo eliminado por cambio aprobado.
+* Dado la nueva baseline, cuando se recalcula la salud, entonces la evaluación compara contra ella (BR-11) y registra la versión usada.","1306","1300","Highest","phs","mvp","cambios","","","","","","","","","","","","","",""
+"Task","CHG-07 Modelo de solicitudes de cambio","Tarea técnica en Project Core.
+
+h3. Criterios de aceptación
+* Dado el esquema projects, cuando corre la migración, entonces existen change_requests, change_items y change_decisions.
+* Dado una solicitud decidida, cuando se intenta editar, entonces no es posible.
+* Dado el repositorio, cuando se implementa, entonces usa IRelationalStore y pasa la suite de contrato.","1307","1300","Highest","phs","mvp","cambios","","","1301","","","","","","","","","","",""
+"Story","CHG-08 Cancelar una solicitud propia","Como PM, quiero cancelar una solicitud que ya no aplica, para no dejar pendientes falsos al líder.
+
+h3. Criterios de aceptación
+* Dado una solicitud mía sin decisión, cuando la cancelo con comentario, entonces queda cancelada y sale de la bandeja del líder.
+* Dado una solicitud ya decidida, cuando intento cancelarla, entonces el sistema lo impide.
+* Dado la cancelación, cuando se guarda, entonces se emite changes.change.cancelled y queda auditada.","1308","1300","Medium","phs","mvp","cambios","","","","","","","","","","","","","",""
+"Epic","E14 Health Center e historial","Experiencia de gobierno por rol: vista del PM completa, vista del líder básica con bandeja de validación, Health Timeline, historial del proyecto, consulta básica de auditoría, modelo de lectura por eventos, navegación por permisos y reinicio de ambientes de prueba.","1400","","Highest","phs","mvp","healthcenter","","","","","","","","","","","","","",""
+"Story","HC-01 Vista del PM: qué atender hoy","Como PM, quiero ver en una sola pantalla lo que requiere mi atención, para actuar sin buscar en varios lugares.
+
+h3. Criterios de aceptación
+* Dado mi usuario, cuando entro al Health Center, entonces veo por proyecto revisiones pendientes, hitos vencidos y próximos, riesgos con mitigación vencida o próxima, acciones asignadas y alertas abiertas, con los vencidos primero.
+* Dado cada elemento, cuando lo selecciono, entonces puedo actuar ahí mismo: iniciar la revisión, actualizar el hito o riesgo, o avanzar la acción.
+* Dado que no tengo pendientes, cuando entro, entonces veo un estado vacío claro; si no tengo proyectos, la acción principal es crear uno.","1401","1400","Highest","phs","mvp","healthcenter","","","","","","","","","","","","","",""
+"Story","HC-02 Vista del líder: dónde intervenir","Como líder de práctica, quiero ver qué proyectos de mi práctica necesitan intervención, para priorizar mi tiempo.
+
+h3. Criterios de aceptación
+* Dado mi ámbito de práctica, cuando entro, entonces veo los proyectos ordenados por salud, con tendencia, confianza y gates activos.
+* Dado la vista, cuando la filtro, entonces puedo ver solo proyectos que empeoran, con confianza baja, sin revisión reciente o con riesgos de exposición alta.
+* Dado la vista, cuando la abro, entonces también veo las acciones vencidas y los cambios pendientes de aprobar de mi práctica.","1402","1400","Highest","phs","mvp","healthcenter","","","1403","","","","","","","","","","",""
+"Story","HC-03 Bandeja de validación de revisiones","Como líder de práctica, quiero una bandeja con las revisiones por validar, para validarlas rápido.
+
+h3. Criterios de aceptación
+* Dado revisiones enviadas en mi práctica, cuando abro la bandeja, entonces las veo ordenadas por antigüedad con su proyecto, autor y cambio de salud.
+* Dado una revisión, cuando la abro desde la bandeja, entonces puedo validarla o pedir corrección sin salir.
+* Dado revisiones con validación vencida, cuando se listan, entonces aparecen resaltadas.","1403","1400","Highest","phs","mvp","healthcenter","","","","","","","","","","","","","",""
+"Story","HC-04 Health Timeline del proyecto","Como PM o líder, quiero ver la línea de tiempo del proyecto, para entender qué pasó, qué está pasando y qué viene.
+
+h3. Criterios de aceptación
+* Dado un proyecto, cuando abro su Timeline, entonces veo en el pasado hitos cumplidos o vencidos, riesgos actualizados, cambios aprobados, revisiones y acciones cerradas.
+* Dado el presente, cuando lo veo, entonces muestra salud actual, riesgos abiertos, acciones pendientes, hitos en curso y desviaciones activas.
+* Dado el futuro, cuando lo veo, entonces muestra próximos hitos, fechas de mitigación y revisiones programadas dentro de la ventana de anticipación.","1404","1400","High","phs","mvp","healthcenter","","","","","","","","","","","","","",""
+"Story","HC-05 Historial del proyecto","Como líder, quiero consultar la evolución completa de un proyecto, para explicar cómo llegó a su situación actual.
+
+h3. Criterios de aceptación
+* Dado un proyecto, cuando abro Historial, entonces veo la gráfica de scores en el tiempo con tendencia y confianza (BR-15).
+* Dado un punto de la gráfica, cuando lo selecciono, entonces veo la foto de esa evaluación y los eventos que la explican.
+* Dado el historial, cuando lo filtro, entonces puedo ver solo revisiones, versiones de baseline, actualizaciones de riesgos, cambios de hitos, eventos o acciones.","1405","1400","High","phs","mvp","healthcenter","","","","","","","","","","","","","",""
+"Story","HC-06 Consulta básica de auditoría","Como administrador del PHS, quiero consultar quién hizo qué y cuándo, para responder a revisiones de gobierno.
+
+h3. Criterios de aceptación
+* Dado el permiso audit:read, cuando abro Auditoría, entonces filtro por rango de fechas, actor, tipo de entidad, entidad y acción.
+* Dado un registro, cuando lo abro, entonces veo valores antes y después, actor, rol, IP de origen e identificador de correlación.
+* Dado la consulta, cuando la ejecuto, entonces pagina de 50 en 50 y responde en menos de 2 segundos en p95 para un rango de 30 días.","1406","1400","Medium","phs","mvp","healthcenter","","","","","","","","","","","","","",""
+"Task","HC-07 Modelo de lectura y API del Health Center","Tarea técnica en Health Engine.
+
+h3. Criterios de aceptación
+* Dado los eventos de proyectos, hitos, riesgos, revisiones, salud, alertas, acciones y cambios, cuando llegan, entonces actualizan un modelo de lectura por usuario y por práctica.
+* Dado la SPA, cuando consulta /api/health/center/pm o /api/health/center/lead, entonces recibe todo lo necesario en una sola llamada con p95 menor a 500 ms.
+* Dado el modelo de lectura, cuando se pierde o corrompe, entonces puede reconstruirse desde las fuentes con un job.","1407","1400","Highest","phs","mvp","healthcenter","","","1401","1402","1404","1405","","","","","","","",""
+"Task","HC-08 Navegación y vistas según permisos","Tarea técnica en la SPA.
+
+h3. Criterios de aceptación
+* Dado un usuario, cuando inicia sesión, entonces la barra lateral se arma desde /api/authz/me/menu y solo muestra lo que sus permisos permiten (BR-16).
+* Dado un usuario con roles de PM y de líder, cuando entra al Health Center, entonces puede alternar entre ambas vistas.
+* Dado una ruta sin permiso, cuando se abre directamente, entonces la SPA muestra un aviso de acceso no permitido y la API responde 403.","1408","1400","Highest","phs","mvp","healthcenter","","","","","","","","","","","","","",""
+"Task","HC-09 Reinicio completo de ambientes de prueba","Tarea técnica transversal.
+
+h3. Criterios de aceptación
+* Dado el flag EnvironmentReset activo y el permiso env:reset, cuando ejecuto el reinicio con doble confirmación, entonces se borran proyectos, clientes, hitos, riesgos, revisiones, eventos, acciones, notificaciones, historial y evidencias, y se restablece la semilla de catálogos.
+* Dado el reinicio, cuando termina, entonces el sistema queda vacío, conserva solo al administrador inicial y lo verifica con un conteo por servicio (BR-19).
+* Dado el ambiente de producción, cuando se intenta activar el flag, entonces la configuración lo rechaza.","1409","1400","High","phs","mvp","healthcenter","","","","","","","","","","","","","",""

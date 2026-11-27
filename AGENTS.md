@@ -25,7 +25,8 @@
 
 - `docs/BITACORA.md`: estado actual e historial.
 - `docs/producto/ESPECIFICACION.md`: comportamiento esperado.
-- `docs/producto/BACKLOG.md`: historias y criterios de aceptación.
+- `docs/producto/BACKLOG-MVP.md`: backlog vigente (export de Jira del 2026-11-26) con el estado e incremento de cada pieza. Se genera con `python3 scripts/backlog-mvp.py`: al avanzar una pieza se actualiza su estado en el script y se regenera en el mismo commit. Su fuente está en `docs/producto/fuentes/`.
+- `docs/producto/BACKLOG.md`: backlog anterior (PHS-001 a PHS-046), histórico; su estado por historia describe lo construido hasta BIT-0042.
 - `docs/producto/DECISIONES.md`: políticas pendientes.
 - `docs/producto/PLAN-ENTREGAS.md`: secuencia y pruebas integrales.
 - `docs/ARQUITECTURA.md`: arquitectura vigente e inventario de componentes construidos. Actualizarlo en el mismo commit cuando se agregue, quite o cambie de responsabilidad un servicio, módulo, paquete o pantalla. `docs/ARQUITECTURA-PHS.md` es el diagnóstico inicial, histórico.

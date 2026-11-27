@@ -1,5 +1,7 @@
 # PHS — Backlog de producto v0.1
 
+> **Sustituido como referencia de trabajo el 2026-11-26 (BIT-0043)** por [BACKLOG-MVP.md](BACKLOG-MVP.md), generado del nuevo backlog en Jira. Se conserva como historia de lo construido: el estado anotado en cada historia sigue siendo válido para saber qué existe.
+
 Estado de todas las historias: **Propuesta / por refinar**. Ninguna funcionalidad se considera terminada porque exista en el prototipo o en el esquema SQL. 46 elementos: 43 del MVP y 3 candidatos posteriores (PHS-046 se añadió el 2026-10-05, BIT-0025). Los habilitadores técnicos tienen criterios verificables igual que las historias funcionales.
 
 Prioridad: **P0** imprescindible para operación o integridad; **P1** completa la experiencia MVP; **P2** posterior. P1 también debe terminar para declarar este MVP completo. Tamaño **S/M/L** es una hipótesis relativa de complejidad, no puntos, horas ni compromiso de fechas. Las historias M/L se dividen en refinamiento si no caben en una iteración.

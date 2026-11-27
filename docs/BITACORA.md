@@ -21,14 +21,14 @@ Memoria compartida de lo realizado, las decisiones, la validación y el trabajo 
 - **Decisiones confirmadas:** PostgreSQL como base del MVP; stack TypeScript/React/NestJS; identidad del MVP validada en la base de datos (OIDC pospuesto); autoaprobación permitida y auditada durante el piloto. El equipo es una sola persona que desarrolla y aprueba.
 - **Stack:** TypeScript 6, React 19 con Vite, NestJS 12 en cada servicio, PostgreSQL 17 con `pg` y SQL parametrizado, migraciones SQL con dbmate, Vitest; instalado y con versiones fijadas en `pnpm-lock.yaml`. Desarrollo local sin Docker. Ver [stack](STACK-TECNOLOGICO.md) y [ADR-001](adr/001-stack-mvp.md). Faltan la infraestructura y el volumen del piloto.
 - **Supuesto no confirmado:** una empresa con varias prácticas. No se ha aprobado alcance SaaS multiempresa.
-- **Backlog:** 46 elementos, 43 para el MVP y 3 posteriores (PHS-046, consulta de proyectos pausados y cerrados, añadida en BIT-0025). Ninguna historia se considera implementada por la existencia de estos documentos.
+- **Backlog:** vigente [BACKLOG-MVP.md](producto/BACKLOG-MVP.md): 128 piezas del export de Jira del 2026-11-26 (8 fuera del MVP por ser infraestructura de Azure). El anterior, [BACKLOG.md](producto/BACKLOG.md) con PHS-001 a PHS-046, queda como historia de lo construido.
 - **Decisiones abiertas:** D07 (retención y respaldos). Confirmadas: D01, D05, D09 (salvo expiración y restricción adicional de acceso) y D10; D06 parcialmente. D02, D03, D04 y D08 definidas por el usuario, con interpretaciones de implementación marcadas "por confirmar" en [DECISIONES.md](producto/DECISIONES.md).
 - **Hallazgos de BIT-0005:** textos vacíos, borrado físico y fecha de outbox corregidos en la migración 004; el resto clasificado en [DECISIONES.md](producto/DECISIONES.md).
 - **Repositorio:** local en `/Users/indra/Documents/ChatGPT/PHS`, rama `main`; remoto `origin` en [iztaneo/PHS](https://github.com/iztaneo/PHS), creado y verificado como privado. La publicación y sincronización de commits se comprueban con Git (`git status -sb`, `git ls-remote origin refs/heads/main`).
 - **Puntos abiertos de la arquitectura:** protocolo de envío de revisión entre Salud y Proyectos; rotación del secreto interno y aislamiento de red entre servicios.
 - **Datos de demostración:** `seed:demo` carga seis usuarios y seis proyectos (DEMO-001 a DEMO-006); regla del usuario en [AGENTS.md](../AGENTS.md): todo cambio funcional amplía el seed y se entrega con datos cargados (BIT-0021). Única excepción a cargarlos mediante los servicios: los dos ciclos pasados de DEMO-006 (BIT-0033).
 - **Entorno local sin Docker:** `db:setup` crea un PostgreSQL propio en `.local/pg` (puerto 54329), aplica migraciones y crea usuarios de desarrollo; ver README.
-- **Siguiente paso funcional:** completar AT-16 con inyección de caída y restauración de respaldo para cerrar PHS-040; después ejecutar PHS-041 con carga, auditoría de accesibilidad y al menos diez revisiones humanas. E2E-07 quedó alineado al contrato 409; E2E-11 verifica la política existente: cinco dimensiones sin dato, equipo 75, banda atención y confianza baja. R1 a R4 siguen sin aceptación del usuario; PHS-041/042 necesitan D07 y la definición del entorno del piloto.
+- **Siguiente paso funcional:** MVP funcional según el nuevo backlog ([BACKLOG-MVP.md](producto/BACKLOG-MVP.md), BIT-0043), sin la infraestructura de Azure. Siete incrementos; el primero es I1, acceso por código de un solo uso y usuarios. Pendiente recibir el documento de arquitectura (ADR-01 a 16) y el documento maestro PHF (BR-01 a 19) que el backlog cita.
 
 ## Cómo se mantiene
 
@@ -1610,6 +1610,45 @@ La información existía pero repartida: el diagrama en un documento titulado "D
 ### Pendientes y siguiente paso
 
 Revisión del documento por quien hizo el comentario. Siguen pendientes AT-16 y D07 para cerrar PHS-040. Siguiente entrada: BIT-0043.
+
+## BIT-0043 — Nuevo backlog y plan del MVP funcional
+
+**Fecha:** 2026-11-26, America/Mexico_City.
+
+**Objetivo:** el usuario entregó nuevos requerimientos de PHS (export de Jira) y pidió contrastarlos con lo construido y definir cómo continuar.
+
+**Relación:** todas las épicas; decisiones D01, D03, D04, D05, D06, D09 y la autoaprobación del piloto (BIT-0001). Solo documentación.
+
+**Identificación:** commit con prefijo `BIT-0043`.
+
+### Hallazgo
+
+El export tiene 14 épicas y 128 piezas (73 historias y 55 tareas). Describe otra arquitectura objetivo: Azure (Bicep, Front Door, APIM, AKS), seis servicios con esquema propio, Service Bus, Cosmos DB, Redis, librería de puertos, JWT y OpenTelemetry. En lo funcional coincide en buena parte con lo construido, pero cambia el acceso (código por correo), los permisos (roles y menú configurables), los catálogos (todo editable) y varias reglas. Cita un documento de arquitectura (ADR-01 a 16) y un documento maestro PHF (BR-01 a 19) que no están en el repositorio.
+
+### Decisiones del usuario
+
+Registradas en [DECISIONES.md](producto/DECISIONES.md), sección "Nuevo backlog": primero un MVP funcional sin la infraestructura de Azure; acceso por código de un solo uso sin contraseña; ante conflicto con decisiones anteriores manda el nuevo backlog; el modelo de salud conserva las fórmulas actuales con parámetros editables; se conservan causa y plan, portafolio, pausados y cerrados, festivos, renovaciones, economía y la ayuda PHF.
+
+### Trabajo realizado
+
+- [fuentes/PHS-Jira-import-completo.csv](producto/fuentes/PHS-Jira-import-completo.csv): el export recibido, sin cambios.
+- [scripts/backlog-mvp.py](../scripts/backlog-mvp.py) genera [BACKLOG-MVP.md](producto/BACKLOG-MVP.md): cada pieza con su estado frente a lo construido (25 hecho, 41 parcial, 33 nuevo, 21 cambia, 8 fuera) y el incremento del MVP al que pertenece.
+- Siete incrementos: I1 acceso por código y usuarios; I2 roles, permisos y menú; I3 catálogos y parámetros; I4 clientes, proyectos y línea base con aprobación; I5 hitos, riesgos, revisiones y salud; I6 alertas, reloj simulado, acciones y cambios; I7 Health Center, historial y auditoría.
+- [BACKLOG.md](producto/BACKLOG.md) queda marcado como histórico; [AGENTS.md](../AGENTS.md) apunta al backlog vigente y a cómo mantenerlo.
+
+### Archivos
+
+`docs/producto/fuentes/PHS-Jira-import-completo.csv`, `scripts/backlog-mvp.py`, `docs/producto/BACKLOG-MVP.md`, `docs/producto/DECISIONES.md`, `docs/producto/BACKLOG.md`, `AGENTS.md` y esta bitácora.
+
+### Validación y límites
+
+- El generador comprueba que cada pieza del export tenga clasificación. El export no contiene credenciales ni correos personales.
+- La clasificación es mía, a partir del código y la documentación; no se validó pieza por pieza contra los criterios de aceptación completos, y puede cambiar al recibir los documentos fuente.
+- El orden de incrementos sigue las dependencias del export (usuarios y roles antes que catálogos, catálogos antes que proyectos).
+
+### Pendientes y siguiente paso
+
+Recibir los documentos fuente. Empezar I1: acceso por código de un solo uso y usuarios. Siguiente entrada: BIT-0044.
 
 ## Plantilla para próximas entradas
 
